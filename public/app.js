@@ -54,6 +54,24 @@ form.addEventListener('submit', async (e) => {
 
     // Display answer
     answerText.textContent = data.answer || 'No response text received.';
+
+    // Display sources if present
+    const sourcesContainer = document.getElementById('sources-container');
+    const sourcesList = document.getElementById('sources-list');
+    sourcesList.innerHTML = '';
+
+    if (data.sources && data.sources.length > 0) {
+      data.sources.forEach((src) => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '4px';
+        li.textContent = `📄 ${src.title} (${src.source}) — similarity score: ${src.score}`;
+        sourcesList.appendChild(li);
+      });
+      sourcesContainer.style.display = 'block';
+    } else {
+      sourcesContainer.style.display = 'none';
+    }
+
     answerSection.style.display = 'block';
   } catch (err) {
     // Display error

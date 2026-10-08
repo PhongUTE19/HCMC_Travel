@@ -3,7 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from './config.js';
-import { generateAnswer } from './rag/gemini.js';
+import { retrieveRelevantChunks } from './rag/retriever.js';
+import { generateGroundedAnswer } from './rag/generator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,7 +46,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 2. Chat endpoint (Walking Skeleton: Browser -> Express -> Gemini -> Browser)
+// 2. Chat endpoint (RAG Flow: Query -> Retrieval -> Relevance Threshold -> Grounded Generation)
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
@@ -54,17 +55,42 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Query message is required.' });
     }
 
-    // Walking Skeleton: Direct LLM generation without RAG retrieval yet
-    const answer = await generateAnswer(message.trim());
+    const query = message.trim();
+
+    // Step 1: Retrieve Top-K candidate chunks
+    const retrievedChunks = await retrieveRelevantChunks(query, inMemoryChunks, config.topK);
+    const bestScore = retrievedChunks[0]?.score || 0;
+
+    console.log(`[Chat] Query: "${query}" | Best score: ${bestScore} (Threshold: ${config.similarityThreshold})`);
+
+    // Step 2: Out-of-scope guardrail via similarity threshold
+    if (bestScore < config.similarityThreshold) {
+      console.log(`[Chat] Query rejected by similarity threshold (${bestScore} < ${config.similarityThreshold}). Early return before calling generateGroundedAnswer().`);
+      return res.json({
+        answer: 'I do not have verified travel information about this topic in the local knowledge base. Please ask about Ho Chi Minh City food, landmarks, or attractions.',
+        sources: [],
+      });
+    }
+
+    // Step 3: Grounded LLM generation using retrieved context
+    console.log(`[Chat] Query accepted (${bestScore} >= ${config.similarityThreshold}). Calling generateGroundedAnswer()...`);
+    const answer = await generateGroundedAnswer(query, retrievedChunks);
+
+    // Step 4: Map source metadata (without exposing internal embedding vectors)
+    const sources = retrievedChunks.map((chunk) => ({
+      title: chunk.title,
+      source: chunk.source,
+      score: chunk.score,
+    }));
 
     res.json({
       answer,
-      sources: [],
+      sources,
     });
   } catch (error) {
     console.error('[Server] Chat generation error:', error.message);
     res.status(500).json({
-      error: error.message || 'Internal server error while generating response.',
+      error: error.message || 'Internal server error while processing travel query.',
     });
   }
 });

@@ -62,5 +62,59 @@
   - Querying available models revealed `gemini-3.5-flash-lite` for generation and `gemini-embedding-001` for embedding are fully active and stable.
   - Configured these verified models in `.env` and `.env.example`, preserving flexibility without hardcoding in application code.
 
-### 4. Next Phase
-* Phase 3: Implement vector retrieval ([src/rag/retriever.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/retriever.js)) using cosine similarity, prompt augmentation in [src/rag/generator.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/generator.js), and attach source citations to `/api/chat`.
+---
+
+## Log Entry: 2026-10-07 (Phase 3: RAG Retrieval + Grounded Generation)
+
+### 1. Scope & Implementation
+* **Retriever Module ([src/rag/retriever.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/retriever.js))**:
+  - Implemented pure JavaScript `cosineSimilarity(a, b)` with normalized dot product calculation.
+  - Implemented `retrieveRelevantChunks(query, chunks, topK)`: embeds query with `embedText()`, scores each chunk, sorts descending, and returns top-K candidates (`{ id, title, content, source, score }`).
+* **Generator Module ([src/rag/generator.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/generator.js))**:
+  - Implemented `buildGroundedPrompt(question, chunks)` with strict negative constraints (no external facts, cite sources in brackets, state lack of information if missing).
+  - Implemented `generateGroundedAnswer(question, chunks)` delegating generation to `gemini.js`.
+* **Server Orchestration & Relevance Guardrail ([src/server.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/server.js))**:
+  - Updated `POST /api/chat` flow:
+    1. Retrieve Top-K chunks.
+    2. Check `bestScore < SIMILARITY_THRESHOLD`. If below, immediately return safe fallback without calling Gemini.
+    3. If accepted, call `generateGroundedAnswer`.
+    4. Return `{ answer, sources: [{ title, source, score }] }` without exposing raw embedding vectors.
+* **Frontend Enhancement ([public/app.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/public/app.js), [public/index.html](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/public/index.html))**:
+  - Added dynamic rendering of retrieved source cards (title, source file, similarity score) when returned.
+
+### 2. Retrieval Parameters & Threshold
+* **Top-K**: `3` (Configurable via `TOP_K` in `.env`).
+* **Similarity Threshold**: `0.60` (Configurable via `SIMILARITY_THRESHOLD` in `.env`).
+* **Calibration Rationale**:
+  - In-domain questions match with scores between `0.75` and `0.81`.
+  - Non-travel out-of-scope questions score under `0.45` (e.g., linear algebra scores `0.4412`).
+  - Broad ambiguous questions score `~0.52`.
+  - Threshold `0.60` creates a clean boundary separating relevant travel queries from out-of-scope queries prior to calling the LLM.
+
+### 3. Validation Results (5 Test Scenarios)
+
+| Test Scenario | Query | Top Chunk & Score | Threshold Decision | Final Output | Sources Count |
+|---|---|---|---|---|---|
+| **1. Clearly answerable** | `"What is Ben Thanh Market?"` | Chợ Bến Thành (`0.7700`) | **ACCEPTED** (>= 0.60) | Accurate, concise summary citing `[Chợ Bến Thành (Ben Thanh Market)]`. | 3 |
+| **2. Another answerable** | `"Where can I eat Com Tam broken rice and what are the traditional toppings?"` | Cơm Tấm (`0.8006`) | **ACCEPTED** (>= 0.60) | Lists Ba Ghiền, Thuận Kiều, and traditional toppings citing `[Cơm Tấm (Broken Rice)]`. | 3 |
+| **3. Out-of-scope** | `"What is linear algebra?"` | Landmark 81 (`0.4412`) | **REJECTED** (< 0.60) | *"I do not have verified travel information about this topic..."* (Gemini skipped). | 0 (`[]`) |
+| **4. HCMC-related but unindexed** | `"What are the ticket prices and tour schedules for the Cu Chi Tunnels?"` | War Remnants Museum (`0.6519`) | **ACCEPTED** (>= 0.60) | *"The knowledge base does not contain enough information to answer this question."* (Zero hallucination). | 3 |
+| **5. Ambiguous query** | `"Where should I go?"` | Chợ Lớn (`0.5279`) | **REJECTED** (< 0.60) | *"I do not have verified travel information about this topic..."* (Gemini skipped). | 0 (`[]`) |
+
+### 4. Known Limitations
+1. **Unindexed Local Spots**: Topics related to HCMC that are not present in `data/knowledge/*.md` (e.g. Cu Chi Tunnels, Saigon Waterbus) pass semantic proximity to history/transportation, but rely on prompt guardrails to reject answering.
+2. **Short Ambiguous Queries**: Queries like *"Where should I go?"* lack sufficient semantic density and fall below 0.60; expanding prompt suggestions or giving example chips in the UI helps users form specific questions.
+
+### 5. Verification & Guardrail Audit (Phase 3 Check)
+* **Configuration Audit**:
+  - `topK`: explicitly set to `3`.
+  - `similarityThreshold`: explicitly set to `0.60`.
+  - Verified fallbacks in `src/config.js`: `gemini-3.5-flash-lite` and `gemini-embedding-001` match active `.env` parameters.
+* **Guardrail Execution Verification**:
+  - Validated that out-of-scope query `"What is linear algebra?"` (best score `0.4412` < `0.60`) executes an immediate early return from `/api/chat` with `sources: []`.
+  - Updated server logging in `src/server.js` to explicitly state `Early return before calling generateGroundedAnswer()` on rejection vs `Calling generateGroundedAnswer()` on acceptance, ensuring observable trace of execution bypass.
+  - Confirmed via spy assertion that neither `generateGroundedAnswer()` nor the Gemini generation API is invoked for rejected queries.
+
+### 6. Next Phase
+* Phase 4: UI integration and polish (e.g. sample suggestion chips, responsive styling, or React frontend as specified for later phases).
+

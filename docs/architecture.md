@@ -28,12 +28,13 @@ A single Express.js process serving both static frontend assets and the minimal 
 |          ▼                                                |
 |   [ RAG Pipeline ]                                        |
 |   ├── retriever.js (Retrieve Top-K chunks via Cosine Sim) |
-|   └── generator.js (Generate answer via Gemini LLM)       |
+|   ├── Threshold Gate (bestScore >= 0.60)                  |
+|   └── generator.js (Grounded generation via Gemini LLM)   |
 |          │                                                |
 |          ▼                                                |
 |   [ In-Memory Store & Gemini Client ]                     |
 |   ├── In-Memory Chunks & Vector Array                     |
-|   └── gemini.js (embedText, generateContent)              |
+|   └── gemini.js (embedText, generateAnswer)               |
 +-----------------------------------------------------------+
 ```
 
@@ -41,18 +42,23 @@ A single Express.js process serving both static frontend assets and the minimal 
 
 ## 3. Core User Workflow
 
-1. **User asks a question** in the browser (e.g., *"Where can I eat Cơm Tấm in District 1?"*).
+1. **User asks a question** in the browser (e.g., *"What is Ben Thanh Market?"*).
 2. **Frontend sends POST request** with `{ "message": "..." }` to `/api/chat`.
-3. **Retrieval step**:
-   - Query text is converted to a vector embedding via Gemini embedding model.
+3. **Retrieval step (`src/rag/retriever.js`)**:
+   - Query text is converted to a vector embedding via `embedText()`.
    - Vector is compared against in-memory chunk vectors using pure JavaScript cosine similarity.
-   - Top-K (default $K=3$) most relevant chunks are selected.
-4. **Generation step**:
-   - Retrieved chunks are formatted into a prompt with strict grounding instructions.
-   - Gemini generates an answer citing the retrieved sources.
-5. **Response delivery**:
+   - Top-K ($K=3$) most relevant chunks are selected and scored.
+4. **Relevance / Guardrail Check**:
+   - If the best score is below `SIMILARITY_THRESHOLD` ($0.60$):
+     - The query is classified as out-of-scope or ungrounded.
+     - Execution skips the LLM call entirely, returning an immediate safe response with `sources: []`.
+5. **Grounded Generation step (`src/rag/generator.js`)**:
+   - If accepted, chunks are formatted into a prompt with strict grounding instructions.
+   - Gemini generates an answer strictly citing the retrieved sources without inventing facts.
+   - If the context lacks specifics, Gemini states that the knowledge base does not contain enough information.
+6. **Response delivery**:
    - Backend returns JSON `{ "answer": "...", "sources": [...] }`.
-   - Frontend displays the answer and source badges.
+   - Frontend displays the answer and clickable/readable source citations.
 
 ---
 
@@ -65,7 +71,7 @@ A single Express.js process serving both static frontend assets and the minimal 
 ```json
 {
   "status": "ok",
-  "indexedChunks": 18
+  "indexedChunks": 13
 }
 ```
 
@@ -75,21 +81,27 @@ A single Express.js process serving both static frontend assets and the minimal 
 * **Request Body**:
 ```json
 {
-  "message": "Where should I go for coffee near Notre-Dame Cathedral?"
+  "message": "What is Ben Thanh Market?"
 }
 ```
 * **Success Response (`200 OK`)**:
 ```json
 {
-  "answer": "Near Notre-Dame Cathedral, you can visit cà phê bệt (sidewalk coffee) at 30/4 Park, or historic cafes along Dong Khoi Street [Landmarks & Cafes].",
+  "answer": "Chợ Bến Thành (Ben Thanh Market) is Ho Chi Minh City's most iconic central market, located in District 1 at Quách Thị Trang Square [Chợ Bến Thành (Ben Thanh Market)]. Built in 1914, its south entrance clock tower is a universally recognized symbol of the city...",
   "sources": [
     {
-      "id": "landmarks_02",
-      "title": "Notre-Dame Cathedral & Surrounding Cafes",
-      "source": "landmarks.md",
-      "score": 0.82
+      "title": "Chợ Bến Thành (Ben Thanh Market)",
+      "source": "attractions.md",
+      "score": 0.77
     }
   ]
+}
+```
+* **Out-of-Scope Response (`200 OK`)**:
+```json
+{
+  "answer": "I do not have verified travel information about this topic in the local knowledge base. Please ask about Ho Chi Minh City food, landmarks, or attractions.",
+  "sources": []
 }
 ```
 * **Error Response (`400 Bad Request` / `500 Server Error`)**:
@@ -104,19 +116,22 @@ A single Express.js process serving both static frontend assets and the minimal 
 ## 5. Minimal Data Models
 
 ```javascript
-// Chunk Model (Stored in memory)
+// Chunk Model (Stored in memory and data/embeddings.json)
 {
-  id: "food_01",
+  id: "food_0",
   title: "Cơm Tấm (Broken Rice)",
-  content: "Cơm tấm is a signature breakfast dish...",
+  content: "Cơm tấm is the quintessential...",
   source: "food.md",
-  embedding: [0.012, -0.045, ...] // Float array
+  embedding: [0.012, -0.045, ...] // 3072-dim Float array
 }
 
-// Retrieval Result
+// Scored Chunk (Internal to Retriever)
 {
-  chunk: KnowledgeChunk,
-  score: 0.82
+  id: string,
+  title: string,
+  content: string,
+  source: string,
+  score: number // Cosine similarity: 0.0 to 1.0
 }
 
 // Chat API Request
@@ -128,14 +143,14 @@ A single Express.js process serving both static frontend assets and the minimal 
 {
   answer: string,
   sources: [
-    { id: string, title: string, source: string, score: number }
+    { title: string, source: string, score: number }
   ]
 }
 ```
 
 ---
 
-## 6. End-to-End RAG Pipeline
+## 6. End-to-End RAG Pipeline & Thresholding
 
 ```
 [Markdown Files (data/knowledge/*.md)]
@@ -143,28 +158,44 @@ A single Express.js process serving both static frontend assets and the minimal 
                   ▼ (1) Header Chunking (split by '## ')
    [Plain Chunks: { id, title, content, source }]
                   │
-                  ▼ (2) Server Startup Embedding (Gemini Embeddings API)
-   [In-Memory Chunks with Vectors Array]
+                  ▼ (2) Offline / Startup Indexing (gemini-embedding-001)
+   [data/embeddings.json loaded into memory array]
                   │
              User Query
                   │
-                  ▼ (3) Embed Query Vector
+                  ▼ (3) Embed Query Vector (gemini.js)
                   │
                   ▼ (4) Cosine Similarity Search (retriever.js)
-   [Top-K (K=3) Relevant Chunks]  <--- Independent test point
+             [Top-K (K=3)]
                   │
-                  ▼ (5) Prompt Augmentation
-        "Answer ONLY using this context:
-         Context: [Chunks]
-         Question: [Query]"
-                  │
-                  ▼ (6) LLM Generation (generator.js)
-   [Grounded Answer + Citations]  <--- Independent test point
+                  ├─────────────────────────────┐
+        bestScore < 0.60               bestScore >= 0.60
+                  │                             │
+                  ▼                             ▼
+       Safe Out-of-Scope Refusal       Prompt Augmentation
+       (Gemini call blocked)           (generator.js)
+                  │                             │
+                  │                             ▼
+                  │                    Gemini Generation
+                  │                    (gemini-3.5-flash-lite)
+                  │                             │
+                  └──────────────┬──────────────┘
+                                 ▼
+                     Formatted API Response
 ```
 
-### Separation for Testing
-* **`retriever.js`** can be tested independently with mock/query vectors without invoking text generation.
-* **`generator.js`** can be tested with static mock chunks without running vector search.
+### Retrieval & Threshold Choice
+* **Top-K ($K = 3$)**: Keeps prompt size minimal, latency low, and provides sufficient context without distracting the LLM.
+* **Similarity Threshold ($0.60$)**:
+  - *Empirical Calibration*:
+    - Clearly answerable travel queries score $0.75 - 0.80+$.
+    - Partially related topics (e.g. general travel/transportation) score $0.62 - 0.66$.
+    - Completely irrelevant questions (e.g. *"What is linear algebra?"*) score $0.44$.
+    - Ambiguous short queries (e.g. *"Where should I go?"*) score $0.52$.
+  - Setting the cutoff at $0.60$ reliably prevents out-of-scope non-travel queries from reaching the LLM, reducing API costs and latency.
+* **Two-Layer Guardrail**:
+  1. *Layer 1 (Pre-LLM)*: Mathematical filter rejects queries with $\text{bestScore} < 0.60$.
+  2. *Layer 2 (In-Prompt)*: Strict prompt instructions force the LLM to output *"The knowledge base does not contain enough information to answer this question"* if facts are missing from retrieved chunks.
 
 ---
 
@@ -176,23 +207,25 @@ HCMC_Travel/
 │   ├── architecture.md       # Minimal architecture and specs
 │   └── agent-log.md          # Implementation progress log
 ├── data/
-│   └── knowledge/            # Small, focused Markdown files
-│       ├── food.md           # HCMC food, street dishes, famous stalls
-│       ├── attractions.md    # Markets, museums, walking streets
-│       └── landmarks.md      # Historic buildings and architectural spots
+│   ├── knowledge/            # Small, focused Markdown files
+│   │   ├── food.md           # HCMC food, street dishes, famous stalls
+│   │   ├── attractions.md    # Markets, museums, walking streets
+│   │   └── landmarks.md      # Historic buildings and architectural spots
+│   └── embeddings.json       # Generated chunk embeddings (in .gitignore)
 ├── public/                   # Static frontend served by Express
-│   ├── index.html            # Minimal clean chat interface
+│   ├── index.html            # Minimal clean chat interface + source list
 │   ├── style.css             # Simple modern styling
-│   └── app.js                # Form submit, fetch /api/chat, render response
+│   └── app.js                # Form submit, fetch /api/chat, render response & sources
 ├── src/
-│   ├── config.js             # Environment variables (PORT, models, API key)
+│   ├── config.js             # Environment variables (PORT, models, threshold, topK)
 │   ├── rag/
 │   │   ├── chunker.js        # Split markdown files by '## ' into chunks
-│   │   ├── gemini.js         # Gemini SDK wrapper (embedText, generateText)
+│   │   ├── gemini.js         # Gemini SDK wrapper (embedText, generateAnswer)
 │   │   ├── retriever.js      # Cosine similarity & top-K chunk retrieval
-│   │   └── generator.js      # Context prompt construction & LLM invocation
+│   │   ├── generator.js      # Grounded prompt construction & LLM invocation
+│   │   └── indexer.js        # Offline script to generate data/embeddings.json
 │   └── server.js             # Express app, routes, startup indexer
-├── .env.example              # Config keys (GEMINI_API_KEY, models)
+├── .env.example              # Config keys (GEMINI_API_KEY, models, TOP_K, THRESHOLD)
 ├── package.json              # Express, dotenv, @google/genai
 └── README.md                 # 2-step run instructions
 ```
@@ -201,7 +234,6 @@ HCMC_Travel/
 
 ## 8. Out-of-Scope List
 
-To maintain the 2-hour budget and keep the code easy to defend:
 * ❌ External database (MongoDB, PostgreSQL, SQLite).
 * ❌ External vector database (Pinecone, ChromaDB, Weaviate).
 * ❌ User authentication, sessions, or login.
@@ -218,7 +250,7 @@ To maintain the 2-hour budget and keep the code easy to defend:
 | Decision | Choice | Rationale |
 |---|---|---|
 | **Runtime & Framework** | Node.js + Express | Matches user familiarity; allows rapid coding and confident oral defense. |
-| **Vector Search** | In-Memory Cosine Similarity | ~10 lines of standard math loop. Fast (< 2ms for < 50 chunks), zero dependency, 100% explainable. |
-| **Separated Modules** | `retriever.js` & `generator.js` | Modular design allows unit testing or manual verification of retrieval accuracy separately from generation. |
-| **Model Configuration** | Configurable via `.env` | Prevents hardcoded model failures; allows switching embedding/generation models easily. |
-| **Single Server Process** | Express serves API + `public/` | No CORS friction, no proxy configs, single command (`npm start`) to run everything. |
+| **Vector Search** | In-Memory Cosine Similarity | ~15 lines of standard math loop. Fast (< 2ms for < 50 chunks), zero external dependencies, 100% explainable. |
+| **Decoupled RAG Pipeline** | `retriever.js` & `generator.js` | Retrieval and prompt generation are separate modules, allowing isolated unit testing. |
+| **Relevance Thresholding** | Pre-generation cutoff ($0.60$) | Blocks irrelevant queries before calling Gemini, saving latency and token budget. |
+| **Two-Tier Safety** | Threshold + Grounded Prompt | Pre-filter eliminates non-travel queries; prompt guardrail eliminates hallucination for unindexed travel queries. |

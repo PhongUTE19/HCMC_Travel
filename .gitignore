@@ -1,3 +1,5 @@
 node_modules/
 .env
 data/embeddings.json
+test-results.json
+test-rag.js
