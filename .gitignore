@@ -1,6 +1,7 @@
 node_modules/
 .env
 data/embeddings.json
+data/vector_store/
 test-results.json
 test-rag.js
 dist/

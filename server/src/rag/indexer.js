@@ -1,11 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import { config } from '../config.js';
 import { loadAndChunkMarkdown } from './chunker.js';
 import { embedText } from './gemini.js';
+import { initVectorStore } from './vector_store.js';
 
 /**
- * Indexes all markdown knowledge files by generating embeddings and writing to data/embeddings.json.
+ * Indexes all markdown knowledge files by generating embeddings and inserting them into Qdrant.
  */
 export async function runIndexer() {
   console.log(`[Indexer] Reading knowledge documents from: ${config.knowledgeDir}`);
@@ -17,28 +16,37 @@ export async function runIndexer() {
     return;
   }
 
-  const indexedChunks = [];
+  // Initialize/reset Qdrant collection
+  console.log(`[Indexer] Connecting to Qdrant at: ${config.qdrantUrl} (collection: "${config.qdrantCollection}")`);
+  const client = await initVectorStore({ reset: true });
 
+  const points = [];
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    console.log(`[Indexer] (${i + 1}/${chunks.length}) Embedding: [${chunk.source}] ${chunk.title}`);
+    console.log(`[Indexer] (${i + 1}/${chunks.length}) Embedding & Indexing: [${chunk.source}] ${chunk.title}`);
     const textToEmbed = `${chunk.title}\n${chunk.content}`;
     const embedding = await embedText(textToEmbed);
 
-    indexedChunks.push({
-      ...chunk,
-      embedding,
+    points.push({
+      id: i + 1,
+      vector: embedding,
+      payload: {
+        id: chunk.id,
+        title: chunk.title,
+        content: chunk.content,
+        source: chunk.source,
+      },
     });
   }
 
-  // Ensure output directory exists
-  const outputDir = path.dirname(config.embeddingsFile);
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
+  console.log(`[Indexer] Upserting ${points.length} points into Qdrant collection "${config.qdrantCollection}"...`);
+  await client.upsert(config.qdrantCollection, {
+    wait: true,
+    points,
+  });
 
-  fs.writeFileSync(config.embeddingsFile, JSON.stringify(indexedChunks, null, 2), 'utf-8');
-  console.log(`[Indexer] Successfully saved ${indexedChunks.length} indexed chunks to: ${config.embeddingsFile}`);
+  const countResult = await client.count(config.qdrantCollection, { exact: true });
+  console.log(`[Indexer] Successfully indexed ${countResult.count} chunks into Qdrant collection "${config.qdrantCollection}".`);
 }
 
 // Allow running directly via CLI (e.g., `npm run index` or `node src/rag/indexer.js`)

@@ -1,15 +1,9 @@
 import express from 'express';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import cors from 'cors';
 import { config } from './config.js';
 import { retrieveRelevantChunks } from './rag/retriever.js';
 import { generateGroundedAnswer } from './rag/generator.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
+import { initVectorStore, getVectorStoreCount } from './rag/vector_store.js';
 
 const app = express();
 
@@ -17,37 +11,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// In-memory store for loaded embeddings
-let inMemoryChunks = [];
-
-/**
- * Loads pre-computed embeddings into memory on server start.
- */
-function loadEmbeddingsIntoMemory() {
-  if (fs.existsSync(config.embeddingsFile)) {
-    try {
-      const rawData = fs.readFileSync(config.embeddingsFile, 'utf-8');
-      inMemoryChunks = JSON.parse(rawData);
-      console.log(`[Server] Loaded ${inMemoryChunks.length} chunks from ${config.embeddingsFile} into memory.`);
-    } catch (err) {
-      console.error(`[Server] Error parsing ${config.embeddingsFile}:`, err.message);
-      inMemoryChunks = [];
-    }
-  } else {
-    console.warn(`[Server] Note: ${config.embeddingsFile} not found. Run 'npm run index' to generate embeddings.`);
-    inMemoryChunks = [];
+// 1. Health check endpoint (queries vector database count)
+app.get('/api/health', async (req, res) => {
+  try {
+    const indexedChunks = await getVectorStoreCount();
+    res.json({
+      status: 'ok',
+      indexedChunks,
+    });
+  } catch (error) {
+    console.error('[Server] Health check error:', error.message);
+    res.status(500).json({
+      status: 'error',
+      detail: error.message,
+    });
   }
-}
-
-// 1. Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    indexedChunks: inMemoryChunks.length,
-  });
 });
 
-// 2. Chat endpoint (RAG Flow: Query -> Retrieval -> Relevance Threshold -> Grounded Generation)
+// 2. Chat endpoint (RAG Flow: Query -> Vector DB Retrieval -> Relevance Threshold -> Grounded Generation)
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
@@ -58,8 +39,8 @@ app.post('/api/chat', async (req, res) => {
 
     const query = message.trim();
 
-    // Step 1: Retrieve Top-K candidate chunks
-    const retrievedChunks = await retrieveRelevantChunks(query, inMemoryChunks, config.topK);
+    // Step 1: Retrieve Top-K candidate chunks directly from vector database
+    const retrievedChunks = await retrieveRelevantChunks(query, config.topK);
     const bestScore = retrievedChunks[0]?.score || 0;
 
     console.log(`[Chat] Query: "${query}" | Best score: ${bestScore} (Threshold: ${config.similarityThreshold})`);
@@ -96,11 +77,18 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Start server
-loadEmbeddingsIntoMemory();
+// Ensure vector store is initialized on server startup
+initVectorStore()
+  .then(async () => {
+    const count = await getVectorStoreCount();
+    console.log(`[Server] Connected to Qdrant vector database at ${config.qdrantUrl}. Loaded ${count} indexed chunks in collection "${config.qdrantCollection}".`);
+  })
+  .catch((err) => {
+    console.warn('[Server] Qdrant initialization warning:', err.message);
+  });
 
 const server = app.listen(config.port, () => {
   console.log(`[Server] HCMC Travel Assistant running at http://localhost:${config.port}`);
 });
 
-export { app, server, inMemoryChunks };
+export { app, server };

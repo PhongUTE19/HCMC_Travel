@@ -211,5 +211,100 @@ Rendered in AnswerSection component
 * Verified `/api/health` and `/api/chat` end-to-end functionality via Vite proxy and CORS.
 * Zero changes made to RAG core logic (`retriever.js`, `generator.js`, `gemini.js`).
 
+---
+
+## Log Entry: 2026-10-08 (Vector Database Refactoring: Vectra)
+
+### 1. Vector Database Selection & Motivation
+* **Selected Database**: **Vectra** (`vectra` v0.15.0).
+* **Rationale**:
+  - Embedded local vector database running directly in the Node.js process without requiring background server daemons, Docker, or external cloud services.
+  - Written in pure JavaScript/TypeScript with zero native C++ compilation (avoiding `node-gyp` / MSBuild errors prevalent on Windows).
+  - Uses file-based storage (`data/vector_store/index.json`) for persistence, fast start, and easy inspection.
+  - Built-in cosine similarity vector search (`queryItems`) with top-K querying and metadata projection.
+
+### 2. Implementation Changes
+* **Package Dependencies**:
+  - Added `vectra` to `server/package.json`.
+* **Configuration (`server/src/config.js`)**:
+  - Replaced `embeddingsFile` with `vectorStoreDir: path.join(projectRoot, 'data', 'vector_store')`.
+* **Vector Store Manager (`server/src/rag/vector_store.js`)**:
+  - Created singleton management module wrapping Vectra's `LocalIndex`.
+  - Added `initVectorStore({ reset })` for creating/opening index.
+  - Added `getVectorStoreCount()` to count indexed items.
+* **Indexing Pipeline (`server/src/rag/indexer.js`)**:
+  - Replaced JSON writing to `data/embeddings.json` with `index.insertItem({ vector, metadata })` into the Vectra vector store.
+  - Preserved chunking and embedding logic using `chunkKnowledgeBase()` and `embedText()`.
+* **Retriever (`server/src/rag/retriever.js`)**:
+  - Replaced manual array cosine similarity loop with `index.queryItems(queryEmbedding, '', topK)`.
+  - Maps returned Vectra items into scored chunk objects `{ id, title, content, source, score }`.
+* **Server & Startup (`server/src/server.js`)**:
+  - Replaced `inMemoryChunks` startup array loading with `getVectorStoreCount()`.
+  - `/api/health` now reports `indexedChunks` directly from the local vector database count.
+  - `/api/chat` calls `retrieveRelevantChunks(message, config.topK)` directly against the vector database.
+  - Preserved threshold gate (`bestScore < 0.60`) and grounded generation (`generateGroundedAnswer()`).
+* **Cleanup & Git**:
+  - Removed obsolete file `data/embeddings.json`.
+  - Added `data/vector_store/` to root `.gitignore`.
+
+### 3. Validation Matrix
+
+| Validation Requirement | Verification Action | Observed Result | Status |
+|---|---|---|---|
+| **1. Knowledge Base Indexing** | Executed `npm run index` from project root | Read 3 Markdown files (13 chunks), generated embeddings via Gemini, stored in `data/vector_store/index.json` (519 KB). | **PASSED** |
+| **2. Health Check** | `GET /api/health` on port 3000 & 5173 | Returned `{ "status": "ok", "indexedChunks": 13 }`. React UI status badge displays connected. | **PASSED** |
+| **3. In-Scope Retrieval & Generation** | `POST /api/chat` with `"What is Ben Thanh Market?"` | Top score $0.77 \ge 0.60$; retrieved 3 chunks from Vectra; generated grounded answer with citations and sources list. | **PASSED** |
+| **4. Out-of-Scope Rejection** | `POST /api/chat` with `"What is linear algebra?"` | Top score $0.4412 < 0.60$; early return logged; Gemini generation skipped; safe refusal with `sources: []` returned. | **PASSED** |
+| **5. Empty Input Handling** | `POST /api/chat` with `{ "message": "   " }` | Returns HTTP 400 Bad Request `{ "error": "Query message is required." }`. | **PASSED** |
+| **6. Frontend Build & Non-Regression** | `npm --prefix client run build` | Built 32 modules successfully into `dist/` with 0 warnings/errors. Full chat interface renders without regressions. | **PASSED** |
+
+---
+
+## Log Entry: 2026-10-08 (Qdrant Vector Database Migration & Docker Containerization)
+
+### 1. Scope & Motivation
+* Migrated vector storage from local Vectra file index to **Qdrant** (`qdrant/qdrant:latest`).
+* Containerized the complete application stack with **Docker Compose**:
+  - `qdrant`: Vector database with persistent named volume `hcmc_qdrant_storage`.
+  - `server`: Express backend running on Node 22-alpine.
+  - `client`: React frontend built with Vite and served via Nginx reverse proxy.
+* Configured health checks for all three services with dependency orchestration (`condition: service_healthy`).
+* Preserved API contracts, grounded generation, similarity threshold ($0.60$), and source citations.
+
+### 2. Implementation Changes
+* **Vector Store & SDK**:
+  - Uninstalled `vectra` and installed `@qdrant/js-client-rest` in `server/`.
+  - Created [server/src/rag/vector_store.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/rag/vector_store.js) wrapping `QdrantClient` for singleton access, collection setup (`initVectorStore`), and item counting (`getVectorStoreCount`).
+  - Configured collection `hcmc_travel` with 3072-dimensional vectors using `Cosine` distance.
+  - Updated [server/src/rag/indexer.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/rag/indexer.js) to upsert points with payload metadata (`id`, `title`, `content`, `source`) into Qdrant.
+  - Updated [server/src/rag/retriever.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/rag/retriever.js) to execute `client.query(collectionName, { query, limit, with_payload })`.
+* **Configuration & Environment**:
+  - Updated [server/src/config.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/config.js) to support `QDRANT_URL`, `QDRANT_COLLECTION_NAME`, `KNOWLEDGE_DIR`.
+  - Updated [server/.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/.env.example) and created root [.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/.env.example).
+* **Containerization**:
+  - Created [client/Dockerfile](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/client/Dockerfile) (multi-stage build with Node 22-alpine + Nginx alpine).
+  - Created [client/nginx.conf](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/client/nginx.conf) serving static assets on port 80 and reverse-proxying `/api/` to `http://server:3000/api/`.
+  - Created [server/Dockerfile](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/Dockerfile) (Node 22-alpine, exposing port 3000).
+  - Created [docker-compose.yml](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/docker-compose.yml) orchestrating `qdrant`, `server`, and `client` with shared bridge network and named persistent volume `hcmc_qdrant_storage`.
+  - Created `.dockerignore` files for root, client, and server.
+  - Added Docker scripts (`docker:build`, `docker:up`, `docker:down`, `docker:index`) to [package.json](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/package.json).
+
+### 3. Validation Matrix
+
+| # | Validation Item | Test Action | Observed Result | Status |
+|---|---|---|---|---|
+| 1 | **Image Build** | `docker compose build` | Built `hcmc_travel-server:latest` and `hcmc_travel-client:latest` with zero errors. | **PASSED** |
+| 2 | **System Startup** | `docker compose up -d` | All 3 containers (`hcmc-qdrant`, `hcmc-server`, `hcmc-client`) started and transitioned to `healthy`. | **PASSED** |
+| 3 | **Qdrant Health** | `GET http://localhost:6333/readyz` | Responded with `all shards are ready` (HTTP 200). | **PASSED** |
+| 4 | **Knowledge Indexing** | `docker compose exec server npm run index` | Chunked 13 sections, generated 3072-dim embeddings via Gemini, upserted into Qdrant collection `hcmc_travel`. | **PASSED** |
+| 5 | **Health API Verification** | `GET http://localhost:3000/api/health` and `:5173/api/health` | Both endpoints returned `{"status":"ok","indexedChunks":13}`. | **PASSED** |
+| 6 | **In-Scope Query** | `POST /api/chat` with `"What is Ben Thanh Market?"` | Top score: 0.77 ($\ge 0.60$); retrieved 3 chunks; generated grounded response citing `[Chợ Bến Thành (Ben Thanh Market)]`. | **PASSED** |
+| 7 | **Out-of-Scope Query** | `POST /api/chat` with `"What is linear algebra?"` | Top score: 0.4412 ($< 0.60$); early exit logged; returned refusal with `sources: []`; Gemini generation skipped. | **PASSED** |
+| 8 | **Volume Persistence** | `docker compose down` then `docker compose up -d` | Containers recreated; all 13 points in collection `hcmc_travel` persisted in volume `hcmc_qdrant_storage`. | **PASSED** |
+| 9 | **Health Post-Restart** | `GET /api/health` after restart | Immediately returned `{"status":"ok","indexedChunks":13}` without needing re-indexing. | **PASSED** |
+| 10| **Frontend-Backend Comms** | `POST /api/chat` via `:5173` after restart | Nginx proxied request to `server:3000`, returned grounded response for `"Tell me about Saigon Central Post Office"`. | **PASSED** |
+
+
+
 
 

@@ -1,8 +1,10 @@
+import { config } from '../config.js';
 import { embedText } from './gemini.js';
+import { getVectorStore } from './vector_store.js';
 
 /**
  * Calculates cosine similarity between two numeric vectors.
- * Returns a value between -1 and 1 (typically 0 to 1 for normalized embeddings).
+ * Preserved for utility / legacy compatibility.
  * 
  * @param {number[]} a - First vector
  * @param {number[]} b - Second vector
@@ -31,36 +33,44 @@ export function cosineSimilarity(a, b) {
 }
 
 /**
- * Retrieves the Top-K most relevant chunks for a user query.
+ * Retrieves the Top-K most relevant chunks from the Qdrant vector database for a user query.
  * 
  * @param {string} query - The search query from the user
- * @param {Array} chunks - The in-memory array of chunks containing embedding vectors
- * @param {number} topK - Number of top chunks to return
+ * @param {number|Array} param2 - Optional topK number, or legacy chunks array for backward compatibility
+ * @param {number} param3 - Optional topK if param2 was legacy chunks array
  * @returns {Promise<Array<{id: string, title: string, content: string, source: string, score: number}>>}
  */
-export async function retrieveRelevantChunks(query, chunks, topK = 3) {
-  if (!query || !query.trim() || !chunks || chunks.length === 0) {
+export async function retrieveRelevantChunks(query, param2 = 3, param3 = 3) {
+  if (!query || !query.trim()) {
+    return [];
+  }
+
+  const topK = typeof param2 === 'number' ? param2 : (typeof param3 === 'number' ? param3 : 3);
+
+  const client = getVectorStore();
+  const exists = await client.collectionExists(config.qdrantCollection);
+  if (!exists) {
     return [];
   }
 
   // 1. Generate query embedding vector
   const queryEmbedding = await embedText(query.trim());
 
-  // 2. Compute similarity score for each chunk
-  const scoredChunks = chunks.map((chunk) => {
-    const score = cosineSimilarity(queryEmbedding, chunk.embedding);
-    return {
-      id: chunk.id,
-      title: chunk.title,
-      content: chunk.content,
-      source: chunk.source,
-      score: Number(score.toFixed(4)),
-    };
+  // 2. Query Qdrant for Top-K points using cosine similarity
+  const response = await client.query(config.qdrantCollection, {
+    query: queryEmbedding,
+    limit: topK,
+    with_payload: true,
   });
 
-  // 3. Sort descending by score
-  scoredChunks.sort((a, b) => b.score - a.score);
+  const points = response?.points || [];
 
-  // 4. Return Top-K chunks
-  return scoredChunks.slice(0, topK);
+  // 3. Map to clean chunk results
+  return points.map((p) => ({
+    id: p.payload?.id || String(p.id),
+    title: p.payload?.title || '',
+    content: p.payload?.content || '',
+    source: p.payload?.source || '',
+    score: Number(p.score.toFixed(4)),
+  }));
 }

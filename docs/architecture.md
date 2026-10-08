@@ -1,64 +1,65 @@
 # Architecture: HCMC Travel Assistant (RAG)
 
 ## 1. Goal & Context
-* **Project**: A lightweight HCMC Travel Assistant using Retrieval-Augmented Generation (RAG).
-* **Target Audience**: Midterm practice project with a **strict 2-hour implementation budget**.
-* **Core Philosophy**: Minimal, clean JavaScript/Node.js stack that is easy to write, understand, and defend without unneeded abstractions.
+* **Project**: A containerized HCMC Travel Assistant using Retrieval-Augmented Generation (RAG).
+* **Stack**: React (Vite / Nginx) + Node.js (Express) + Qdrant Vector Database + Google Gemini API.
+* **Core Philosophy**: Clean separation of concerns, containerized via Docker Compose, reproducible environment with zero host dependency issues.
 
 ---
 
-## 2. Simplified Architecture
+## 2. Containerized Multi-Service Architecture
 
-A single Express.js process serving both static frontend assets and the minimal RAG API:
+The system is organized into three services managed by Docker Compose within a shared internal bridge network:
 
 ```
-+-----------------------------------------------------------+
-|               Browser UI (public/)                        |
-|       Vanilla HTML + CSS + JavaScript                     |
-+-----------------------------+-----------------------------+
-                              | HTTP POST /api/chat
-                              | HTTP GET  /api/health
-                              v
-+-----------------------------------------------------------+
-|               Express.js Server (src/server.js)           |
-|                                                           |
-|   1. GET /api/health                                      |
-|   2. POST /api/chat                                       |
-|          │                                                |
-|          ▼                                                |
-|   [ RAG Pipeline ]                                        |
-|   ├── retriever.js (Retrieve Top-K chunks via Cosine Sim) |
-|   ├── Threshold Gate (bestScore >= 0.60)                  |
-|   └── generator.js (Grounded generation via Gemini LLM)   |
-|          │                                                |
-|          ▼                                                |
-|   [ In-Memory Store & Gemini Client ]                     |
-|   ├── In-Memory Chunks & Vector Array                     |
-|   └── gemini.js (embedText, generateAnswer)               |
-+-----------------------------------------------------------+
++-----------------------------------------------------------------------------------------+
+|                                    Docker Host Network                                  |
+|                                                                                         |
+|        Host Port 5173                          Host Port 3000          Host Port 6333   |
+|              │                                       │                       │          |
++--------------┼───────────────────────────────────────┼───────────────────────┼----------+
+|              ▼                                       ▼                       ▼          |
+|  +─────────────────────────+          +─────────────────────────+  +──────────────────+ |
+|  |     hcmc-client         |          |       hcmc-server       |  |   hcmc-qdrant    | |
+|  |   (Nginx :80)           |          |   (Express :3000)       |  |  (Qdrant :6333)  | |
+|  |                         |          |                         |  |                  | |
+|  | - Serves React bundle   |  proxy   | - Health Check Endpoint |  | - Vector Search  | |
+|  | - Reverse-proxies /api/ ├─────────►| - RAG Pipeline Router   |  | - Payload Store  | |
+|  |   to http://server:3000 |          | - Similarity Gate (0.60)|  | - HNSW Index     | |
+|  |                         |          | - Grounded Gen (Gemini) |  |                  | |
+|  +─────────────────────────+          +────────────┬────────────+  +────────┬─────────+ |
+|                                                    │                        │           |
+|                                                    │  http://qdrant:6333    │           |
+|                                                    └───────────────────────►│           |
+|                                                                             │           |
+|                                                     +───────────────────────┴────────+  |
+|                                                     | Named Volume:                  |  |
+|                                                     | hcmc_qdrant_storage            |  |
+|                                                     | (/qdrant/storage)              |  |
+|                                                     +────────────────────────────────+  |
++-----------------------------------------------------------------------------------------+
 ```
 
 ---
 
 ## 3. Core User Workflow
 
-1. **User asks a question** in the browser (e.g., *"What is Ben Thanh Market?"*).
-2. **Frontend sends POST request** with `{ "message": "..." }` to `/api/chat`.
-3. **Retrieval step (`src/rag/retriever.js`)**:
-   - Query text is converted to a vector embedding via `embedText()`.
-   - Vector is compared against in-memory chunk vectors using pure JavaScript cosine similarity.
-   - Top-K ($K=3$) most relevant chunks are selected and scored.
+1. **User queries the Assistant** in the React web interface (e.g., *"What is Ben Thanh Market?"*).
+2. **Frontend issues request** to `/api/chat` via Nginx reverse proxy, which forwards to `http://server:3000/api/chat`.
+3. **Retrieval step (`server/src/rag/retriever.js`)**:
+   - Query text is vectorized into 3072-dimensional embedding using `embedText()` (Gemini `gemini-embedding-001`).
+   - Query embedding is sent via `@qdrant/js-client-rest` to Qdrant collection `hcmc_travel` using cosine similarity.
+   - Top-K ($K=3$) most relevant chunks with payload metadata are returned.
 4. **Relevance / Guardrail Check**:
-   - If the best score is below `SIMILARITY_THRESHOLD` ($0.60$):
-     - The query is classified as out-of-scope or ungrounded.
-     - Execution skips the LLM call entirely, returning an immediate safe response with `sources: []`.
-5. **Grounded Generation step (`src/rag/generator.js`)**:
-   - If accepted, chunks are formatted into a prompt with strict grounding instructions.
-   - Gemini generates an answer strictly citing the retrieved sources without inventing facts.
-   - If the context lacks specifics, Gemini states that the knowledge base does not contain enough information.
-6. **Response delivery**:
-   - Backend returns JSON `{ "answer": "...", "sources": [...] }`.
-   - Frontend displays the answer and clickable/readable source citations.
+   - If `bestScore < 0.60` (`SIMILARITY_THRESHOLD`):
+     - The query is deemed out-of-scope or ungrounded.
+     - Backend immediately returns a safe refusal with `sources: []`, skipping the LLM call entirely.
+5. **Grounded Generation step (`server/src/rag/generator.js`)**:
+   - If accepted (`bestScore >= 0.60`), retrieved chunk contents are assembled into a strictly grounded prompt.
+   - Gemini (`gemini-3.5-flash-lite`) generates an answer strictly citing sources in brackets `[Source Title]`.
+6. **Response Delivery**:
+   - Backend returns `{ "answer": "...", "sources": [...] }`.
+   - React UI displays the answer and clickable/formatted source cards.
 
 ---
 
@@ -66,7 +67,6 @@ A single Express.js process serving both static frontend assets and the minimal 
 
 ### 4.1. Health Check
 * **Method & Path**: `GET /api/health`
-* **Purpose**: Verify server is running and knowledge base is loaded in memory.
 * **Response (`200 OK`)**:
 ```json
 {
@@ -77,7 +77,6 @@ A single Express.js process serving both static frontend assets and the minimal 
 
 ### 4.2. Chat Query
 * **Method & Path**: `POST /api/chat`
-* **Purpose**: Ask travel questions and receive grounded answers.
 * **Request Body**:
 ```json
 {
@@ -87,7 +86,7 @@ A single Express.js process serving both static frontend assets and the minimal 
 * **Success Response (`200 OK`)**:
 ```json
 {
-  "answer": "Chợ Bến Thành (Ben Thanh Market) is Ho Chi Minh City's most iconic central market, located in District 1 at Quách Thị Trang Square [Chợ Bến Thành (Ben Thanh Market)]. Built in 1914, its south entrance clock tower is a universally recognized symbol of the city...",
+  "answer": "Chợ Bến Thành is Ho Chi Minh City's most iconic central market...",
   "sources": [
     {
       "title": "Chợ Bến Thành (Ben Thanh Market)",
@@ -104,28 +103,32 @@ A single Express.js process serving both static frontend assets and the minimal 
   "sources": []
 }
 ```
-* **Error Response (`400 Bad Request` / `500 Server Error`)**:
-```json
-{
-  "error": "Query message is required."
-}
-```
 
 ---
 
-## 5. Minimal Data Models
+## 5. Qdrant Collection Configuration & Data Models
 
+### 5.1. Qdrant Collection Spec
+* **Collection Name**: `hcmc_travel` (configurable via `QDRANT_COLLECTION_NAME`)
+* **Vector Dimension**: `3072` (matching Google Gemini `gemini-embedding-001`)
+* **Distance Metric**: `Cosine`
+* **Persistence**: Backed by named Docker volume `hcmc_qdrant_storage` mapped to `/qdrant/storage`
+* **Point Schema**:
 ```javascript
-// Chunk Model (Stored in memory and data/embeddings.json)
 {
-  id: "food_0",
-  title: "Cơm Tấm (Broken Rice)",
-  content: "Cơm tấm is the quintessential...",
-  source: "food.md",
-  embedding: [0.012, -0.045, ...] // 3072-dim Float array
+  id: 1, // Positive integer ID (1..N)
+  vector: [0.012, -0.045, ...], // 3072-dim float array
+  payload: {
+    id: "attractions_0",
+    title: "Chợ Bến Thành (Ben Thanh Market)",
+    content: "Chợ Bến Thành is Ho Chi Minh City's most iconic...",
+    source: "attractions.md"
+  }
 }
+```
 
-// Scored Chunk (Internal to Retriever)
+### 5.2. Scored Chunk (Retriever Output)
+```javascript
 {
   id: string,
   title: string,
@@ -133,24 +136,11 @@ A single Express.js process serving both static frontend assets and the minimal 
   source: string,
   score: number // Cosine similarity: 0.0 to 1.0
 }
-
-// Chat API Request
-{
-  message: string
-}
-
-// Chat API Response
-{
-  answer: string,
-  sources: [
-    { title: string, source: string, score: number }
-  ]
-}
 ```
 
 ---
 
-## 6. End-to-End RAG Pipeline & Thresholding
+## 6. End-to-End RAG Pipeline & Vector Database Choice
 
 ```
 [Markdown Files (data/knowledge/*.md)]
@@ -158,14 +148,14 @@ A single Express.js process serving both static frontend assets and the minimal 
                   ▼ (1) Header Chunking (split by '## ')
    [Plain Chunks: { id, title, content, source }]
                   │
-                  ▼ (2) Offline / Startup Indexing (gemini-embedding-001)
-   [data/embeddings.json loaded into memory array]
+                  ▼ (2) Indexing Execution (indexer.js -> Gemini Embeddings)
+   [Qdrant Collection: hcmc_travel (cosine: 3072-dim)]
                   │
              User Query
                   │
                   ▼ (3) Embed Query Vector (gemini.js)
                   │
-                  ▼ (4) Cosine Similarity Search (retriever.js)
+                  ▼ (4) Vector Similarity Query (retriever.js -> Qdrant /collections/hcmc_travel)
              [Top-K (K=3)]
                   │
                   ├─────────────────────────────┐
@@ -184,18 +174,12 @@ A single Express.js process serving both static frontend assets and the minimal 
                      Formatted API Response
 ```
 
-### Retrieval & Threshold Choice
-* **Top-K ($K = 3$)**: Keeps prompt size minimal, latency low, and provides sufficient context without distracting the LLM.
-* **Similarity Threshold ($0.60$)**:
-  - *Empirical Calibration*:
-    - Clearly answerable travel queries score $0.75 - 0.80+$.
-    - Partially related topics (e.g. general travel/transportation) score $0.62 - 0.66$.
-    - Completely irrelevant questions (e.g. *"What is linear algebra?"*) score $0.44$.
-    - Ambiguous short queries (e.g. *"Where should I go?"*) score $0.52$.
-  - Setting the cutoff at $0.60$ reliably prevents out-of-scope non-travel queries from reaching the LLM, reducing API costs and latency.
-* **Two-Layer Guardrail**:
-  1. *Layer 1 (Pre-LLM)*: Mathematical filter rejects queries with $\text{bestScore} < 0.60$.
-  2. *Layer 2 (In-Prompt)*: Strict prompt instructions force the LLM to output *"The knowledge base does not contain enough information to answer this question"* if facts are missing from retrieved chunks.
+### Vector Database Choice: Qdrant
+We migrated from Vectra to **Qdrant** for production-grade vector storage:
+1. **Dedicated Service Architecture**: Decouples vector indexing and search from the Node.js process.
+2. **True Persistence**: Robust disk persistence with write-ahead logs (WAL) via Docker volume (`hcmc_qdrant_storage`), surviving container restarts and shutdowns.
+3. **High-Performance HNSW Indexing**: Native Rust-powered vector indexing with sub-millisecond query latency.
+4. **Official REST Client SDK**: Seamless integration with `@qdrant/js-client-rest`.
 
 ---
 
@@ -203,45 +187,58 @@ A single Express.js process serving both static frontend assets and the minimal 
 
 ```
 HCMC_Travel/
-├── docs/
-│   ├── architecture.md       # Minimal architecture and specs
-│   └── agent-log.md          # Implementation progress log
+├── client/                   # React + Vite frontend
+│   ├── src/
+│   │   ├── components/       # UI components (HealthBadge, ChatForm, AnswerSection)
+│   │   ├── services/         # API fetch client
+│   │   ├── App.jsx           # Main chat UI
+│   │   ├── index.css         # Styling
+│   │   └── main.jsx
+│   ├── Dockerfile            # Node 22 build -> Nginx reverse proxy
+│   ├── nginx.conf            # Nginx config
+│   ├── package.json
+│   └── vite.config.js        # Vite dev server proxy
+├── server/                   # Node.js + Express backend
+│   ├── src/
+│   │   ├── config.js         # Configuration (Qdrant URL, models, threshold, topK)
+│   │   ├── rag/
+│   │   │   ├── chunker.js    # Markdown header chunking
+│   │   │   ├── gemini.js     # Gemini SDK client (embedText, generateAnswer)
+│   │   │   ├── vector_store.js # Qdrant client singleton & collection manager
+│   │   │   ├── indexer.js    # Indexes knowledge into Qdrant collection
+│   │   │   ├── retriever.js  # Top-K retrieval via Qdrant
+│   │   │   └── generator.js  # Grounded prompt generation
+│   │   └── server.js         # Express server & API routes
+│   ├── Dockerfile            # Node 22-alpine container image
+│   ├── package.json          # Dependencies (@google/genai, @qdrant/js-client-rest, express)
+│   ├── .env.example
+│   └── .env                  # Local backend configuration
 ├── data/
-│   ├── knowledge/            # Small, focused Markdown files
-│   │   ├── food.md           # HCMC food, street dishes, famous stalls
-│   │   ├── attractions.md    # Markets, museums, walking streets
-│   │   └── landmarks.md      # Historic buildings and architectural spots
-│   └── embeddings.json       # Generated chunk embeddings (in .gitignore)
-├── public/                   # Static frontend served by Express
-│   ├── index.html            # Minimal clean chat interface + source list
-│   ├── style.css             # Simple modern styling
-│   └── app.js                # Form submit, fetch /api/chat, render response & sources
-├── src/
-│   ├── config.js             # Environment variables (PORT, models, threshold, topK)
-│   ├── rag/
-│   │   ├── chunker.js        # Split markdown files by '## ' into chunks
-│   │   ├── gemini.js         # Gemini SDK wrapper (embedText, generateAnswer)
-│   │   ├── retriever.js      # Cosine similarity & top-K chunk retrieval
-│   │   ├── generator.js      # Grounded prompt construction & LLM invocation
-│   │   └── indexer.js        # Offline script to generate data/embeddings.json
-│   └── server.js             # Express app, routes, startup indexer
-├── .env.example              # Config keys (GEMINI_API_KEY, models, TOP_K, THRESHOLD)
-├── package.json              # Express, dotenv, @google/genai
-└── README.md                 # 2-step run instructions
+│   └── knowledge/            # Markdown knowledge files
+│       ├── food.md
+│       ├── attractions.md
+│       └── landmarks.md
+├── docs/
+│   ├── architecture.md       # Architecture & specifications
+│   ├── agent-log.md          # Progress & validation log
+│   └── learning-guide.md     # Comprehensive explanation guide
+├── docker-compose.yml        # Docker Compose configuration (Qdrant, Server, Client)
+├── .env.example              # Docker Compose environment template
+├── package.json              # Root orchestration scripts
+└── README.md
 ```
 
 ---
 
 ## 8. Out-of-Scope List
 
-* ❌ External database (MongoDB, PostgreSQL, SQLite).
-* ❌ External vector database (Pinecone, ChromaDB, Weaviate).
+* ❌ Remote cloud vector database instances (Pinecone, Qdrant Cloud).
+* ❌ Heavy relational / NoSQL database servers (PostgreSQL, MongoDB).
 * ❌ User authentication, sessions, or login.
 * ❌ Multi-turn conversational chat history.
 * ❌ Real-time web scraping / Google Search live grounding.
-* ❌ Category filtering (retrieval is purely semantic based on the query).
+* ❌ Admin document upload UI.
 * ❌ Agent / Tool Calling workflows.
-* ❌ Audio / Voice / Image features.
 
 ---
 
@@ -249,8 +246,9 @@ HCMC_Travel/
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| **Runtime & Framework** | Node.js + Express | Matches user familiarity; allows rapid coding and confident oral defense. |
-| **Vector Search** | In-Memory Cosine Similarity | ~15 lines of standard math loop. Fast (< 2ms for < 50 chunks), zero external dependencies, 100% explainable. |
-| **Decoupled RAG Pipeline** | `retriever.js` & `generator.js` | Retrieval and prompt generation are separate modules, allowing isolated unit testing. |
-| **Relevance Thresholding** | Pre-generation cutoff ($0.60$) | Blocks irrelevant queries before calling Gemini, saving latency and token budget. |
-| **Two-Tier Safety** | Threshold + Grounded Prompt | Pre-filter eliminates non-travel queries; prompt guardrail eliminates hallucination for unindexed travel queries. |
+| **Vector Database** | Qdrant (`qdrant/qdrant:latest`) | Enterprise-grade vector database with persistent storage volume, HNSW search, and REST client. |
+| **Containerization** | Docker Compose | Complete environment reproducibility for Qdrant, Express, and React with health checks. |
+| **Frontend Serving** | Nginx Alpine (Multi-stage) | Production-ready static React delivery with built-in `/api/` reverse proxy eliminating CORS concerns. |
+| **Persistence Strategy** | Named Volume `hcmc_qdrant_storage` | Preserves vectors across `docker compose down` and `docker compose up`. |
+| **Service Communication** | Internal Docker Bridge Network | `server` communicates with `http://qdrant:6333`, `client` proxies to `http://server:3000`. |
+| **Similarity Guardrail** | Pre-generation cutoff ($0.60$) | Filters out-of-scope non-travel queries before calling Gemini, saving latency and cost. |

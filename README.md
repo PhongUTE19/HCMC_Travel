@@ -1,6 +1,6 @@
 # HCMC Travel Assistant (RAG)
 
-A lightweight Ho Chi Minh City travel question-answering assistant using Retrieval-Augmented Generation (RAG) powered by Google Gemini and a verified local Markdown knowledge base.
+A lightweight Ho Chi Minh City travel question-answering assistant using Retrieval-Augmented Generation (RAG) powered by Google Gemini, Qdrant vector database, Express backend, and React frontend, fully containerized with Docker Compose.
 
 ---
 
@@ -8,88 +8,137 @@ A lightweight Ho Chi Minh City travel question-answering assistant using Retriev
 
 ```text
 HCMC_Travel/
-├── client/                 # React + Vite frontend (Port 5173)
+├── client/                 # React + Vite frontend (Port 5173 / Containerized Nginx)
 │   ├── src/
 │   │   ├── components/     # HealthBadge, ChatForm, AnswerSection, ErrorMessage
-│   │   ├── services/       # api.js (fetch client calling /api/health and /api/chat)
+│   │   ├── services/       # api.js (calls /api/health and /api/chat)
 │   │   ├── App.jsx         # Main application state & orchestration
 │   │   ├── index.css       # Clean design styles
 │   │   └── main.jsx        # React root entry
-│   ├── package.json
-│   └── vite.config.js      # Development proxy (/api -> http://localhost:3000)
+│   ├── Dockerfile          # Multi-stage build (Node 22 build -> Nginx reverse proxy)
+│   ├── nginx.conf          # Nginx config routing /api to Express backend
+│   └── package.json
 ├── server/                 # Node.js + Express backend (Port 3000)
 │   ├── src/
-│   │   ├── config.js       # Environment and model configurations
+│   │   ├── config.js       # Environment, Qdrant URL, and model configurations
 │   │   ├── server.js       # Express server & API endpoints
 │   │   └── rag/
-│   │       ├── chunker.js   # Section-based Markdown chunker (## headings)
-│   │       ├── gemini.js    # Google GenAI SDK wrapper (embedContent & generateContent)
-│   │       ├── retriever.js # In-memory cosine similarity and Top-K ranking
-│   │       ├── generator.js # Grounded prompt formatting & citation enforcement
-│   │       └── indexer.js   # Offline embedding generator (data/embeddings.json)
+│   │       ├── chunker.js      # Section-based Markdown chunker (## headings)
+│   │       ├── gemini.js       # Google GenAI SDK wrapper (embedContent & generateContent)
+│   │       ├── vector_store.js # Qdrant client singleton, init & point counting
+│   │       ├── indexer.js      # Vector indexing script inserting points to Qdrant
+│   │       ├── retriever.js    # Qdrant Top-K cosine similarity search
+│   │       └── generator.js    # Grounded prompt formatting & citation enforcement
+│   ├── Dockerfile          # Node 22-alpine container image
 │   ├── package.json
 │   ├── .env.example
-│   └── .env                # Secrets & model configurations
+│   └── .env                # Local development environment configuration
 ├── data/
-│   ├── knowledge/          # Controlled ground-truth Markdown documents
-│   │   ├── food.md
-│   │   ├── attractions.md
-│   │   └── landmarks.md
-│   └── embeddings.json     # Generated vector embeddings cache
+│   └── knowledge/          # Controlled ground-truth Markdown documents
+│       ├── food.md
+│       ├── attractions.md
+│       └── landmarks.md
 ├── docs/                   # Architecture, agent logs, and learning guide
-├── package.json            # Root workspace orchestration (concurrently)
+├── docker-compose.yml      # Multi-container orchestration (Qdrant, Server, Client)
+├── .env.example            # Root Docker Compose environment template
+├── package.json            # Root workspace orchestration scripts
 └── README.md
 ```
 
 ---
 
-## 2. Quickstart
+## 2. Docker Compose (Recommended)
 
 ### Prerequisites
-* Node.js (v18+)
-* A Google Gemini API key
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Docker Compose v2+.
+* A Google Gemini API Key.
 
-### Installation
-From the project root:
+### Step 1: Configure Environment Variables
+Create a root `.env` file from `.env.example`:
 ```bash
-npm run install:all
+cp .env.example .env
 ```
-*(Or install inside `server/` and `client/` manually: `cd server && npm install && cd ../client && npm install`).*
-
-### Configuration
-Ensure `server/.env` exists with your Gemini API key:
+Edit `.env` and provide your Gemini API key:
 ```env
-PORT=3000
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=your_actual_gemini_api_key_here
 GEMINI_MODEL=gemini-3.5-flash-lite
 EMBEDDING_MODEL=gemini-embedding-001
 TOP_K=3
 SIMILARITY_THRESHOLD=0.60
+QDRANT_COLLECTION_NAME=hcmc_travel
 ```
+
+### Step 2: Build & Start Containers
+```bash
+docker compose up -d
+```
+This starts three healthy services:
+* **`hcmc-qdrant`**: Qdrant Vector Database (:6333 REST, :6334 gRPC) with persistent volume `hcmc_qdrant_storage`.
+* **`hcmc-server`**: Express Backend (:3000).
+* **`hcmc-client`**: Nginx + React Frontend (:5173).
+
+### Step 3: Index Knowledge Base into Qdrant
+Run the indexing process inside the server container:
+```bash
+docker compose exec server npm run index
+```
+*(Or from root using npm script: `npm run docker:index`).*
+
+### Step 4: Open the Assistant
+Visit **http://localhost:5173** in your web browser.
 
 ---
 
-## 3. Running the Application
+## 3. Data Persistence Guarantee
 
-### 1. Index Knowledge Base (Generate Embeddings)
-Whenever knowledge documents in `data/knowledge/` change, run:
+Qdrant data is stored in the named Docker volume **`hcmc_qdrant_storage`**:
 ```bash
-npm run index
-```
-This parses the Markdown sections, requests vector embeddings, and writes `data/embeddings.json`.
+# Stop containers safely (preserves indexed vectors):
+docker compose down
 
-### 2. Start Client & Server Concurrently
-To start both the Express backend (:3000) and the React frontend (:5173):
-```bash
-npm run dev
+# Restart containers (all vectors remain immediately available):
+docker compose up -d
 ```
-
-Open your browser at:
-**http://localhost:5173**
+> **Important**: Do not use `docker compose down -v` unless you intentionally want to delete all vector embeddings.
 
 ---
 
-## 4. API Endpoints
+## 4. Local Development Without Docker (Optional)
 
-* `GET /api/health`: Returns server status and number of indexed chunks loaded in RAM.
-* `POST /api/chat`: Accepts `{ "message": "string" }` and returns `{ "answer": "...", "sources": [...] }`.
+If running directly on the host machine:
+
+1. Ensure Qdrant is running (e.g., via Docker on `:6333` or standalone binary).
+2. Install dependencies:
+   ```bash
+   npm run install:all
+   ```
+3. Ensure `server/.env` contains your `GEMINI_API_KEY` and `QDRANT_URL=http://localhost:6333`.
+4. Index the knowledge base:
+   ```bash
+   npm run index
+   ```
+5. Start backend and frontend concurrently:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 5. API Endpoints
+
+* **`GET /api/health`**: Returns `{ "status": "ok", "indexedChunks": 13 }`.
+* **`POST /api/chat`**:
+  - Request: `{ "message": "What is Ben Thanh Market?" }`
+  - Response:
+    ```json
+    {
+      "answer": "Chợ Bến Thành is Ho Chi Minh City's most iconic central market...",
+      "sources": [
+        {
+          "title": "Chợ Bến Thành (Ben Thanh Market)",
+          "source": "attractions.md",
+          "score": 0.77
+        }
+      ]
+    }
+    ```
