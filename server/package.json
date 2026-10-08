@@ -1,0 +1,26 @@
+{
+  "name": "hcmc-travel-server",
+  "version": "1.0.0",
+  "description": "Small HCMC Travel Assistant with RAG",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node src/server.js",
+    "index": "node src/rag/indexer.js"
+  },
+  "keywords": [
+    "hcmc",
+    "travel",
+    "rag",
+    "gemini",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^2.27.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

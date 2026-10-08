@@ -116,5 +116,100 @@
   - Confirmed via spy assertion that neither `generateGroundedAnswer()` nor the Gemini generation API is invoked for rejected queries.
 
 ### 6. Next Phase
-* Phase 4: UI integration and polish (e.g. sample suggestion chips, responsive styling, or React frontend as specified for later phases).
+* Phase 4: React frontend integration with Vite.
+
+---
+
+## Log Entry: 2026-10-08 (Phase 4: React Frontend Integration)
+
+### 1. Scope & Implementation
+* **React Frontend Scaffold (`client/`)**:
+  - Initialized Vite + React 18 frontend inside `client/`.
+  - Configured `client/vite.config.js` with development proxy (`/api` -> `http://localhost:3000`).
+* **Component Architecture**:
+  - `client/src/services/api.js`: Handles communication with `GET /api/health` and `POST /api/chat`.
+  - `client/src/components/HealthBadge.jsx`: Real-time health badge reporting backend connection status and count of indexed chunks.
+  - `client/src/components/ChatForm.jsx`: Text input with submission handler, disabling during submission, and empty-input validation.
+  - `client/src/components/AnswerSection.jsx`: Formatted answer display with interactive source citation cards (`title`, `source`, `score`).
+  - `client/src/components/ErrorMessage.jsx`: User-facing alert box for network/server errors.
+  - `client/src/App.jsx`: Main state orchestration, sample question chips for quick testing, and loading indicators.
+  - `client/src/index.css`: Clean vanilla CSS design system.
+* **Backend Adjustments**:
+  - Added `cors` middleware to `src/server.js` to ensure flexible multi-origin support.
+  - **Zero changes** to RAG pipeline modules (`retriever.js`, `generator.js`, `gemini.js`, `chunker.js`, `indexer.js`).
+
+### 2. React → API → RAG Flow
+```
+User clicks/enters query in React (ChatForm)
+   │
+   ▼
+client/src/services/api.js (fetch '/api/chat')
+   │
+   ▼ (Vite Proxy: localhost:5173 -> localhost:3000)
+Express Backend (src/server.js: POST /api/chat)
+   │
+   ▼
+retriever.js (embedText -> cosine similarity -> Top-3)
+   │
+   ├─────────────────────────────────────────────────┐
+bestScore < 0.60 (Out-of-Scope)           bestScore >= 0.60 (Accepted)
+   │                                                 │
+   ▼                                                 ▼
+Safe Fallback Response                   generator.js (buildGroundedPrompt -> gemini.js)
+(Gemini generation skipped)                          │
+sources: []                                          ▼
+   │                                     Answer + Sources [{ title, source, score }]
+   └───────────────────────┬─────────────────────────┘
+                           ▼
+React App receives JSON { answer, sources }
+   │
+   ▼
+Rendered in AnswerSection component
+```
+
+### 3. Validation Results
+
+| Test Scenario | Action | Observed Result | Status |
+|---|---|---|---|
+| **1. Health Check** | React mounts, calls `/api/health` | Badge displays `● Server: Online \| Memory: 13 indexed chunks`. | **PASSED** |
+| **2. In-Scope Query** | `"What is Ben Thanh Market?"` | Answer returned in ~1.2s citing `[Chợ Bến Thành (Ben Thanh Market)]`; 3 sources displayed with scores. | **PASSED** |
+| **3. Out-of-Scope Query** | `"What is linear algebra?"` | Immediate refusal returned; `sources: []`; Gemini generation skipped. | **PASSED** |
+| **4. Empty Input Handling** | User clicks Send with empty or whitespace input | Button disabled; form blocks submit; client service rejects with error. | **PASSED** |
+| **5. Loading State** | Active query processing | Input disabled, button shows "Thinking...", animated spinner displayed. | **PASSED** |
+| **6. Error State** | Server failure / invalid input simulation | Error box displayed cleanly without app crash. | **PASSED** |
+| **7. Backend Non-Regression** | Git diff audit on `src/` | Verified zero changes to `retriever.js`, `generator.js`, `gemini.js`, `indexer.js`, or `chunker.js`. | **PASSED** |
+
+### 4. Known Issues / Observations
+* None. Development proxy and CORS both operate seamlessly; API contracts remain identical (`{ message }` -> `{ answer, sources }`).
+
+---
+
+## Log Entry: 2026-10-08 (Project Structure & Workspace Refactoring)
+
+### 1. Scope & Implementation
+* **Directory Reorganization**:
+  - Moved backend source from `src/` to `server/src/`.
+  - Moved backend `package.json`, `package-lock.json`, `.env`, and `.env.example` into `server/`.
+  - Kept `data/` and `docs/` at the project root as shared ground truth.
+  - Removed deprecated `public/` directory (vanilla frontend replaced by React in `client/`).
+* **Path & Configuration Alignment**:
+  - Updated `server/src/config.js` to resolve `projectRoot` up two directories (`path.resolve(__dirname, '..', '..')`) ensuring `data/knowledge/` and `data/embeddings.json` are properly addressed.
+  - Configured `dotenv.config({ path: path.join(serverRoot, '.env') })` to guarantee environment loading regardless of execution CWD.
+  - Removed obsolete static `public/` mounting from `server/src/server.js`.
+* **Root Orchestration (`package.json`)**:
+  - Configured root `package.json` with `concurrently` scripts:
+    - `npm run dev`: starts both `server` (port 3000) and `client` (port 5173).
+    - `npm run server`: starts the Express backend (`npm --prefix server start`).
+    - `npm run client`: starts the Vite dev server (`npm --prefix client dev`).
+    - `npm run index`: executes the indexing pipeline from the root (`npm --prefix server run index`).
+* **Documentation**:
+  - Created root [README.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\README.md) with updated structure, setup instructions, and startup commands.
+
+### 2. Validation
+* Verified `npm run index` from root loads `data/knowledge` and updates `data/embeddings.json`.
+* Verified root `npm run dev` boots Express on port 3000 and React on port 5173 concurrently.
+* Verified `/api/health` and `/api/chat` end-to-end functionality via Vite proxy and CORS.
+* Zero changes made to RAG core logic (`retriever.js`, `generator.js`, `gemini.js`).
+
+
 

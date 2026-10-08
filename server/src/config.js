@@ -2,12 +2,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-// Load environment variables from .env
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
+const serverRoot = path.resolve(__dirname, '..');
+const projectRoot = path.resolve(serverRoot, '..');
+
+// Load environment variables from server/.env
+dotenv.config({ path: path.join(serverRoot, '.env') });
 
 export const config = {
   port: process.env.PORT || 3000,

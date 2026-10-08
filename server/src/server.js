@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cors from 'cors';
 import { config } from './config.js';
 import { retrieveRelevantChunks } from './rag/retriever.js';
 import { generateGroundedAnswer } from './rag/generator.js';
@@ -13,8 +14,8 @@ const projectRoot = path.resolve(__dirname, '..');
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(projectRoot, 'public')));
 
 // In-memory store for loaded embeddings
 let inMemoryChunks = [];
