@@ -10,6 +10,9 @@ let qdrantClientInstance = null;
  */
 export function getVectorStore() {
   if (!qdrantClientInstance) {
+    if (!config.qdrantUrl) {
+      throw new Error('[VectorStore] QDRANT_URL is not configured. Please set QDRANT_URL in your environment or .env file.');
+    }
     qdrantClientInstance = new QdrantClient({
       url: config.qdrantUrl,
       apiKey: config.qdrantApiKey || undefined,

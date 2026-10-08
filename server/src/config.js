@@ -7,8 +7,7 @@ const __dirname = path.dirname(__filename);
 const serverRoot = path.resolve(__dirname, '..');
 const projectRoot = path.resolve(serverRoot, '..');
 
-// Load environment variables from server/.env
-dotenv.config({ path: path.join(serverRoot, '.env') });
+dotenv.config({ path: path.join(projectRoot, '.env') });
 
 export const config = {
   port: parseInt(process.env.PORT || '3000', 10),
@@ -18,7 +17,7 @@ export const config = {
   similarityThreshold: parseFloat(process.env.SIMILARITY_THRESHOLD || '0.60'),
   topK: parseInt(process.env.TOP_K || '3', 10),
   knowledgeDir: process.env.KNOWLEDGE_DIR || path.join(projectRoot, 'data', 'knowledge'),
-  qdrantUrl: process.env.QDRANT_URL || 'http://localhost:6333',
+  qdrantUrl: process.env.QDRANT_URL || '',
   qdrantApiKey: process.env.QDRANT_API_KEY || '',
   qdrantCollection: process.env.QDRANT_COLLECTION_NAME || 'hcmc_travel',
   vectorSize: 3072,

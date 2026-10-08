@@ -13,10 +13,6 @@ COPY src/ ./src/
 RUN mkdir -p /app/data/knowledge
 
 ENV NODE_ENV=production
-ENV PORT=3000
-ENV KNOWLEDGE_DIR=/app/data/knowledge
-ENV QDRANT_URL=http://qdrant:6333
-ENV QDRANT_COLLECTION_NAME=hcmc_travel
 
 EXPOSE 3000
 

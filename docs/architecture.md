@@ -2,42 +2,45 @@
 
 ## 1. Goal & Context
 * **Project**: A containerized HCMC Travel Assistant using Retrieval-Augmented Generation (RAG).
-* **Stack**: React (Vite / Nginx) + Node.js (Express) + Qdrant Vector Database + Google Gemini API.
-* **Core Philosophy**: Clean separation of concerns, containerized via Docker Compose, reproducible environment with zero host dependency issues.
+* **Stack**: React (Vite / Nginx) + Node.js (Express) + Qdrant Cloud + Google Gemini API.
+* **Core Philosophy**: Clean separation of concerns, containerized via Docker Compose, reproducible environment with managed cloud vector storage.
 
 ---
 
-## 2. Containerized Multi-Service Architecture
+## 2. Containerized Multi-Service Architecture (with Qdrant Cloud)
 
-The system is organized into three services managed by Docker Compose within a shared internal bridge network:
+The system consists of two containerized application services managed by Docker Compose, communicating externally with **Qdrant Cloud** and **Google Gemini API**:
 
 ```
 +-----------------------------------------------------------------------------------------+
 |                                    Docker Host Network                                  |
 |                                                                                         |
-|        Host Port 5173                          Host Port 3000          Host Port 6333   |
-|              │                                       │                       │          |
-+--------------┼───────────────────────────────────────┼───────────────────────┼----------+
-|              ▼                                       ▼                       ▼          |
-|  +─────────────────────────+          +─────────────────────────+  +──────────────────+ |
-|  |     hcmc-client         |          |       hcmc-server       |  |   hcmc-qdrant    | |
-|  |   (Nginx :80)           |          |   (Express :3000)       |  |  (Qdrant :6333)  | |
-|  |                         |          |                         |  |                  | |
-|  | - Serves React bundle   |  proxy   | - Health Check Endpoint |  | - Vector Search  | |
-|  | - Reverse-proxies /api/ ├─────────►| - RAG Pipeline Router   |  | - Payload Store  | |
-|  |   to http://server:3000 |          | - Similarity Gate (0.60)|  | - HNSW Index     | |
-|  |                         |          | - Grounded Gen (Gemini) |  |                  | |
-|  +─────────────────────────+          +────────────┬────────────+  +────────┬─────────+ |
-|                                                    │                        │           |
-|                                                    │  http://qdrant:6333    │           |
-|                                                    └───────────────────────►│           |
-|                                                                             │           |
-|                                                     +───────────────────────┴────────+  |
-|                                                     | Named Volume:                  |  |
-|                                                     | hcmc_qdrant_storage            |  |
-|                                                     | (/qdrant/storage)              |  |
-|                                                     +────────────────────────────────+  |
-+-----------------------------------------------------------------------------------------+
+|        Host Port 5173                          Host Port 3000                           |
+|              │                                       │                                  |
++--------------┼───────────────────────────────────────┼──────────────────────────────────+
+|              ▼                                       ▼                                  |
+|  +─────────────────────────+          +─────────────────────────+                       |
+|  |     hcmc-client         |          |       hcmc-server       |                       |
+|  |   (Nginx :80)           |          |   (Express :3000)       |                       |
+|  |                         |          |                         |                       |
+|  | - Serves React bundle   |  proxy   | - Health Check Endpoint |                       |
+|  | - Reverse-proxies /api/ ├─────────►| - RAG Pipeline Router   |                       |
+|  |   to http://server:3000 |          | - Similarity Gate (0.60)|                       |
+|  |                         |          | - Grounded Gen (Gemini) |                       |
+|  +─────────────────────────+          +────────────┬────────────+                       |
++----------------------------------------------------┼────────────────────────────────----+
+                                                     │
+                                                     │  HTTPS (REST API)
+                                                     ▼
+                                        +─────────────────────────+
+                                        |      Qdrant Cloud       |
+                                        | (Managed Cluster :6333) |
+                                        |                         |
+                                        | - 3072-dim Cosine Index |
+                                        | - Secure API Key Auth   |
+                                        | - Managed Persistence   |
+                                        | - High-Performance HNSW|
+                                        +─────────────────────────+
 ```
 
 ---
@@ -47,8 +50,8 @@ The system is organized into three services managed by Docker Compose within a s
 1. **User queries the Assistant** in the React web interface (e.g., *"What is Ben Thanh Market?"*).
 2. **Frontend issues request** to `/api/chat` via Nginx reverse proxy, which forwards to `http://server:3000/api/chat`.
 3. **Retrieval step (`server/src/rag/retriever.js`)**:
-   - Query text is vectorized into 3072-dimensional embedding using `embedText()` (Gemini `gemini-embedding-001`).
-   - Query embedding is sent via `@qdrant/js-client-rest` to Qdrant collection `hcmc_travel` using cosine similarity.
+   - Query text is vectorized into a 3072-dimensional embedding using `embedText()` (Gemini `gemini-embedding-001`).
+   - Query embedding is sent via `@qdrant/js-client-rest` over HTTPS with `QDRANT_API_KEY` to Qdrant Cloud collection `hcmc_travel` using cosine similarity.
    - Top-K ($K=3$) most relevant chunks with payload metadata are returned.
 4. **Relevance / Guardrail Check**:
    - If `bestScore < 0.60` (`SIMILARITY_THRESHOLD`):
@@ -59,7 +62,7 @@ The system is organized into three services managed by Docker Compose within a s
    - Gemini (`gemini-3.5-flash-lite`) generates an answer strictly citing sources in brackets `[Source Title]`.
 6. **Response Delivery**:
    - Backend returns `{ "answer": "...", "sources": [...] }`.
-   - React UI displays the answer and clickable/formatted source cards.
+   - React UI displays the answer and formatted source cards.
 
 ---
 
@@ -106,13 +109,14 @@ The system is organized into three services managed by Docker Compose within a s
 
 ---
 
-## 5. Qdrant Collection Configuration & Data Models
+## 5. Qdrant Cloud Collection Configuration & Data Models
 
-### 5.1. Qdrant Collection Spec
+### 5.1. Qdrant Cloud Collection Spec
 * **Collection Name**: `hcmc_travel` (configurable via `QDRANT_COLLECTION_NAME`)
 * **Vector Dimension**: `3072` (matching Google Gemini `gemini-embedding-001`)
 * **Distance Metric**: `Cosine`
-* **Persistence**: Backed by named Docker volume `hcmc_qdrant_storage` mapped to `/qdrant/storage`
+* **Cluster Connection**: Managed Qdrant Cloud endpoint (`https://<cluster-id>.<region>.cloud.qdrant.io:6333`)
+* **Authentication**: Secret API Key passed in `api-key` header
 * **Point Schema**:
 ```javascript
 {
@@ -140,7 +144,7 @@ The system is organized into three services managed by Docker Compose within a s
 
 ---
 
-## 6. End-to-End RAG Pipeline & Vector Database Choice
+## 6. End-to-End RAG Pipeline & Cloud Vector Database Choice
 
 ```
 [Markdown Files (data/knowledge/*.md)]
@@ -149,13 +153,13 @@ The system is organized into three services managed by Docker Compose within a s
    [Plain Chunks: { id, title, content, source }]
                   │
                   ▼ (2) Indexing Execution (indexer.js -> Gemini Embeddings)
-   [Qdrant Collection: hcmc_travel (cosine: 3072-dim)]
+   [Qdrant Cloud: hcmc_travel (cosine: 3072-dim)]
                   │
              User Query
                   │
                   ▼ (3) Embed Query Vector (gemini.js)
                   │
-                  ▼ (4) Vector Similarity Query (retriever.js -> Qdrant /collections/hcmc_travel)
+                  ▼ (4) Vector Similarity Query (retriever.js -> Qdrant Cloud HTTPS)
              [Top-K (K=3)]
                   │
                   ├─────────────────────────────┐
@@ -174,12 +178,12 @@ The system is organized into three services managed by Docker Compose within a s
                      Formatted API Response
 ```
 
-### Vector Database Choice: Qdrant
-We migrated from Vectra to **Qdrant** for production-grade vector storage:
-1. **Dedicated Service Architecture**: Decouples vector indexing and search from the Node.js process.
-2. **True Persistence**: Robust disk persistence with write-ahead logs (WAL) via Docker volume (`hcmc_qdrant_storage`), surviving container restarts and shutdowns.
-3. **High-Performance HNSW Indexing**: Native Rust-powered vector indexing with sub-millisecond query latency.
-4. **Official REST Client SDK**: Seamless integration with `@qdrant/js-client-rest`.
+### Cloud Vector Database Choice: Qdrant Cloud
+We migrated from local self-hosted Qdrant to **Qdrant Cloud**:
+1. **Zero Host Overhead**: No need to manage or allocate RAM/CPU for a local database container on developer machines.
+2. **Managed Cloud Persistence**: Vector backups, clustering, high availability, and storage lifecycle are fully managed.
+3. **Consistent Deployment**: Both local developers and containerized CI/CD environments connect to the same reliable cloud vector database.
+4. **Clean Decoupling**: Docker Compose only contains application workloads (`client` and `server`), avoiding stateful volume management on local Docker hosts.
 
 ---
 
@@ -200,19 +204,18 @@ HCMC_Travel/
 │   └── vite.config.js        # Vite dev server proxy
 ├── server/                   # Node.js + Express backend
 │   ├── src/
-│   │   ├── config.js         # Configuration (Qdrant URL, models, threshold, topK)
+│   │   ├── config.js         # Configuration (Qdrant Cloud URL, models, threshold, topK)
 │   │   ├── rag/
 │   │   │   ├── chunker.js    # Markdown header chunking
 │   │   │   ├── gemini.js     # Gemini SDK client (embedText, generateAnswer)
 │   │   │   ├── vector_store.js # Qdrant client singleton & collection manager
-│   │   │   ├── indexer.js    # Indexes knowledge into Qdrant collection
-│   │   │   ├── retriever.js  # Top-K retrieval via Qdrant
+│   │   │   ├── indexer.js    # Indexes knowledge into Qdrant Cloud
+│   │   │   ├── retriever.js  # Top-K retrieval via Qdrant Cloud
 │   │   │   └── generator.js  # Grounded prompt generation
 │   │   └── server.js         # Express server & API routes
 │   ├── Dockerfile            # Node 22-alpine container image
 │   ├── package.json          # Dependencies (@google/genai, @qdrant/js-client-rest, express)
-│   ├── .env.example
-│   └── .env                  # Local backend configuration
+│   └── .env                  # Local backend configuration (ignored by Git)
 ├── data/
 │   └── knowledge/            # Markdown knowledge files
 │       ├── food.md
@@ -222,8 +225,8 @@ HCMC_Travel/
 │   ├── architecture.md       # Architecture & specifications
 │   ├── agent-log.md          # Progress & validation log
 │   └── learning-guide.md     # Comprehensive explanation guide
-├── docker-compose.yml        # Docker Compose configuration (Qdrant, Server, Client)
-├── .env.example              # Docker Compose environment template
+├── docker-compose.yml        # Docker Compose configuration (Server, Client)
+├── .env.example              # Unified environment template
 ├── package.json              # Root orchestration scripts
 └── README.md
 ```
@@ -232,7 +235,6 @@ HCMC_Travel/
 
 ## 8. Out-of-Scope List
 
-* ❌ Remote cloud vector database instances (Pinecone, Qdrant Cloud).
 * ❌ Heavy relational / NoSQL database servers (PostgreSQL, MongoDB).
 * ❌ User authentication, sessions, or login.
 * ❌ Multi-turn conversational chat history.
@@ -246,9 +248,8 @@ HCMC_Travel/
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| **Vector Database** | Qdrant (`qdrant/qdrant:latest`) | Enterprise-grade vector database with persistent storage volume, HNSW search, and REST client. |
-| **Containerization** | Docker Compose | Complete environment reproducibility for Qdrant, Express, and React with health checks. |
-| **Frontend Serving** | Nginx Alpine (Multi-stage) | Production-ready static React delivery with built-in `/api/` reverse proxy eliminating CORS concerns. |
-| **Persistence Strategy** | Named Volume `hcmc_qdrant_storage` | Preserves vectors across `docker compose down` and `docker compose up`. |
-| **Service Communication** | Internal Docker Bridge Network | `server` communicates with `http://qdrant:6333`, `client` proxies to `http://server:3000`. |
+| **Vector Database** | Qdrant Cloud | Managed vector database in the cloud, removing local container and volume maintenance. |
+| **Authentication** | API Key (`api-key` header) | Secure authentication with Qdrant Cloud cluster; key stored strictly in environment variables. |
+| **Containerization** | Docker Compose (`server` + `client`) | Light application containers; stateless and easily deployable anywhere. |
+| **Unified Environment Configuration** | Root `.env` & `.env.example` | Eliminates duplicated `.env` files across root and server; both Docker and local Node load root `.env`. |
 | **Similarity Guardrail** | Pre-generation cutoff ($0.60$) | Filters out-of-scope non-travel queries before calling Gemini, saving latency and cost. |

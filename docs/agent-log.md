@@ -303,8 +303,40 @@ Rendered in AnswerSection component
 | 8 | **Volume Persistence** | `docker compose down` then `docker compose up -d` | Containers recreated; all 13 points in collection `hcmc_travel` persisted in volume `hcmc_qdrant_storage`. | **PASSED** |
 | 9 | **Health Post-Restart** | `GET /api/health` after restart | Immediately returned `{"status":"ok","indexedChunks":13}` without needing re-indexing. | **PASSED** |
 | 10| **Frontend-Backend Comms** | `POST /api/chat` via `:5173` after restart | Nginx proxied request to `server:3000`, returned grounded response for `"Tell me about Saigon Central Post Office"`. | **PASSED** |
+---
 
+## Log Entry: 2026-10-09 (Qdrant Cloud Migration & Docker Streamlining)
 
+### 1. Scope & Motivation
+* Migrated from self-hosted local Qdrant container to managed **Qdrant Cloud**.
+* Streamlined Docker Compose architecture:
+  - Removed local `hcmc-qdrant` container, ports 6333-6334, and named volume `hcmc_qdrant_storage`.
+  - Docker Compose now runs application workloads (`server` and `client`).
+  - `server` communicates directly over HTTPS with Qdrant Cloud using `QDRANT_URL` and `QDRANT_API_KEY`.
+* Consolidated environment variable architecture:
+  - Audited environment variables between Docker and Express server.
+  - Removed redundant `server/.env.example` in favor of single root `.env.example`.
+  - Configured `server/src/config.js` to load both `server/.env` and `projectRoot/.env`.
 
+### 2. Implementation Changes
+* **Docker Compose (`docker-compose.yml`)**:
+  - Removed `qdrant` service and `qdrant_storage` volume.
+  - Removed `depends_on: qdrant` from `server`.
+  - Added `QDRANT_URL=${QDRANT_URL}` and `QDRANT_API_KEY=${QDRANT_API_KEY}` to `server` environment.
+* **Server Dockerfile (`server/Dockerfile`)**:
+  - Removed obsolete local container default `ENV QDRANT_URL=http://qdrant:6333`.
+* **Configuration & Environment**:
+  - [server/src/config.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\config.js): Added fallback loading for `projectRoot/.env` and updated `qdrantUrl` default.
+  - [server/src/rag/vector_store.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\rag\vector_store.js): Added explicit configuration check for `QDRANT_URL`.
+  - [.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\.env.example): Updated with Qdrant Cloud settings (`QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION_NAME`).
+  - Deleted obsolete duplicate `server/.env.example`.
+* **Documentation**:
+  - Updated [README.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\README.md) and [docs/architecture.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\docs\architecture.md) for Qdrant Cloud.
 
+### 3. Validation Matrix
 
+| # | Validation Item | Test Action | Observed Result | Status |
+|---|---|---|---|---|
+| 1 | **Docker Image Build** | `docker compose build` | Successfully built `hcmc_travel-server:latest` and `hcmc_travel-client:latest` with zero errors. | **PASSED** |
+| 2 | **Local Qdrant Removal** | Inspected `docker-compose.yml` & stopped old local containers | Local Qdrant container and volume `hcmc_qdrant_storage` cleanly removed. | **PASSED** |
+| 3 | **Git / Secret Leak Audit** | Git status and code inspection | Zero API keys committed or tracked by Git; all secrets sourced from `.env`. | **PASSED** |
