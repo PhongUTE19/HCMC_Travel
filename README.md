@@ -11,7 +11,7 @@ HCMC_Travel/
 ├── client/                 # React + Vite frontend (Port 5173 / Containerized Nginx)
 │   ├── src/
 │   │   ├── components/     # HealthBadge, ChatForm, AnswerSection, ErrorMessage
-│   │   ├── services/       # api.js (calls /api/health and /api/chat)
+│   │   ├── services/       # userApi.js (/api/user/chat), adminApi.js (/api/admin/*)
 │   │   ├── App.jsx         # Main application state & orchestration
 │   │   ├── index.css       # Clean design styles
 │   │   └── main.jsx        # React root entry
@@ -128,7 +128,7 @@ If running directly on the host machine:
 ## 5. API Endpoints
 
 * **`GET /api/health`**: Returns `{ "status": "ok", "indexedChunks": 13 }`.
-* **`POST /api/chat`**:
+* **`POST /api/user/chat`**:
   - Request: `{ "message": "What is Ben Thanh Market?" }`
   - Response:
     ```json

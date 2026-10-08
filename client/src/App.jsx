@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import HealthBadge from './components/HealthBadge';
-import ChatForm from './components/ChatForm';
-import AnswerSection from './components/AnswerSection';
-import ErrorMessage from './components/ErrorMessage';
-import { fetchHealth, sendChatMessage } from './services/api';
+import UserChatView from './components/user/UserChatView';
+import AdminDashboard from './components/admin/AdminDashboard';
+import { fetchHealth } from './services/userApi';
 
 export default function App() {
+  const [role, setRole] = useState('user'); // 'user' | 'admin'
   const [health, setHealth] = useState({
     status: '',
     indexedChunks: 0,
@@ -13,12 +13,8 @@ export default function App() {
     error: null,
   });
 
-  const [loading, setLoading] = useState(false);
-  const [answerData, setAnswerData] = useState(null);
-  const [error, setError] = useState(null);
-
-  // Check backend health on initial load
-  useEffect(() => {
+  // Check backend health on initial load or role switch
+  const checkHealth = () => {
     fetchHealth()
       .then((data) => {
         setHealth({
@@ -36,36 +32,38 @@ export default function App() {
           error: err.message,
         });
       });
-  }, []);
-
-  const handleSendMessage = async (message) => {
-    setError(null);
-    setLoading(true);
-
-    try {
-      const data = await sendChatMessage(message);
-      setAnswerData(data);
-    } catch (err) {
-      setError(err.message || 'Failed to communicate with assistant.');
-      setAnswerData(null);
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const sampleQuestions = [
-    'What is Ben Thanh Market?',
-    'Where can I eat Com Tam broken rice?',
-    'What is linear algebra?',
-  ];
+  useEffect(() => {
+    checkHealth();
+  }, [role]);
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${role === 'admin' ? 'app-container--admin' : ''}`}>
       <header className="app-header">
-        <h1 className="app-title">HCMC Travel Assistant</h1>
-        <p className="app-subtitle">
-          React Frontend with Local RAG & Google Gemini
-        </p>
+        <div className="header-top-row">
+          <div>
+            <h1 className="app-title">HCMC Travel Assistant</h1>
+            <p className="app-subtitle">
+              {role === 'user'
+                ? 'React Frontend with RAG & Google Gemini'
+                : 'Admin Knowledge Base Manager'}
+            </p>
+          </div>
+          <div className="header-actions">
+            <button
+              id="role-switch-btn"
+              className={`role-switch-btn ${role === 'admin' ? 'role-switch-btn--admin' : ''}`}
+              onClick={() => {
+                setRole(role === 'user' ? 'admin' : 'user');
+              }}
+              title={role === 'user' ? 'Switch to Knowledge Management' : 'Switch back to Chat Interface'}
+            >
+              {role === 'user' ? '⚙ Switch to Admin' : '💬 Switch to User'}
+            </button>
+          </div>
+        </div>
+
         <HealthBadge
           status={health.status}
           indexedChunks={health.indexedChunks}
@@ -74,38 +72,7 @@ export default function App() {
         />
       </header>
 
-      <main className="app-main">
-        <div className="sample-chips">
-          <span className="chips-label">Quick test:</span>
-          {sampleQuestions.map((q, idx) => (
-            <button
-              key={idx}
-              className="chip-btn"
-              disabled={loading}
-              onClick={() => handleSendMessage(q)}
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-
-        <ChatForm onSubmit={handleSendMessage} loading={loading} />
-
-        {loading && (
-          <div className="status-msg loading-msg">
-            <span className="spinner"></span> Thinking... Retrieving context and generating response...
-          </div>
-        )}
-
-        <ErrorMessage message={error} />
-
-        {answerData && (
-          <AnswerSection
-            answer={answerData.answer}
-            sources={answerData.sources}
-          />
-        )}
-      </main>
+      {role === 'user' ? <UserChatView /> : <AdminDashboard />}
     </div>
   );
 }

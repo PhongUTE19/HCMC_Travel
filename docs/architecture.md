@@ -48,7 +48,7 @@ The system consists of two containerized application services managed by Docker 
 ## 3. Core User Workflow
 
 1. **User queries the Assistant** in the React web interface (e.g., *"What is Ben Thanh Market?"*).
-2. **Frontend issues request** to `/api/chat` via Nginx reverse proxy, which forwards to `http://server:3000/api/chat`.
+2. **Frontend issues request** to `/api/user/chat` via Nginx reverse proxy, which forwards to `http://server:3000/api/user/chat`.
 3. **Retrieval step (`server/src/rag/retriever.js`)**:
    - Query text is vectorized into a 3072-dimensional embedding using `embedText()` (Gemini `gemini-embedding-001`).
    - Query embedding is sent via `@qdrant/js-client-rest` over HTTPS with `QDRANT_API_KEY` to Qdrant Cloud collection `hcmc_travel` using cosine similarity.
@@ -58,7 +58,7 @@ The system consists of two containerized application services managed by Docker 
      - The query is deemed out-of-scope or ungrounded.
      - Backend immediately returns a safe refusal with `sources: []`, skipping the LLM call entirely.
 5. **Grounded Generation step (`server/src/rag/generator.js`)**:
-   - If accepted (`bestScore >= 0.60`), retrieved chunk contents are assembled into a strictly grounded prompt.
+   - If accepted (`bestScore >= 0.60`), the generator dynamically reads the active system prompt (from persistent storage `data/system_prompt.txt`) and retrieved chunk contents into a strictly grounded prompt.
    - Gemini (`gemini-3.5-flash-lite`) generates an answer strictly citing sources in brackets `[Source Title]`.
 6. **Response Delivery**:
    - Backend returns `{ "answer": "...", "sources": [...] }`.
@@ -78,8 +78,8 @@ The system consists of two containerized application services managed by Docker 
 }
 ```
 
-### 4.2. Chat Query
-* **Method & Path**: `POST /api/chat`
+### 4.2. User Chat Query
+* **Method & Path**: `POST /api/user/chat`
 * **Request Body**:
 ```json
 {
@@ -106,6 +106,56 @@ The system consists of two containerized application services managed by Docker 
   "sources": []
 }
 ```
+
+### 4.3. Admin Management Endpoints
+* **`GET /api/admin/status`**:
+  - Response: `{ documentCount, totalFileChunks, indexedChunks, isIndexing, lastIndexedAt, isSynced }`
+* **`GET /api/admin/documents`**:
+  - Response: `{ documents: [{ filename, size, modifiedAt, sectionCount }] }`
+* **`GET /api/admin/documents/:filename`**:
+  - Response: `{ filename, content }`
+* **`POST /api/admin/documents`**:
+  - Request Body: `{ filename, content, overwrite? }`
+  - Response (`201 Created`): `{ success: true, filename, message }`
+* **`PUT /api/admin/documents/:filename`**:
+  - Request Body: `{ content }`
+  - Response (`200 OK`): `{ success: true, filename, message }`
+* **`DELETE /api/admin/documents/:filename`**:
+  - Response (`200 OK`): `{ success: true, filename, message }`
+* **`GET /api/admin/chunks`** (Paginated with Server-side Search):
+  - **Query Parameters**:
+    - `limit`: Number of chunks returned per batch. Supported options: `10`, `30`, `50`. Default: `10`. Maximum: `50`.
+    - `offset`: Zero-based start index. Default: `0`.
+    - `q` / `search`: Optional search query string. Filters chunks matching `id`, `title`, `source`, or `content` before slicing.
+  - **Response (`200 OK`)**:
+    ```json
+    {
+      "totalChunks": 13,
+      "chunks": [
+        {
+          "id": "attractions_0",
+          "title": "Chợ Bến Thành (Ben Thanh Market)",
+          "source": "attractions.md",
+          "content": "..."
+        }
+      ],
+      "limit": 10,
+      "offset": 0,
+      "hasMore": true
+    }
+    ```
+  - **Pagination Behavior**:
+    - `totalChunks`: Total count of chunks matching the query.
+    - `hasMore`: Boolean flag (`offset + chunks.length < totalChunks`).
+    - The client only fetches and renders the current page of chunks.
+    - Previous and Next controls increment/decrement `offset` by `limit`. Changing page size or search query resets `offset` to `0`.
+* **`POST /api/admin/index`**:
+  - Response: `{ success: true, message, indexedChunks }`
+* **`GET /api/admin/prompt`**:
+  - Response: `{ prompt: string }`
+* **`PUT /api/admin/prompt`**:
+  - Request Body: `{ prompt: string }`
+  - Response (`200 OK`): `{ success: true, message: string, prompt: string }`
 
 ---
 
@@ -193,10 +243,18 @@ We migrated from local self-hosted Qdrant to **Qdrant Cloud**:
 HCMC_Travel/
 ├── client/                   # React + Vite frontend
 │   ├── src/
-│   │   ├── components/       # UI components (HealthBadge, ChatForm, AnswerSection)
-│   │   ├── services/         # API fetch client
-│   │   ├── App.jsx           # Main chat UI
-│   │   ├── index.css         # Styling
+│   │   ├── components/       # Component tree
+│   │   │   ├── admin/        # Admin UI modules (AdminStats, DocumentEditor, DocumentTable, ChunkReview, ChunkCard, SystemPromptEditor)
+│   │   │   ├── user/         # User UI modules (UserChatView, ChatForm, AnswerSection)
+│   │   │   ├── AdminDashboard.jsx # Admin container coordinator
+│   │   │   ├── HealthBadge.jsx    # Shared health indicator
+│   │   │   ├── ErrorMessage.jsx   # Shared error alert
+│   │   │   └── SuccessMessage.jsx # Shared dismissible success alert
+│   │   ├── services/         # Modular API fetch services
+│   │   │   ├── userApi.js    # User chat & health fetch methods
+│   │   │   └── adminApi.js   # Admin status, document CRUD, prompt, paginated chunks, and indexing
+│   │   ├── App.jsx           # Role switcher coordinator (User <-> Admin)
+│   │   ├── index.css         # Styling system
 │   │   └── main.jsx
 │   ├── Dockerfile            # Node 22 build -> Nginx reverse proxy
 │   ├── nginx.conf            # Nginx config
@@ -204,23 +262,33 @@ HCMC_Travel/
 │   └── vite.config.js        # Vite dev server proxy
 ├── server/                   # Node.js + Express backend
 │   ├── src/
-│   │   ├── config.js         # Configuration (Qdrant Cloud URL, models, threshold, topK)
+│   │   ├── config.js         # Configuration (Qdrant Cloud URL, models, threshold, topK, promptFile)
+│   │   ├── controllers/
+│   │   │   ├── adminController.js # Admin HTTP parsing, response formatting & error handling
+│   │   │   └── userController.js  # User HTTP parsing & error handling
+│   │   ├── services/
+│   │   │   ├── adminService.js    # Knowledge-base business logic, file I/O, prompt persistence, indexing
+│   │   │   └── userService.js     # Chat workflow orchestration, threshold guardrail, generation
+│   │   ├── routes/
+│   │   │   ├── adminRoute.js      # Admin route definitions and controller references
+│   │   │   └── userRoute.js       # User route definitions (/api/user/chat)
 │   │   ├── rag/
 │   │   │   ├── chunker.js    # Markdown header chunking
 │   │   │   ├── gemini.js     # Gemini SDK client (embedText, generateAnswer)
 │   │   │   ├── vector_store.js # Qdrant client singleton & collection manager
 │   │   │   ├── indexer.js    # Indexes knowledge into Qdrant Cloud
 │   │   │   ├── retriever.js  # Top-K retrieval via Qdrant Cloud
-│   │   │   └── generator.js  # Grounded prompt generation
-│   │   └── server.js         # Express server & API routes
+│   │   │   └── generator.js  # Grounded prompt generation using dynamic system prompt
+│   │   └── server.js         # Express server mounting /api/admin and /api/user
 │   ├── Dockerfile            # Node 22-alpine container image
 │   ├── package.json          # Dependencies (@google/genai, @qdrant/js-client-rest, express)
 │   └── .env                  # Local backend configuration (ignored by Git)
 ├── data/
-│   └── knowledge/            # Markdown knowledge files
-│       ├── food.md
-│       ├── attractions.md
-│       └── landmarks.md
+│   ├── knowledge/            # Markdown knowledge files
+│   │   ├── food.md
+│   │   ├── attractions.md
+│   │   └── landmarks.md
+│   └── system_prompt.txt     # Persistent storage for active system prompt
 ├── docs/
 │   ├── architecture.md       # Architecture & specifications
 │   ├── agent-log.md          # Progress & validation log

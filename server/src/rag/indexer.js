@@ -13,7 +13,7 @@ export async function runIndexer() {
 
   if (chunks.length === 0) {
     console.warn('[Indexer] Warning: No chunks found to index.');
-    return;
+    return { indexedChunks: 0 };
   }
 
   // Initialize/reset Qdrant collection
@@ -47,6 +47,7 @@ export async function runIndexer() {
 
   const countResult = await client.count(config.qdrantCollection, { exact: true });
   console.log(`[Indexer] Successfully indexed ${countResult.count} chunks into Qdrant collection "${config.qdrantCollection}".`);
+  return { indexedChunks: countResult.count };
 }
 
 // Allow running directly via CLI (e.g., `npm run index` or `node src/rag/indexer.js`)

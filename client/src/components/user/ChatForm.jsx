@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 
 export default function ChatForm({ onSubmit, loading }) {
-  const [input, setInput] = useState('');
+  const [inputMessage, setInputMessage] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
-    onSubmit(input);
+    if (!inputMessage.trim() || loading) return;
+    onSubmit(inputMessage);
+    setInputMessage('');
   };
 
   return (
@@ -14,21 +15,18 @@ export default function ChatForm({ onSubmit, loading }) {
       <div className="input-group">
         <input
           type="text"
-          id="message-input"
           className="chat-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a question about HCMC food, landmarks, or attractions..."
+          placeholder="Ask about attractions, landmarks, food, or general tips in HCMC..."
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
           disabled={loading}
-          autoComplete="off"
         />
         <button
           type="submit"
-          id="submit-btn"
           className="submit-btn"
-          disabled={!input.trim() || loading}
+          disabled={loading || !inputMessage.trim()}
         >
-          {loading ? 'Thinking...' : 'Send'}
+          Send
         </button>
       </div>
     </form>

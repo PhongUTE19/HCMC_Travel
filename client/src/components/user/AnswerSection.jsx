@@ -5,18 +5,19 @@ export default function AnswerSection({ answer, sources }) {
 
   return (
     <div className="answer-section">
-      <h3 className="answer-title">Response:</h3>
-      <div className="answer-text">{answer}</div>
+      <h3 className="section-title">Assistant Response</h3>
+      <div className="answer-content">
+        <p>{answer}</p>
+      </div>
 
       {sources && sources.length > 0 && (
         <div className="sources-container">
-          <h4 className="sources-title">Retrieved Sources:</h4>
+          <h4 className="sources-title">Retrieved Knowledge Sources:</h4>
           <ul className="sources-list">
-            {sources.map((src, index) => (
+            {sources.map((source, index) => (
               <li key={index} className="source-item">
-                <span className="source-badge">📄 {src.title}</span>
-                <span className="source-meta">({src.source})</span>
-                <span className="source-score">score: {src.score}</span>
+                <span className="source-index">[{index + 1}]</span>
+                <span className="source-name">{source}</span>
               </li>
             ))}
           </ul>
