@@ -47,11 +47,11 @@ The system consists of two containerized application services managed by Docker 
 
 ## 3. Core User Workflow
 
-1. **User queries the Assistant** in the React web interface (e.g., *"What is Ben Thanh Market?"*).
+1. **User queries the Assistant** in the React web interface (e.g., *"What is the tuition fee for the Standard Program?"*).
 2. **Frontend issues request** to `/api/user/chat` via Nginx reverse proxy, which forwards to `http://server:3000/api/user/chat`.
 3. **Retrieval step (`server/src/rag/retriever.js`)**:
    - Query text is vectorized into a 3072-dimensional embedding using `embedText()` (Gemini `gemini-embedding-001`).
-   - Query embedding is sent via `@qdrant/js-client-rest` over HTTPS with `QDRANT_API_KEY` to Qdrant Cloud collection `hcmc_travel` using cosine similarity.
+   - Query embedding is sent via `@qdrant/js-client-rest` over HTTPS with `QDRANT_API_KEY` to Qdrant Cloud collection `Student_Handbook` using cosine similarity.
    - Top-K ($K=3$) most relevant chunks with payload metadata are returned.
 4. **Relevance / Guardrail Check**:
    - If `bestScore < 0.60` (`SIMILARITY_THRESHOLD`):
@@ -74,7 +74,7 @@ The system consists of two containerized application services managed by Docker 
 ```json
 {
   "status": "ok",
-  "indexedChunks": 13
+  "indexedChunks": 12
 }
 ```
 
@@ -83,18 +83,18 @@ The system consists of two containerized application services managed by Docker 
 * **Request Body**:
 ```json
 {
-  "message": "What is Ben Thanh Market?"
+  "message": "What is the tuition fee for the Standard Program?"
 }
 ```
 * **Success Response (`200 OK`)**:
 ```json
 {
-  "answer": "Chợ Bến Thành is Ho Chi Minh City's most iconic central market...",
+  "answer": "The tuition fee for the Standard Program is 42,000,000 VND per semester [2. Programs at a Glance].",
   "sources": [
     {
-      "title": "Chợ Bến Thành (Ben Thanh Market)",
-      "source": "attractions.md",
-      "score": 0.77
+      "title": "2. Programs at a Glance",
+      "source": "KB-A_Lumen-Institute-Student-Handbook.md",
+      "score": 0.81
     }
   ]
 }
@@ -102,7 +102,7 @@ The system consists of two containerized application services managed by Docker 
 * **Out-of-Scope Response (`200 OK`)**:
 ```json
 {
-  "answer": "I do not have verified travel information about this topic in the local knowledge base. Please ask about Ho Chi Minh City food, landmarks, or attractions.",
+  "answer": "I do not have verified information about this topic in the student handbook knowledge base. Please ask about Lumen Institute programs, tuition, scholarships, courses, exams, or student rules.",
   "sources": []
 }
 ```
@@ -130,12 +130,12 @@ The system consists of two containerized application services managed by Docker 
   - **Response (`200 OK`)**:
     ```json
     {
-      "totalChunks": 13,
+      "totalChunks": 12,
       "chunks": [
         {
-          "id": "attractions_0",
-          "title": "Chợ Bến Thành (Ben Thanh Market)",
-          "source": "attractions.md",
+          "id": "KB-A_Lumen-Institute-Student-Handbook_1",
+          "title": "2. Programs at a Glance",
+          "source": "KB-A_Lumen-Institute-Student-Handbook.md",
           "content": "..."
         }
       ],
@@ -162,7 +162,7 @@ The system consists of two containerized application services managed by Docker 
 ## 5. Qdrant Cloud Collection Configuration & Data Models
 
 ### 5.1. Qdrant Cloud Collection Spec
-* **Collection Name**: `hcmc_travel` (configurable via `QDRANT_COLLECTION_NAME`)
+* **Collection Name**: `Student_Handbook` (configurable via `QDRANT_COLLECTION_NAME`)
 * **Vector Dimension**: `3072` (matching Google Gemini `gemini-embedding-001`)
 * **Distance Metric**: `Cosine`
 * **Cluster Connection**: Managed Qdrant Cloud endpoint (`https://<cluster-id>.<region>.cloud.qdrant.io:6333`)
@@ -173,10 +173,10 @@ The system consists of two containerized application services managed by Docker 
   id: 1, // Positive integer ID (1..N)
   vector: [0.012, -0.045, ...], // 3072-dim float array
   payload: {
-    id: "attractions_0",
-    title: "Chợ Bến Thành (Ben Thanh Market)",
-    content: "Chợ Bến Thành is Ho Chi Minh City's most iconic...",
-    source: "attractions.md"
+    id: "KB-A_Lumen-Institute-Student-Handbook_1",
+    title: "2. Programs at a Glance",
+    content: "| Item | Standard Program | Honors Program |...",
+    source: "KB-A_Lumen-Institute-Student-Handbook.md"
   }
 }
 ```
@@ -203,7 +203,7 @@ The system consists of two containerized application services managed by Docker 
    [Plain Chunks: { id, title, content, source }]
                   │
                   ▼ (2) Indexing Execution (indexer.js -> Gemini Embeddings)
-   [Qdrant Cloud: hcmc_travel (cosine: 3072-dim)]
+   [Qdrant Cloud: Student_Handbook (cosine: 3072-dim)]
                   │
              User Query
                   │
@@ -240,7 +240,7 @@ We migrated from local self-hosted Qdrant to **Qdrant Cloud**:
 ## 7. Folder Structure
 
 ```
-HCMC_Travel/
+Student_Handbook/
 ├── client/                   # React + Vite frontend
 │   ├── src/
 │   │   ├── components/       # Component tree
@@ -285,9 +285,7 @@ HCMC_Travel/
 │   └── .env                  # Local backend configuration (ignored by Git)
 ├── data/
 │   ├── knowledge/            # Markdown knowledge files
-│   │   ├── food.md
-│   │   ├── attractions.md
-│   │   └── landmarks.md
+│   │   └── KB-A_Lumen-Institute-Student-Handbook.md
 │   └── system_prompt.txt     # Persistent storage for active system prompt
 ├── docs/
 │   ├── architecture.md       # Architecture & specifications
@@ -320,4 +318,4 @@ HCMC_Travel/
 | **Authentication** | API Key (`api-key` header) | Secure authentication with Qdrant Cloud cluster; key stored strictly in environment variables. |
 | **Containerization** | Docker Compose (`server` + `client`) | Light application containers; stateless and easily deployable anywhere. |
 | **Unified Environment Configuration** | Root `.env` & `.env.example` | Eliminates duplicated `.env` files across root and server; both Docker and local Node load root `.env`. |
-| **Similarity Guardrail** | Pre-generation cutoff ($0.60$) | Filters out-of-scope non-travel queries before calling Gemini, saving latency and cost. |
+| **Similarity Guardrail** | Pre-generation cutoff ($0.60$) | Filters out-of-scope non-handbook queries before calling Gemini, saving latency and cost. |

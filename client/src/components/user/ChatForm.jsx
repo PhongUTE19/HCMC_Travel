@@ -16,7 +16,7 @@ export default function ChatForm({ onSubmit, loading }) {
         <input
           type="text"
           className="chat-input"
-          placeholder="Ask about attractions, landmarks, food, or general tips in HCMC..."
+          placeholder="Ask about tuition, programs, scholarships, dorms, or exam rules..."
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           disabled={loading}

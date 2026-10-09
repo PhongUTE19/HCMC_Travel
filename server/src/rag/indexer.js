@@ -32,6 +32,8 @@ export async function runIndexer() {
       vector: embedding,
       payload: {
         id: chunk.id,
+        sectionNumber: chunk.sectionNumber,
+        sectionTitle: chunk.sectionTitle,
         title: chunk.title,
         content: chunk.content,
         source: chunk.source,

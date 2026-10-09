@@ -68,6 +68,8 @@ export async function retrieveRelevantChunks(query, param2 = 3, param3 = 3) {
   // 3. Map to clean chunk results
   return points.map((p) => ({
     id: p.payload?.id || String(p.id),
+    sectionNumber: p.payload?.sectionNumber ?? null,
+    sectionTitle: p.payload?.sectionTitle || '',
     title: p.payload?.title || '',
     content: p.payload?.content || '',
     source: p.payload?.source || '',

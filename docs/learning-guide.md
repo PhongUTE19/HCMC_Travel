@@ -5,7 +5,7 @@
 ## 1. Project Overview
 
 ### What This Application Does
-The **Student Handbook Assistant** is a web-based question-answering system focused on Ho Chi Minh City travel, cuisine, landmarks, and culture. Users submit natural-language questions through a browser interface (for example, *"What is Ben Thanh Market?"* or *"Where can I eat Com Tam broken rice?"*). The system looks up relevant information from a curated local knowledge base and produces a concise, factual answer that cites the source documents. If the question is outside the scope of the knowledge base or is not related to Student Handbook, the system safely refuses to answer instead of hallucinating.
+The **Student Handbook Assistant** is a web-based question-answering system focused on the Lumen Institute of Technology Student Handbook (academic programs, tuition, course registration, library rules, scholarships, exams, dormitory regulations, and policies). Users submit natural-language questions through a browser interface (for example, *"What is the tuition fee for the Standard Program?"* or *"What are the requirements for the Aurora Scholarship?"*). The system looks up relevant information from a curated local knowledge base and produces a concise, factual answer that cites the source documents. If the question is outside the scope of the knowledge base or is not related to the Student Handbook, the system safely refuses to answer instead of hallucinating.
 
 ### What RAG Means in This Project
 **RAG (Retrieval-Augmented Generation)** is an architectural pattern that combines search with large language models:
@@ -181,13 +181,13 @@ Phase 3 introduced the actual RAG pipeline:
   * **Output**: An array of plain chunk objects:
     ```json
     {
-      "id": "food_0",
-      "title": "Cơm Tấm (Broken Rice)",
-      "content": "Cơm tấm is the quintessential Ho Chi Minh City dish...",
-      "source": "food.md"
+      "id": "KB-A_Lumen-Institute-Student-Handbook_1",
+      "title": "2. Programs at a Glance",
+      "content": "| Item | Standard Program | Honors Program |\n|---|---|---|...",
+      "source": "KB-A_Lumen-Institute-Student-Handbook.md"
     }
     ```
-* **Why Header-Based Chunking Was Chosen**: Fixed-character chunking (e.g., splitting every 500 characters) cuts words or sentences in half, separating dish ingredients from restaurant names. Splitting by `## ` guarantees that every chunk contains exactly one cohesive topic.
+* **Why Header-Based Chunking Was Chosen**: Fixed-character chunking (e.g., splitting every 500 characters) cuts words or sentences in half, separating policy criteria from fee schedules. Splitting by `## ` guarantees that every chunk contains exactly one cohesive section.
 * **What Breaks If Changed**: If heading detection breaks, files become one giant chunk, exceeding optimal embedding focus and losing granularity.
 
 ---
@@ -253,14 +253,14 @@ Phase 3 introduced the actual RAG pipeline:
   1. `buildGroundedPrompt(question, chunks)`:
      * Combines chunk titles, sources, and contents into labeled context blocks:
        ```
-       [Source 1: Chợ Bến Thành (Ben Thanh Market) (attractions.md)]
-       Chợ Bến Thành is Ho Chi Minh City's most iconic central market...
+       [Source 1: 2. Programs at a Glance (KB-A_Lumen-Institute-Student-Handbook.md)]
+       | Item | Standard Program | Honors Program |
        ```
      * Injects strict negative rules:
        - Rely *only* on stated facts.
        - Do *not* extrapolate or guess.
        - If context lacks information, state: *"The knowledge base does not contain enough information to answer this question."*
-       - Cite sources in brackets, e.g. `[Chợ Bến Thành (Ben Thanh Market)]`.
+       - Cite sources in brackets, e.g. `[2. Programs at a Glance]`.
   2. `generateGroundedAnswer(question, chunks)`:
      * Checks if `chunks` is empty; if so, returns the fallback string immediately.
      * Otherwise calls `generateAnswer(prompt)`.
@@ -285,7 +285,7 @@ Phase 3 introduced the actual RAG pipeline:
        - Returns HTTP 200 with:
          ```json
          {
-           "answer": "I do not have verified travel information about this topic in the local knowledge base. Please ask about Ho Chi Minh City food, landmarks, or attractions.",
+           "answer": "I do not have verified information about this topic in the student handbook knowledge base. Please ask about Lumen Institute programs, tuition, scholarships, courses, exams, or student rules.",
            "sources": []
          }
          ```
@@ -316,50 +316,47 @@ Phase 3 introduced the actual RAG pipeline:
 
 ## 4. Tracing Real Requests
 
-### Trace 1: In-Scope Accepted Query — `"What is Ben Thanh Market?"`
+### Trace 1: In-Scope Accepted Query — `"What is the tuition fee for the Standard Program?"`
 
-1. **User Action**: User types `"What is Ben Thanh Market?"` and clicks "Send".
-2. **Browser Layer (`public/app.js`)**:
-   - `fetch('/api/chat', { method: 'POST', body: '{"message":"What is Ben Thanh Market?"}' })` is executed.
-3. **Route Handler (`src/server.js`)**:
+1. **User Action**: User types `"What is the tuition fee for the Standard Program?"` and clicks "Send".
+2. **Browser Layer (`client/src/components/user/UserChatView.jsx`)**:
+   - `fetch('/api/user/chat', { method: 'POST', body: '{"message":"What is the tuition fee for the Standard Program?"}' })` is executed.
+3. **Route Handler & Controller (`server/src/controllers/userController.js`)**:
    - `req.body.message` is validated and trimmed.
-4. **Retrieval (`src/rag/retriever.js`)**:
-   - `retrieveRelevantChunks("What is Ben Thanh Market?", inMemoryChunks, 3)` is called.
-   - `gemini.embedText("What is Ben Thanh Market?")` sends an API request to `models/gemini-embedding-001`.
-   - The query vector (3,072 floats) is returned.
-   - Cosine similarity is computed against all 13 in-memory chunks.
+4. **Retrieval (`server/src/rag/retriever.js`)**:
+   - `retrieveRelevantChunks("What is the tuition fee for the Standard Program?", 3)` is called.
+   - `gemini.embedText(...)` sends an API request to `models/gemini-embedding-001`.
+   - The query vector (3,072 floats) is compared against Qdrant Cloud collection `student_handbook`.
    - Top-3 scored chunks:
-     1. `Chợ Bến Thành (Ben Thanh Market)` (`attractions.md`) — **Score: 0.7700**
-     2. `Chợ Lớn & Chùa Bà Thiên Hậu (District 5 Chinatown)` (`attractions.md`) — **Score: 0.6534**
-     3. `Bún Riêu Cua (Crab and Tomato Noodle Soup)` (`food.md`) — **Score: 0.6414**
-5. **Threshold Evaluation (`src/server.js`)**:
-   - `bestScore = 0.7700`.
-   - Condition: `0.7700 < 0.60` is **`false`**.
-   - Server logs: `[Chat] Query accepted (0.77 >= 0.6). Calling generateGroundedAnswer()...`
-6. **Prompt Construction (`src/rag/generator.js`)**:
+     1. `2. Programs at a Glance` (`KB-A_Lumen-Institute-Student-Handbook.md`) — **Score: 0.8124**
+     2. `3. Paying Tuition` (`KB-A_Lumen-Institute-Student-Handbook.md`) — **Score: 0.7410**
+     3. `1. About This Handbook` (`KB-A_Lumen-Institute-Student-Handbook.md`) — **Score: 0.6380**
+5. **Threshold Evaluation (`server/src/services/userService.js`)**:
+   - `bestScore = 0.8124`.
+   - Condition: `0.8124 < 0.60` is **`false`**.
+   - Server logs: `[Chat] Query accepted (0.8124 >= 0.6). Calling generateGroundedAnswer()...`
+6. **Prompt Construction (`server/src/rag/generator.js`)**:
    - `buildGroundedPrompt()` injects the 3 retrieved chunks into the prompt context:
      ```text
      Context:
-     [Source 1: Chợ Bến Thành (Ben Thanh Market) (attractions.md)]
-     Chợ Bến Thành is Ho Chi Minh City's most iconic central market...
-
-     [Source 2: Chợ Lớn & Chùa Bà Thiên Hậu (District 5 Chinatown) (attractions.md)]
+     [Source 1: 2. Programs at a Glance (KB-A_Lumen-Institute-Student-Handbook.md)]
+     | Item | Standard Program | Honors Program |
      ...
-     Question: What is Ben Thanh Market?
+     Question: What is the tuition fee for the Standard Program?
      ```
-7. **LLM Generation (`src/rag/gemini.js`)**:
+7. **LLM Generation (`server/src/rag/gemini.js`)**:
    - `generateAnswer(prompt)` sends the augmented prompt to `models/gemini-3.5-flash-lite`.
-   - Gemini responds with a grounded paragraph citing `[Chợ Bến Thành (Ben Thanh Market)]`.
+   - Gemini responds with a grounded paragraph citing `[2. Programs at a Glance]`.
 8. **HTTP Response**:
    - Status: `200 OK`.
    - Body:
      ```json
      {
-       "answer": "Chợ Bến Thành (Ben Thanh Market) is Ho Chi Minh City's most iconic central market, located in District 1 at Quách Thị Trang Square [Chợ Bến Thành (Ben Thanh Market)]. Built in 1914, its south entrance clock tower is a universally recognized symbol...",
+       "answer": "The tuition fee for the Standard Program is 42,000,000 VND per semester [2. Programs at a Glance].",
        "sources": [
-         { "title": "Chợ Bến Thành (Ben Thanh Market)", "source": "attractions.md", "score": 0.77 },
-         { "title": "Chợ Lớn & Chùa Bà Thiên Hậu (District 5 Chinatown)", "source": "attractions.md", "score": 0.6534 },
-         { "title": "Bún Riêu Cua (Crab and Tomato Noodle Soup)", "source": "food.md", "score": 0.6414 }
+         { "title": "2. Programs at a Glance", "source": "KB-A_Lumen-Institute-Student-Handbook.md", "score": 0.8124 },
+         { "title": "3. Paying Tuition", "source": "KB-A_Lumen-Institute-Student-Handbook.md", "score": 0.7410 },
+         { "title": "1. About This Handbook", "source": "KB-A_Lumen-Institute-Student-Handbook.md", "score": 0.6380 }
        ]
      }
      ```
@@ -379,9 +376,9 @@ Phase 3 introduced the actual RAG pipeline:
    - `gemini.embedText("What is linear algebra?")` converts the question into a 3,072-dimensional vector.
    - Cosine similarity is computed against all 13 in-memory chunks.
    - Top-3 scored chunks:
-     1. `Tòa Nhà Landmark 81` (`landmarks.md`) — **Score: 0.4412**
-     2. `Phố Đi Bộ Nguyễn Huệ (Nguyen Hue Walking Street)` (`attractions.md`) — **Score: 0.4398**
-     3. `Bánh Mì Sài Gòn (Vietnamese Baguette)` (`food.md`) — **Score: 0.4391**
+     1. `8. Dormitory` (`KB-A_Lumen-Institute-Student-Handbook.md`) — **Score: 0.4412**
+     2. `5. Library` (`KB-A_Lumen-Institute-Student-Handbook.md`) — **Score: 0.4398**
+     3. `7. Exam Rules` (`KB-A_Lumen-Institute-Student-Handbook.md`) — **Score: 0.4391**
 5. **Threshold Evaluation (`src/server.js`)**:
    - `bestScore = 0.4412`.
    - Condition: `0.4412 < 0.60` is **`true`**.
@@ -392,7 +389,7 @@ Phase 3 introduced the actual RAG pipeline:
    - The route handler immediately returns:
      ```json
      {
-       "answer": "I do not have verified travel information about this topic in the local knowledge base. Please ask about Ho Chi Minh City food, landmarks, or attractions.",
+       "answer": "I do not have verified information about this topic in the student handbook knowledge base. Please ask about Lumen Institute programs, tuition, scholarships, courses, exams, or student rules.",
        "sources": []
      }
      ```
@@ -410,7 +407,7 @@ Phase 3 introduced the actual RAG pipeline:
 
 ### 2. Embedding
 * **What It Means**: A mathematical projection that maps human language into a high-dimensional continuous vector space, where concepts with similar meanings sit physically close to one another.
-* **Why This Project Needs It**: Enables semantic search rather than exact keyword matching (e.g. recognizing that "places to eat" relates to "food stalls").
+* **Why This Project Needs It**: Enables semantic search rather than exact keyword matching (e.g. recognizing that "cost of classes" relates to "tuition fees").
 * **Project Example**: Gemini's `embedContent` API transforming a string into 3,072 floating-point numbers.
 
 ### 3. Vector
@@ -420,8 +417,8 @@ Phase 3 introduced the actual RAG pipeline:
 
 ### 4. Chunk
 * **What It Means**: A discrete piece of a larger document.
-* **Why This Project Needs It**: Passing an entire 10,000-word travel book into an LLM context is expensive, slow, and causes the model to miss details. Chunking isolates specific topics.
-* **Project Example**: The text under `## Cơm Tấm (Broken Rice)` in `data/knowledge/food.md`.
+* **Why This Project Needs It**: Passing an entire 10,000-word student handbook document into an LLM context is expensive, slow, and causes the model to miss details. Chunking isolates specific topics.
+* **Project Example**: The text under `## 2. Programs at a Glance` in `data/knowledge/KB-A_Lumen-Institute-Student-Handbook.md`.
 
 ### 5. Cosine Similarity
 * **What It Means**: A metric that measures the cosine of the angle between two multi-dimensional vectors:
@@ -527,13 +524,13 @@ Vector similarity is a relative ranking. If you have 13 chunks and ask for Top-3
 ### 2. Why Top-K Does Not Mean "Relevant"
 Top-K simply returns the $K$ highest mathematical values. It does not know what those values mean in human terms. This is why a **similarity threshold** is mandatory.
 
-### 3. The Cu Chi Tunnels Case (Semantic Proximity Without Factual Answers)
-* **User Query**: *"What are the ticket prices and tour schedules for the Cu Chi Tunnels?"*
-* **Top Retrieved Chunk**: *Bảo Tàng Chứng Tích Chiến Tranh (War Remnants Museum)* with a score of **`0.6519`**.
-* **Why it passed the threshold ($0.6519 \ge 0.60$)**: The query contains words like "tunnels", "tour", "Vietnam", and "tickets", which are semantically close to war history and museum exhibits in the vector space.
-* **How the system handled it**: The chunks were passed to `generator.js`. Gemini read the context about the War Remnants Museum, saw that Cu Chi Tunnels ticket prices were not mentioned, and followed Rule 3:
+### 3. The Graduate Tuition Case (Semantic Proximity Without Factual Answers)
+* **User Query**: *"What is the tuition fee for Master's degree programs?"*
+* **Top Retrieved Chunk**: *2. Programs at a Glance* or *3. Paying Tuition* with a score around **`0.64`**.
+* **Why it passed the threshold ($0.64 \ge 0.60$)**: The query contains terms like "tuition", "fee", and "degree", which are semantically close to university programs and fee structures in the vector space.
+* **How the system handled it**: The chunks were passed to `generator.js`. Gemini read the context about undergraduate Standard and Honors programs, saw that Master's programs were not mentioned anywhere in the handbook, and followed Rule 3:
   > *"The knowledge base does not contain enough information to answer this question."*
-* **Takeaway**: The system uses a two-layer defense. Layer 1 (threshold) stops obvious out-of-scope queries. Layer 2 (prompt grounding) catches queries that pass the threshold but lack specific answers in the retrieved text.
+* **Takeaway**: The system uses a two-layer defense. Layer 1 (threshold) stops obvious out-of-scope queries (like linear algebra). Layer 2 (prompt grounding) catches queries that pass the threshold but lack specific answers in the retrieved text.
 
 ### 4. Why the Threshold is a Heuristic, Not a Probability
 Cosine similarity produces a geometric value between -1.0 and 1.0. A score of `0.60` does **not** mean "60% probability of being correct." It is simply an empirical cutoff chosen based on testing:
@@ -552,7 +549,7 @@ Cosine similarity produces a geometric value between -1.0 and 1.0. A score of `0
 * **Instruction Drift**: If the prompt instructions are not strict enough, the LLM may fall back to its pre-trained knowledge and answer ungrounded questions.
 
 ### 7. Why RAG Does Not Guarantee Correctness
-RAG only ensures that the generation is grounded in the *retrieved context*. If the context itself contains outdated or incorrect information (for example, if a restaurant in `food.md` closed down), the LLM will confidently output that incorrect information with a valid source citation. The quality of a RAG system is fundamentally limited by the quality of its knowledge base.
+RAG only ensures that the generation is grounded in the *retrieved context*. If the context itself contains outdated or incorrect information (for example, if a scholarship deadline in the handbook changed without updating the document), the LLM will output that incorrect information with a valid source citation. The quality of a RAG system is fundamentally limited by the quality of its knowledge base.
 
 ---
 
@@ -650,7 +647,7 @@ For a beginner or student studying this repository, follow this reading path:
 * **Answer**: Our knowledge base is currently small (13 chunks), but real knowledge bases have thousands of pages. Sending everything wastes tokens, increases cost, increases latency, and degrades model attention ("lost in the middle" effect). RAG keeps prompts small, fast, and focused.
 
 ### Q3: Why do we need vector embeddings? Why not just use keyword search (`String.includes` or regex)?
-* **Answer**: Keyword search fails when users use synonyms (e.g. searching "places to eat" wouldn't match a document titled "Culinary Specialties"). Embeddings capture *semantic meaning*, so "dining", "food", "restaurants", and "street stalls" all map to similar vector directions regardless of the exact words used.
+* **Answer**: Keyword search fails when users use synonyms (e.g. searching "cost of attendance" wouldn't match a document titled "Tuition and Fees"). Embeddings capture *semantic meaning*, so "cost", "tuition", "semester fee", and "payment" all map to similar vector directions regardless of the exact words used.
 
 ### Q4: Why did you choose cosine similarity over Euclidean distance?
 * **Answer**: Cosine similarity measures the *angle* between vectors rather than their magnitude:
@@ -662,8 +659,8 @@ For a beginner or student studying this repository, follow this reading path:
 
 ### Q6: Why did you choose 0.60 as the similarity threshold?
 * **Answer**: Through empirical testing with `gemini-embedding-001`:
-  * Direct travel questions scored between $0.75$ and $0.81$.
-  * Related travel queries scored between $0.62$ and $0.66$.
+  * Direct student handbook questions scored between $0.75$ and $0.82$.
+  * Related handbook queries scored between $0.62$ and $0.66$.
   * Out-of-scope queries (e.g. *"What is linear algebra?"*) scored $0.44$.
   * Ambiguous queries scored $0.52$.
   A threshold of $0.60$ cleanly separates relevant queries from irrelevant queries before calling Gemini.

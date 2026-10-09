@@ -36,7 +36,7 @@ export async function processChat(rawMessage) {
     );
     return {
       answer:
-        'I do not have verified travel information about this topic in the local knowledge base. Please ask about Ho Chi Minh City food, landmarks, or attractions.',
+        'I do not have verified information about this topic in the student handbook knowledge base. Please ask about Lumen Institute programs, tuition, scholarships, courses, exams, or student rules.',
       sources: [],
     };
   }
@@ -48,6 +48,8 @@ export async function processChat(rawMessage) {
   // Step 4: Map source metadata (without exposing internal embedding vectors)
   const sources = retrievedChunks.map((chunk) => ({
     title: chunk.title,
+    sectionNumber: chunk.sectionNumber,
+    sectionTitle: chunk.sectionTitle,
     source: chunk.source,
     score: chunk.score,
   }));

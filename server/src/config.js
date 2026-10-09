@@ -19,7 +19,7 @@ export const config = {
   knowledgeDir: process.env.KNOWLEDGE_DIR || path.join(projectRoot, 'data', 'knowledge'),
   qdrantUrl: process.env.QDRANT_URL || '',
   qdrantApiKey: process.env.QDRANT_API_KEY || '',
-  qdrantCollection: process.env.QDRANT_COLLECTION_NAME || 'hcmc_travel',
+  qdrantCollection: process.env.QDRANT_COLLECTION_NAME || 'Student_Handbook',
   promptFile: process.env.PROMPT_FILE || path.join(projectRoot, 'data', 'system_prompt.txt'),
   vectorSize: 3072,
   vectorDistance: 'Cosine',

@@ -19,7 +19,7 @@ export default function DocumentEditor({ editingDoc, onChange, onSave, onCancel 
             className="form-input"
             value={editingDoc.filename}
             disabled={!editingDoc.isNew}
-            placeholder="e.g. festivals.md"
+            placeholder="e.g. academic_regulations.md"
             onChange={(e) => onChange({ ...editingDoc, filename: e.target.value })}
             required
           />

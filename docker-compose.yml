@@ -16,7 +16,7 @@ services:
       - TOP_K=${TOP_K:-3}
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-hcmc_travel}
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-Student_Handbook}
       - KNOWLEDGE_DIR=/app/data/knowledge
       - PROMPT_FILE=/app/data/system_prompt.txt
     volumes:

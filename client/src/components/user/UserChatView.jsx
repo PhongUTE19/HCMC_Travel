@@ -5,8 +5,8 @@ import ErrorMessage from '../ErrorMessage';
 import { sendChatMessage } from '../../services/userApi';
 
 const SAMPLE_QUESTIONS = [
-  'What is Ben Thanh Market?',
-  'Where can I eat Com Tam broken rice?',
+  'What is the tuition fee for the Standard Program?',
+  'What are the requirements for the Aurora Scholarship?',
   'What is linear algebra?',
 ];
 

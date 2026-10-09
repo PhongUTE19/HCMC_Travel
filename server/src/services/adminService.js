@@ -208,6 +208,7 @@ export async function getPaginatedChunks({ limit = 10, offset = 0, search = '' }
       return (
         chunk.id.toLowerCase().includes(query) ||
         chunk.title.toLowerCase().includes(query) ||
+        (chunk.sectionTitle && chunk.sectionTitle.toLowerCase().includes(query)) ||
         chunk.source.toLowerCase().includes(query) ||
         chunk.content.toLowerCase().includes(query)
       );
@@ -249,7 +250,7 @@ export async function executeIndexing() {
   }
 }
 
-export const DEFAULT_SYSTEM_PROMPT = `You are the Ho Chi Minh City (HCMC) Travel Assistant.
+export const DEFAULT_SYSTEM_PROMPT = `You are the Student Handbook Assistant.
 Answer the user's question using ONLY the provided context below.
 
 Strict rules:

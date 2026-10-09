@@ -9,8 +9,8 @@
     "index": "node src/rag/indexer.js"
   },
   "keywords": [
-    "hcmc",
-    "travel",
+    "student",
+    "handbook",
     "rag",
     "gemini",
     "express"

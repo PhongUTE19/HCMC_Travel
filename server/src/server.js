@@ -14,6 +14,7 @@ app.use(express.json());
 // Mounted API routes
 app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
+app.use('/api', userRouter); // Backward compatibility for POST /api/chat
 
 // Health check endpoint (queries vector database count)
 app.get('/api/health', async (req, res) => {

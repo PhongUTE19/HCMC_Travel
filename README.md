@@ -1,13 +1,13 @@
 # Student Handbook Assistant (RAG)
 
-A lightweight Ho Chi Minh City travel question-answering assistant using Retrieval-Augmented Generation (RAG) powered by Google Gemini, Qdrant Cloud managed vector database, Express backend, and React frontend, fully containerized with Docker Compose.
+A lightweight Student Handbook question-answering assistant for Lumen Institute of Technology using Retrieval-Augmented Generation (RAG) powered by Google Gemini, Qdrant Cloud managed vector database, Express backend, and React frontend, fully containerized with Docker Compose.
 
 ---
 
 ## 1. Project Structure
 
 ```text
-HCMC_Travel/
+Student_Handbook/
 ├── client/                 # React + Vite frontend (Port 5173 / Containerized Nginx)
 │   ├── src/
 │   │   ├── components/     # HealthBadge, ChatForm, AnswerSection, ErrorMessage
@@ -32,10 +32,9 @@ HCMC_Travel/
 │   ├── Dockerfile          # Node 22-alpine container image
 │   └── package.json
 ├── data/
-│   └── knowledge/          # Controlled ground-truth Markdown documents
-│       ├── food.md
-│       ├── attractions.md
-│       └── landmarks.md
+│   ├── knowledge/          # Controlled ground-truth Markdown documents
+│   │   └── KB-A_Lumen-Institute-Student-Handbook.md
+│   └── system_prompt.txt   # Persistent active system prompt
 ├── docs/                   # Architecture, agent logs, and learning guide
 ├── docker-compose.yml      # Multi-container orchestration (Server, Client)
 ├── .env.example            # Single unified environment template
@@ -69,7 +68,7 @@ SIMILARITY_THRESHOLD=0.60
 # Qdrant Cloud Configuration
 QDRANT_URL=https://your-cluster-id.region.gcp.cloud.qdrant.io:6333
 QDRANT_API_KEY=your_qdrant_cloud_api_key_here
-QDRANT_COLLECTION_NAME=hcmc_travel
+QDRANT_COLLECTION_NAME=Student_Handbook
 ```
 
 ### Step 2: Build & Start Application Containers
@@ -127,18 +126,18 @@ If running directly on the host machine:
 
 ## 5. API Endpoints
 
-* **`GET /api/health`**: Returns `{ "status": "ok", "indexedChunks": 13 }`.
+* **`GET /api/health`**: Returns `{ "status": "ok", "indexedChunks": 12 }`.
 * **`POST /api/user/chat`**:
-  - Request: `{ "message": "What is Ben Thanh Market?" }`
+  - Request: `{ "message": "What is the tuition fee for the Standard Program?" }`
   - Response:
     ```json
     {
-      "answer": "Chợ Bến Thành is Ho Chi Minh City's most iconic central market...",
+      "answer": "The tuition fee for the Standard Program is 42,000,000 VND per semester [2. Programs at a Glance].",
       "sources": [
         {
-          "title": "Chợ Bến Thành (Ben Thanh Market)",
-          "source": "attractions.md",
-          "score": 0.77
+          "title": "2. Programs at a Glance",
+          "source": "KB-A_Lumen-Institute-Student-Handbook.md",
+          "score": 0.81
         }
       ]
     }

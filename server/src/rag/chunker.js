@@ -33,8 +33,13 @@ export function loadAndChunkMarkdown(knowledgeDir) {
         if (currentTitle && currentLines.length > 0) {
           const sectionContent = currentLines.join('\n').trim();
           if (sectionContent) {
+            const match = currentTitle.match(/^(\d+)\.\s*(.*)$/);
+            const sectionNumber = match ? parseInt(match[1], 10) : (sectionIndex + 1);
+            const sectionTitle = match ? match[2].trim() : currentTitle;
             chunks.push({
-              id: `${baseId}_${sectionIndex}`,
+              id: `${baseId}_sec${sectionNumber}`,
+              sectionNumber,
+              sectionTitle,
               title: currentTitle,
               content: sectionContent,
               source: file,
@@ -53,8 +58,13 @@ export function loadAndChunkMarkdown(knowledgeDir) {
     if (currentTitle && currentLines.length > 0) {
       const sectionContent = currentLines.join('\n').trim();
       if (sectionContent) {
+        const match = currentTitle.match(/^(\d+)\.\s*(.*)$/);
+        const sectionNumber = match ? parseInt(match[1], 10) : (sectionIndex + 1);
+        const sectionTitle = match ? match[2].trim() : currentTitle;
         chunks.push({
-          id: `${baseId}_${sectionIndex}`,
+          id: `${baseId}_sec${sectionNumber}`,
+          sectionNumber,
+          sectionTitle,
           title: currentTitle,
           content: sectionContent,
           source: file,

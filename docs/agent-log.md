@@ -30,17 +30,17 @@
 
 ### 1. Scope & Accomplishments
 * **Knowledge Base Ingestion**:
-  - Created 3 curated knowledge files: [data/knowledge/food.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/data/knowledge/food.md), [data/knowledge/attractions.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/data/knowledge/attractions.md), and [data/knowledge/landmarks.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/data/knowledge/landmarks.md).
-  - Implemented [src/rag/chunker.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/chunker.js) parsing markdown by `## ` headings into 13 structured sections.
+  - Created 3 curated knowledge files: [data/knowledge/food.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/data/knowledge/food.md), [data/knowledge/attractions.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/data/knowledge/attractions.md), and [data/knowledge/landmarks.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/data/knowledge/landmarks.md).
+  - Implemented [src/rag/chunker.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/src/rag/chunker.js) parsing markdown by `## ` headings into 13 structured sections.
 * **Embedding & Indexing Pipeline**:
-  - Implemented [src/rag/gemini.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/gemini.js) using `@google/genai` SDK.
-  - Implemented [src/rag/indexer.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/indexer.js) generating embeddings for all 13 chunks and writing to [data/embeddings.json](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/data/embeddings.json).
+  - Implemented [src/rag/gemini.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/src/rag/gemini.js) using `@google/genai` SDK.
+  - Implemented [src/rag/indexer.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/src/rag/indexer.js) generating embeddings for all 13 chunks and writing to [data/embeddings.json](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/data/embeddings.json).
 * **Walking Skeleton Server & Endpoints**:
-  - Implemented [src/server.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/server.js) loading `data/embeddings.json` into memory on startup.
+  - Implemented [src/server.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/src/server.js) loading `data/embeddings.json` into memory on startup.
   - Added `GET /api/health` returning `{ status: "ok", indexedChunks: 13 }`.
   - Added `POST /api/chat` invoking Gemini directly (`Browser -> Express -> Gemini -> Browser`).
 * **Minimal Test Frontend**:
-  - Created [public/index.html](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/public/index.html), [public/style.css](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/public/style.css), and [public/app.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/public/app.js) with live health status, message input, submit button, loading state, answer display, and error handling.
+  - Created [public/index.html](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/public/index.html), [public/style.css](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/public/style.css), and [public/app.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/public/app.js) with live health status, message input, submit button, loading state, answer display, and error handling.
 
 ### 2. Validation & Testing Results
 * **Indexing verification**:
@@ -67,19 +67,19 @@
 ## Log Entry: 2026-10-07 (Phase 3: RAG Retrieval + Grounded Generation)
 
 ### 1. Scope & Implementation
-* **Retriever Module ([src/rag/retriever.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/retriever.js))**:
+* **Retriever Module ([src/rag/retriever.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/src/rag/retriever.js))**:
   - Implemented pure JavaScript `cosineSimilarity(a, b)` with normalized dot product calculation.
   - Implemented `retrieveRelevantChunks(query, chunks, topK)`: embeds query with `embedText()`, scores each chunk, sorts descending, and returns top-K candidates (`{ id, title, content, source, score }`).
-* **Generator Module ([src/rag/generator.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/rag/generator.js))**:
+* **Generator Module ([src/rag/generator.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/src/rag/generator.js))**:
   - Implemented `buildGroundedPrompt(question, chunks)` with strict negative constraints (no external facts, cite sources in brackets, state lack of information if missing).
   - Implemented `generateGroundedAnswer(question, chunks)` delegating generation to `gemini.js`.
-* **Server Orchestration & Relevance Guardrail ([src/server.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/src/server.js))**:
+* **Server Orchestration & Relevance Guardrail ([src/server.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/src/server.js))**:
   - Updated `POST /api/chat` flow:
     1. Retrieve Top-K chunks.
     2. Check `bestScore < SIMILARITY_THRESHOLD`. If below, immediately return safe fallback without calling Gemini.
     3. If accepted, call `generateGroundedAnswer`.
     4. Return `{ answer, sources: [{ title, source, score }] }` without exposing raw embedding vectors.
-* **Frontend Enhancement ([public/app.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/public/app.js), [public/index.html](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/public/index.html))**:
+* **Frontend Enhancement ([public/app.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/public/app.js), [public/index.html](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/public/index.html))**:
   - Added dynamic rendering of retrieved source cards (title, source file, similarity score) when returned.
 
 ### 2. Retrieval Parameters & Threshold
@@ -102,7 +102,7 @@
 | **5. Ambiguous query** | `"Where should I go?"` | Chợ Lớn (`0.5279`) | **REJECTED** (< 0.60) | *"I do not have verified travel information about this topic..."* (Gemini skipped). | 0 (`[]`) |
 
 ### 4. Known Limitations
-1. **Unindexed Local Spots**: Topics related to HCMC that are not present in `data/knowledge/*.md` (e.g. Cu Chi Tunnels, Saigon Waterbus) pass semantic proximity to history/transportation, but rely on prompt guardrails to reject answering.
+1. **Unindexed Local Spots**: Topics related to Student Handbook that are not present in `data/knowledge/*.md` (e.g. Cu Chi Tunnels, Saigon Waterbus) pass semantic proximity to history/transportation, but rely on prompt guardrails to reject answering.
 2. **Short Ambiguous Queries**: Queries like *"Where should I go?"* lack sufficient semantic density and fall below 0.60; expanding prompt suggestions or giving example chips in the UI helps users form specific questions.
 
 ### 5. Verification & Guardrail Audit (Phase 3 Check)
@@ -203,7 +203,7 @@ Rendered in AnswerSection component
     - `npm run client`: starts the Vite dev server (`npm --prefix client dev`).
     - `npm run index`: executes the indexing pipeline from the root (`npm --prefix server run index`).
 * **Documentation**:
-  - Created root [README.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\README.md) with updated structure, setup instructions, and startup commands.
+  - Created root [README.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\README.md) with updated structure, setup instructions, and startup commands.
 
 ### 2. Validation
 * Verified `npm run index` from root loads `data/knowledge` and updates `data/embeddings.json`.
@@ -265,7 +265,7 @@ Rendered in AnswerSection component
 ### 1. Scope & Motivation
 * Migrated vector storage from local Vectra file index to **Qdrant** (`qdrant/qdrant:latest`).
 * Containerized the complete application stack with **Docker Compose**:
-  - `qdrant`: Vector database with persistent named volume `hcmc_qdrant_storage`.
+  - `qdrant`: Vector database with persistent named volume `student_handbook_qdrant_storage`.
   - `server`: Express backend running on Node 22-alpine.
   - `client`: React frontend built with Vite and served via Nginx reverse proxy.
 * Configured health checks for all three services with dependency orchestration (`condition: service_healthy`).
@@ -274,33 +274,33 @@ Rendered in AnswerSection component
 ### 2. Implementation Changes
 * **Vector Store & SDK**:
   - Uninstalled `vectra` and installed `@qdrant/js-client-rest` in `server/`.
-  - Created [server/src/rag/vector_store.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/rag/vector_store.js) wrapping `QdrantClient` for singleton access, collection setup (`initVectorStore`), and item counting (`getVectorStoreCount`).
-  - Configured collection `hcmc_travel` with 3072-dimensional vectors using `Cosine` distance.
-  - Updated [server/src/rag/indexer.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/rag/indexer.js) to upsert points with payload metadata (`id`, `title`, `content`, `source`) into Qdrant.
-  - Updated [server/src/rag/retriever.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/rag/retriever.js) to execute `client.query(collectionName, { query, limit, with_payload })`.
+  - Created [server/src/rag/vector_store.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/server/src/rag/vector_store.js) wrapping `QdrantClient` for singleton access, collection setup (`initVectorStore`), and item counting (`getVectorStoreCount`).
+  - Configured collection `Student_Handbook` with 3072-dimensional vectors using `Cosine` distance.
+  - Updated [server/src/rag/indexer.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/server/src/rag/indexer.js) to upsert points with payload metadata (`id`, `title`, `content`, `source`) into Qdrant.
+  - Updated [server/src/rag/retriever.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/server/src/rag/retriever.js) to execute `client.query(collectionName, { query, limit, with_payload })`.
 * **Configuration & Environment**:
-  - Updated [server/src/config.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/src/config.js) to support `QDRANT_URL`, `QDRANT_COLLECTION_NAME`, `KNOWLEDGE_DIR`.
-  - Updated [server/.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/.env.example) and created root [.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/.env.example).
+  - Updated [server/src/config.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/server/src/config.js) to support `QDRANT_URL`, `QDRANT_COLLECTION_NAME`, `KNOWLEDGE_DIR`.
+  - Updated [server/.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/server/.env.example) and created root [.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/.env.example).
 * **Containerization**:
-  - Created [client/Dockerfile](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/client/Dockerfile) (multi-stage build with Node 22-alpine + Nginx alpine).
-  - Created [client/nginx.conf](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/client/nginx.conf) serving static assets on port 80 and reverse-proxying `/api/` to `http://server:3000/api/`.
-  - Created [server/Dockerfile](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/server/Dockerfile) (Node 22-alpine, exposing port 3000).
-  - Created [docker-compose.yml](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/docker-compose.yml) orchestrating `qdrant`, `server`, and `client` with shared bridge network and named persistent volume `hcmc_qdrant_storage`.
+  - Created [client/Dockerfile](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/client/Dockerfile) (multi-stage build with Node 22-alpine + Nginx alpine).
+  - Created [client/nginx.conf](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/client/nginx.conf) serving static assets on port 80 and reverse-proxying `/api/` to `http://server:3000/api/`.
+  - Created [server/Dockerfile](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/server/Dockerfile) (Node 22-alpine, exposing port 3000).
+  - Created [docker-compose.yml](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/docker-compose.yml) orchestrating `qdrant`, `server`, and `client` with shared bridge network and named persistent volume `student_handbook_qdrant_storage`.
   - Created `.dockerignore` files for root, client, and server.
-  - Added Docker scripts (`docker:build`, `docker:up`, `docker:down`, `docker:index`) to [package.json](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/HCMC_Travel/package.json).
+  - Added Docker scripts (`docker:build`, `docker:up`, `docker:down`, `docker:index`) to [package.json](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/package.json).
 
 ### 3. Validation Matrix
 
 | # | Validation Item | Test Action | Observed Result | Status |
 |---|---|---|---|---|
-| 1 | **Image Build** | `docker compose build` | Built `hcmc_travel-server:latest` and `hcmc_travel-client:latest` with zero errors. | **PASSED** |
+| 1 | **Image Build** | `docker compose build` | Built `Student_Handbook-server:latest` and `Student_Handbook-client:latest` with zero errors. | **PASSED** |
 | 2 | **System Startup** | `docker compose up -d` | All 3 containers (`student-handbook-qdrant`, `student-handbook-server`, `student-handbook-client`) started and transitioned to `healthy`. | **PASSED** |
 | 3 | **Qdrant Health** | `GET http://localhost:6333/readyz` | Responded with `all shards are ready` (HTTP 200). | **PASSED** |
-| 4 | **Knowledge Indexing** | `docker compose exec server npm run index` | Chunked 13 sections, generated 3072-dim embeddings via Gemini, upserted into Qdrant collection `hcmc_travel`. | **PASSED** |
+| 4 | **Knowledge Indexing** | `docker compose exec server npm run index` | Chunked 13 sections, generated 3072-dim embeddings via Gemini, upserted into Qdrant collection `Student_Handbook`. | **PASSED** |
 | 5 | **Health API Verification** | `GET http://localhost:3000/api/health` and `:5173/api/health` | Both endpoints returned `{"status":"ok","indexedChunks":13}`. | **PASSED** |
 | 6 | **In-Scope Query** | `POST /api/chat` with `"What is Ben Thanh Market?"` | Top score: 0.77 ($\ge 0.60$); retrieved 3 chunks; generated grounded response citing `[Chợ Bến Thành (Ben Thanh Market)]`. | **PASSED** |
 | 7 | **Out-of-Scope Query** | `POST /api/chat` with `"What is linear algebra?"` | Top score: 0.4412 ($< 0.60$); early exit logged; returned refusal with `sources: []`; Gemini generation skipped. | **PASSED** |
-| 8 | **Volume Persistence** | `docker compose down` then `docker compose up -d` | Containers recreated; all 13 points in collection `hcmc_travel` persisted in volume `hcmc_qdrant_storage`. | **PASSED** |
+| 8 | **Volume Persistence** | `docker compose down` then `docker compose up -d` | Containers recreated; all 13 points in collection `Student_Handbook` persisted in volume `student_handbook_qdrant_storage`. | **PASSED** |
 | 9 | **Health Post-Restart** | `GET /api/health` after restart | Immediately returned `{"status":"ok","indexedChunks":13}` without needing re-indexing. | **PASSED** |
 | 10| **Frontend-Backend Comms** | `POST /api/chat` via `:5173` after restart | Nginx proxied request to `server:3000`, returned grounded response for `"Tell me about Saigon Central Post Office"`. | **PASSED** |
 ---
@@ -310,7 +310,7 @@ Rendered in AnswerSection component
 ### 1. Scope & Motivation
 * Migrated from self-hosted local Qdrant container to managed **Qdrant Cloud**.
 * Streamlined Docker Compose architecture:
-  - Removed local `student-handbook-qdrant` container, ports 6333-6334, and named volume `hcmc_qdrant_storage`.
+  - Removed local `student-handbook-qdrant` container, ports 6333-6334, and named volume `student_handbook_qdrant_storage`.
   - Docker Compose now runs application workloads (`server` and `client`).
   - `server` communicates directly over HTTPS with Qdrant Cloud using `QDRANT_URL` and `QDRANT_API_KEY`.
 * Consolidated environment variable architecture:
@@ -326,19 +326,19 @@ Rendered in AnswerSection component
 * **Server Dockerfile (`server/Dockerfile`)**:
   - Removed obsolete local container default `ENV QDRANT_URL=http://qdrant:6333`.
 * **Configuration & Environment**:
-  - [server/src/config.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\config.js): Added fallback loading for `projectRoot/.env` and updated `qdrantUrl` default.
-  - [server/src/rag/vector_store.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\rag\vector_store.js): Added explicit configuration check for `QDRANT_URL`.
-  - [.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\.env.example): Updated with Qdrant Cloud settings (`QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION_NAME`).
+  - [server/src/config.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\server\src\config.js): Added fallback loading for `projectRoot/.env` and updated `qdrantUrl` default.
+  - [server/src/rag/vector_store.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\server\src\rag\vector_store.js): Added explicit configuration check for `QDRANT_URL`.
+  - [.env.example](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\.env.example): Updated with Qdrant Cloud settings (`QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION_NAME`).
   - Deleted obsolete duplicate `server/.env.example`.
 * **Documentation**:
-  - Updated [README.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\README.md) and [docs/architecture.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\docs\architecture.md) for Qdrant Cloud.
+  - Updated [README.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\README.md) and [docs/architecture.md](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\docs\architecture.md) for Qdrant Cloud.
 
 ### 3. Validation Matrix
 
 | # | Validation Item | Test Action | Observed Result | Status |
 |---|---|---|---|---|
-| 1 | **Docker Image Build** | `docker compose build` | Successfully built `hcmc_travel-server:latest` and `hcmc_travel-client:latest` with zero errors. | **PASSED** |
-| 2 | **Local Qdrant Removal** | Inspected `docker-compose.yml` & stopped old local containers | Local Qdrant container and volume `hcmc_qdrant_storage` cleanly removed. | **PASSED** |
+| 1 | **Docker Image Build** | `docker compose build` | Successfully built `Student_Handbook-server:latest` and `Student_Handbook-client:latest` with zero errors. | **PASSED** |
+| 2 | **Local Qdrant Removal** | Inspected `docker-compose.yml` & stopped old local containers | Local Qdrant container and volume `student_handbook_qdrant_storage` cleanly removed. | **PASSED** |
 | 3 | **Git / Secret Leak Audit** | Git status and code inspection | Zero API keys committed or tracked by Git; all secrets sourced from `.env`. | **PASSED** |
 
 ---
@@ -358,7 +358,7 @@ Rendered in AnswerSection component
 * Preserved the complete existing User chat experience, grounded generation, and source attribution.
 
 ### 2. Implementation Changes
-* **Backend Admin Endpoints ([server/src/routes/admin.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\routes\admin.js))**:
+* **Backend Admin Endpoints ([server/src/routes/admin.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\server\src\routes\admin.js))**:
   - `GET /api/admin/status`: Returns document count, chunk count, cloud vectors, sync status.
   - `GET /api/admin/documents`: Lists all Markdown documents with sizes, section counts, and timestamps.
   - `GET /api/admin/documents/:filename`: Retrieves raw Markdown content.
@@ -367,17 +367,17 @@ Rendered in AnswerSection component
   - `DELETE /api/admin/documents/:filename`: Removes document from `data/knowledge/`.
   - `GET /api/admin/chunks`: Returns all parsed section chunks.
   - `POST /api/admin/index`: Triggers `runIndexer()` with concurrency lock.
-* **Backend Server ([server/src/server.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\server.js))**:
+* **Backend Server ([server/src/server.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\server\src\server.js))**:
   - Mounted `/api/admin` routes.
-* **Indexer ([server/src/rag/indexer.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\rag\indexer.js))**:
+* **Indexer ([server/src/rag/indexer.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\server\src\rag\indexer.js))**:
   - Updated `runIndexer()` to return `{ indexedChunks }`.
-* **Frontend Architecture ([client/src/](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\))**:
-  - [App.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\App.jsx): Added `role` state (`user` / `admin`) and role switch button in top-right header.
-  - [components/AdminDashboard.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\components\AdminDashboard.jsx): Built comprehensive admin panel with stat cards, document CRUD, file upload, chunk search/review, and re-indexing trigger.
-  - [components/SuccessMessage.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\components\SuccessMessage.jsx): Shared dismissible success alert.
-  - [services/api.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\services\api.js): Added client methods for all admin endpoints.
-  - [index.css](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\index.css): Added styled layouts for header switcher, stat cards, admin tables, modals, and chunk cards.
-* **Docker Compose ([docker-compose.yml](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\docker-compose.yml))**:
+* **Frontend Architecture ([client/src/](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\))**:
+  - [App.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\App.jsx): Added `role` state (`user` / `admin`) and role switch button in top-right header.
+  - [components/AdminDashboard.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\components\AdminDashboard.jsx): Built comprehensive admin panel with stat cards, document CRUD, file upload, chunk search/review, and re-indexing trigger.
+  - [components/SuccessMessage.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\components\SuccessMessage.jsx): Shared dismissible success alert.
+  - [services/api.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\services\api.js): Added client methods for all admin endpoints.
+  - [index.css](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\index.css): Added styled layouts for header switcher, stat cards, admin tables, modals, and chunk cards.
+* **Docker Compose ([docker-compose.yml](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\docker-compose.yml))**:
   - Updated `data/knowledge` volume mount to read-write so admin file operations persist directly to disk.
 
 ### 3. Validation Matrix
@@ -410,16 +410,16 @@ Rendered in AnswerSection component
   - Added UI pagination controls (Page size selector, range display, Previous/Next navigation).
 
 ### 2. Implementation Changes
-* **Backend Controller ([server/src/controllers/adminController.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\controllers\adminController.js))**:
+* **Backend Controller ([server/src/controllers/adminController.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\server\src\controllers\adminController.js))**:
   - Extracted handlers: `getStatus`, `getDocuments`, `getDocument`, `createDocument`, `updateDocument`, `deleteDocument`, `getChunks`, `triggerIndexing`, and helper `sanitizeFilename`.
   - Added server-side keyword filtering and pagination in `getChunks`: returns `{ totalChunks, chunks, limit, offset, hasMore }`. Supported page sizes: `10`, `30`, `50`; default `10`; clamped max `50`.
-* **Backend Routes ([server/src/routes/admin.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\server\src\routes\admin.js))**:
+* **Backend Routes ([server/src/routes/admin.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\server\src\routes\admin.js))**:
   - Refactored to map endpoints directly to controller methods.
-* **Frontend API Separation ([client/src/services/](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\services\))**:
-  - [userApi.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\services\userApi.js): `fetchHealth`, `sendChatMessage`.
-  - [adminApi.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\services\adminApi.js): `fetchAdminStatus`, `fetchDocuments`, `fetchDocumentContent`, `saveDocument`, `updateDocument`, `deleteDocument`, `fetchChunks({ limit, offset, search })`, `triggerIndexing`.
+* **Frontend API Separation ([client/src/services/](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\services\))**:
+  - [userApi.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\services\userApi.js): `fetchHealth`, `sendChatMessage`.
+  - [adminApi.js](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\services\adminApi.js): `fetchAdminStatus`, `fetchDocuments`, `fetchDocumentContent`, `saveDocument`, `updateDocument`, `deleteDocument`, `fetchChunks({ limit, offset, search })`, `triggerIndexing`.
   - Deleted legacy `api.js`.
-* **Frontend Components ([client/src/components/](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\components\))**:
+* **Frontend Components ([client/src/components/](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\components\))**:
   - `admin/AdminStats.jsx`: Overview cards for files, chunks, Qdrant vectors, sync badge.
   - `admin/DocumentEditor.jsx`: Markdown creation and edit form.
   - `admin/DocumentTable.jsx`: Document list, upload button, add button, edit/delete actions.
@@ -428,9 +428,9 @@ Rendered in AnswerSection component
   - `user/UserChatView.jsx`: User chat experience container.
   - `user/ChatForm.jsx`: Chat input form and submit handling.
   - `user/AnswerSection.jsx`: Grounded answer display and citation list.
-  - [AdminDashboard.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\components\AdminDashboard.jsx): Refactored coordinator for Admin state and API coordination.
-  - [App.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\App.jsx): Role state and header coordinator.
-  - [index.css](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\HCMC_Travel\client\src\index.css): Added pagination styling for controls bar, dropdown, and buttons.
+  - [AdminDashboard.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\components\AdminDashboard.jsx): Refactored coordinator for Admin state and API coordination.
+  - [App.jsx](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\App.jsx): Role state and header coordinator.
+  - [index.css](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering\Student_Handbook\client\src\index.css): Added pagination styling for controls bar, dropdown, and buttons.
 
 ### 3. Validation Matrix
 
@@ -485,7 +485,7 @@ Rendered in AnswerSection component
 | 4 | **Admin Document CRUD** | Created, read, updated, deleted `coffee_guide.md` | All operations succeeded (`201 Created` -> `200 OK` -> `200 OK` -> `200 OK`). | **PASSED** |
 | 5 | **Chunk Pagination & Search** | Queried `limit=10`, `offset=10`, `limit=30`, `q=Market` | Paginated batches and keyword filtering returned expected slices and metadata. | **PASSED** |
 | 6 | **Re-index** | `POST /api/admin/index` | Re-indexed 13 chunks into Qdrant Cloud. | **PASSED** |
-| 7 | **Qdrant Retrieval** | Query retrieval test | Cosine distance search in collection `hcmc_travel` operating normally. | **PASSED** |
+| 7 | **Qdrant Retrieval** | Query retrieval test | Cosine distance search in collection `Student_Handbook` operating normally. | **PASSED** |
 | 8 | **Backend Startup** | `npm start` root command | Both `server` (port 3000) and `client` (port 5173) boot concurrently without errors. | **PASSED** |
 | 9 | **Frontend Build** | `npm run build` in `client/` | Vite build succeeded in 11.69s with zero errors. | **PASSED** |
 
@@ -541,6 +541,62 @@ Rendered in AnswerSection component
 | 8 | **Frontend Build** | `npm run build` in `client/` | Vite build passed in 20.5s with zero errors (`dist/assets/index-Cf99hfZs.js`). | **PASSED** |
 | 9 | **Backend Startup** | Booted server on port 3000 | Successfully connected to Qdrant Cloud and loaded collection. | **PASSED** |
 | 10 | **User/Admin Switching** | Toggled role button | Both views functional and integrated without conflict. | **PASSED** |
+
+---
+
+## Log Entry: 2026-10-09 (Domain Migration: HCMC Travel to Student Handbook)
+
+### 1. Scope & Objective
+- Replace all references to HCMC Travel, Ben Thanh Market, Com Tam, attractions, and food across the codebase, knowledge base, system prompt, and documentation with the **Student Handbook** domain (Lumen Institute of Technology Student Handbook).
+- Re-index Qdrant Cloud collection `student_handbook` with the 12 sections of `KB-A_Lumen-Institute-Student-Handbook.md`.
+- Update User refusal message for queries falling below the similarity threshold ($0.60$).
+- Update frontend quick-test sample questions and form placeholder.
+- Validate in-scope retrieval, source attribution, out-of-scope guardrail rejection, and frontend compilation.
+
+### 2. Implementation Changes
+1. **Knowledge Base & Vector Store**:
+   - Curated knowledge document: `data/knowledge/KB-A_Lumen-Institute-Student-Handbook.md` containing 12 sections:
+     1. About This Handbook
+     2. Programs at a Glance
+     3. Paying Tuition
+     4. Course Registration and Credit Overload
+     5. Library
+     6. Scholarships
+     7. Exam Rules
+     8. Dormitory
+     9. Academic Warning and Probation
+     10. Graduation Requirements
+     11. Amendments
+     12. Frequently Asked Questions
+   - Re-indexed 12 points into Qdrant Cloud collection `student_handbook` via `npm run index`.
+2. **Backend Services & Prompts**:
+   - `server/src/services/userService.js`: Updated out-of-scope refusal message:
+     *"I do not have verified information about this topic in the student handbook knowledge base. Please ask about Lumen Institute programs, tuition, scholarships, courses, exams, or student rules."*
+   - `data/system_prompt.txt` & `server/src/services/adminService.js`: System prompt configured for Student Handbook Assistant with strict factual grounding and bracket citation rules.
+3. **Frontend Components**:
+   - `client/src/components/user/UserChatView.jsx`: Updated `SAMPLE_QUESTIONS` to:
+     - `What is the tuition fee for the Standard Program?`
+     - `What are the requirements for the Aurora Scholarship?`
+     - `What is linear algebra?` (out-of-scope test)
+   - `client/src/components/user/ChatForm.jsx`: Updated placeholder to `"Ask about tuition, programs, scholarships, dorms, or exam rules..."`.
+   - `client/src/components/admin/DocumentEditor.jsx`: Updated placeholder to `"e.g. academic_regulations.md"`.
+   - `client/vite.config.js`: Added `resolve.preserveSymlinks: true` to support build resolution across directory junctions.
+4. **Documentation**:
+   - `README.md`: Updated project description, architecture overview, sample API requests, and responses.
+   - `docs/architecture.md`: Updated API contracts, chunk payloads, and query traces to Student Handbook examples.
+   - `docs/learning-guide.md`: Updated application overview, chunking examples, request traces, semantic proximity edge case, and FAQ.
+
+### 3. Validation Matrix
+
+| # | Validation Item | Test Action | Observed Result | Status |
+|---|---|---|---|---|
+| 1 | **Qdrant Cloud Indexing** | `npm --prefix server run index` | 12 chunks successfully embedded and upserted to Qdrant Cloud (`student_handbook`). | **PASSED** |
+| 2 | **Admin Health & Status** | `getAdminStatus()` | 1 document, 12 file chunks, 12 indexed chunks, `isSynced: true`. | **PASSED** |
+| 3 | **In-Scope Query (Tuition)** | `"What is the tuition fee for the Standard Program?"` | Top score: `0.7135` ($\ge 0.60$). Generated grounded answer citing `[2. Programs at a Glance]` with 3 sources. | **PASSED** |
+| 4 | **In-Scope Query (Scholarships)** | `"What are the requirements for the Aurora Scholarship?"` | Top score: `0.7364` ($\ge 0.60$). Grounded answer citing `[6. Scholarships]` with GPA and conduct requirements. | **PASSED** |
+| 5 | **Out-of-Scope Query Guardrail** | `"What is linear algebra?"` | Top score: `0.5142` ($< 0.60$). Immediately rejected before calling LLM; returned student handbook refusal message with `sources: []`. | **PASSED** |
+| 6 | **Frontend Build** | `npm run build` in `client/` | Vite build passed cleanly in 7.50s without error. | **PASSED** |
+
 
 
 
