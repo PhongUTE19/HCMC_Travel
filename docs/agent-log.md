@@ -1,4 +1,4 @@
-# Agent Log: HCMC Travel Assistant (RAG)
+# Agent Log: Student Handbook Assistant (RAG)
 
 ## Log Entry: 2026-10-07 (Phase 0: Architectural Simplification)
 
@@ -98,7 +98,7 @@
 | **1. Clearly answerable** | `"What is Ben Thanh Market?"` | Chợ Bến Thành (`0.7700`) | **ACCEPTED** (>= 0.60) | Accurate, concise summary citing `[Chợ Bến Thành (Ben Thanh Market)]`. | 3 |
 | **2. Another answerable** | `"Where can I eat Com Tam broken rice and what are the traditional toppings?"` | Cơm Tấm (`0.8006`) | **ACCEPTED** (>= 0.60) | Lists Ba Ghiền, Thuận Kiều, and traditional toppings citing `[Cơm Tấm (Broken Rice)]`. | 3 |
 | **3. Out-of-scope** | `"What is linear algebra?"` | Landmark 81 (`0.4412`) | **REJECTED** (< 0.60) | *"I do not have verified travel information about this topic..."* (Gemini skipped). | 0 (`[]`) |
-| **4. HCMC-related but unindexed** | `"What are the ticket prices and tour schedules for the Cu Chi Tunnels?"` | War Remnants Museum (`0.6519`) | **ACCEPTED** (>= 0.60) | *"The knowledge base does not contain enough information to answer this question."* (Zero hallucination). | 3 |
+| **4. student-handbook-related but unindexed** | `"What are the ticket prices and tour schedules for the Cu Chi Tunnels?"` | War Remnants Museum (`0.6519`) | **ACCEPTED** (>= 0.60) | *"The knowledge base does not contain enough information to answer this question."* (Zero hallucination). | 3 |
 | **5. Ambiguous query** | `"Where should I go?"` | Chợ Lớn (`0.5279`) | **REJECTED** (< 0.60) | *"I do not have verified travel information about this topic..."* (Gemini skipped). | 0 (`[]`) |
 
 ### 4. Known Limitations
@@ -294,7 +294,7 @@ Rendered in AnswerSection component
 | # | Validation Item | Test Action | Observed Result | Status |
 |---|---|---|---|---|
 | 1 | **Image Build** | `docker compose build` | Built `hcmc_travel-server:latest` and `hcmc_travel-client:latest` with zero errors. | **PASSED** |
-| 2 | **System Startup** | `docker compose up -d` | All 3 containers (`hcmc-qdrant`, `hcmc-server`, `hcmc-client`) started and transitioned to `healthy`. | **PASSED** |
+| 2 | **System Startup** | `docker compose up -d` | All 3 containers (`student-handbook-qdrant`, `student-handbook-server`, `student-handbook-client`) started and transitioned to `healthy`. | **PASSED** |
 | 3 | **Qdrant Health** | `GET http://localhost:6333/readyz` | Responded with `all shards are ready` (HTTP 200). | **PASSED** |
 | 4 | **Knowledge Indexing** | `docker compose exec server npm run index` | Chunked 13 sections, generated 3072-dim embeddings via Gemini, upserted into Qdrant collection `hcmc_travel`. | **PASSED** |
 | 5 | **Health API Verification** | `GET http://localhost:3000/api/health` and `:5173/api/health` | Both endpoints returned `{"status":"ok","indexedChunks":13}`. | **PASSED** |
@@ -310,7 +310,7 @@ Rendered in AnswerSection component
 ### 1. Scope & Motivation
 * Migrated from self-hosted local Qdrant container to managed **Qdrant Cloud**.
 * Streamlined Docker Compose architecture:
-  - Removed local `hcmc-qdrant` container, ports 6333-6334, and named volume `hcmc_qdrant_storage`.
+  - Removed local `student-handbook-qdrant` container, ports 6333-6334, and named volume `hcmc_qdrant_storage`.
   - Docker Compose now runs application workloads (`server` and `client`).
   - `server` communicates directly over HTTPS with Qdrant Cloud using `QDRANT_URL` and `QDRANT_API_KEY`.
 * Consolidated environment variable architecture:

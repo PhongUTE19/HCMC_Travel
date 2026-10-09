@@ -43,7 +43,7 @@ export default function App() {
       <header className="app-header">
         <div className="header-top-row">
           <div>
-            <h1 className="app-title">HCMC Travel Assistant</h1>
+            <h1 className="app-title">Student Handbook Assistant</h1>
             <p className="app-subtitle">
               {role === 'user'
                 ? 'React Frontend with RAG & Google Gemini'

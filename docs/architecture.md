@@ -1,7 +1,7 @@
-# Architecture: HCMC Travel Assistant (RAG)
+# Architecture: Student Handbook Assistant (RAG)
 
 ## 1. Goal & Context
-* **Project**: A containerized HCMC Travel Assistant using Retrieval-Augmented Generation (RAG).
+* **Project**: A containerized Student Handbook Assistant using Retrieval-Augmented Generation (RAG).
 * **Stack**: React (Vite / Nginx) + Node.js (Express) + Qdrant Cloud + Google Gemini API.
 * **Core Philosophy**: Clean separation of concerns, containerized via Docker Compose, reproducible environment with managed cloud vector storage.
 
@@ -20,7 +20,7 @@ The system consists of two containerized application services managed by Docker 
 +--------------┼───────────────────────────────────────┼──────────────────────────────────+
 |              ▼                                       ▼                                  |
 |  +─────────────────────────+          +─────────────────────────+                       |
-|  |     hcmc-client         |          |       hcmc-server       |                       |
+|  |     student-handbook-client         |          |       student-handbook-server       |                       |
 |  |   (Nginx :80)           |          |   (Express :3000)       |                       |
 |  |                         |          |                         |                       |
 |  | - Serves React bundle   |  proxy   | - Health Check Endpoint |                       |

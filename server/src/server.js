@@ -43,7 +43,7 @@ initVectorStore()
   });
 
 const server = app.listen(config.port, () => {
-  console.log(`[Server] HCMC Travel Assistant running at http://localhost:${config.port}`);
+  console.log(`[Server] Student Handbook Assistant running at http://localhost:${config.port}`);
 });
 
 export { app, server };

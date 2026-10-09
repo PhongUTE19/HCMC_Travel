@@ -1,11 +1,11 @@
-# HCMC Travel Assistant: Complete Learning & Implementation Guide
+# Student Handbook Assistant: Complete Learning & Implementation Guide
 
 ---
 
 ## 1. Project Overview
 
 ### What This Application Does
-The **HCMC Travel Assistant** is a web-based question-answering system focused on Ho Chi Minh City travel, cuisine, landmarks, and culture. Users submit natural-language questions through a browser interface (for example, *"What is Ben Thanh Market?"* or *"Where can I eat Com Tam broken rice?"*). The system looks up relevant information from a curated local knowledge base and produces a concise, factual answer that cites the source documents. If the question is outside the scope of the knowledge base or is not related to HCMC travel, the system safely refuses to answer instead of hallucinating.
+The **Student Handbook Assistant** is a web-based question-answering system focused on Ho Chi Minh City travel, cuisine, landmarks, and culture. Users submit natural-language questions through a browser interface (for example, *"What is Ben Thanh Market?"* or *"Where can I eat Com Tam broken rice?"*). The system looks up relevant information from a curated local knowledge base and produces a concise, factual answer that cites the source documents. If the question is outside the scope of the knowledge base or is not related to Student Handbook, the system safely refuses to answer instead of hallucinating.
 
 ### What RAG Means in This Project
 **RAG (Retrieval-Augmented Generation)** is an architectural pattern that combines search with large language models:
@@ -16,7 +16,7 @@ The **HCMC Travel Assistant** is a web-based question-answering system focused o
 In this project, RAG solves three major problems of raw LLMs:
 * **Hallucination Prevention**: The model is instructed never to invent facts not present in the local knowledge base.
 * **Verifiable Sourcing**: Every answer lists the exact local documents and sections used.
-* **Domain Boundary Enforcement**: Questions unrelated to HCMC travel are blocked before invoking the LLM, saving execution time and API cost.
+* **Domain Boundary Enforcement**: Questions unrelated to Student Handbook are blocked before invoking the LLM, saving execution time and API cost.
 
 ### Complete End-to-End Flow
 1. **Offline Phase (Indexing)**: Markdown documents in `data/knowledge/` are split into section chunks by `chunker.js`. For each chunk, `indexer.js` calls Gemini's embedding API (`gemini-embedding-001`) to generate a 3,072-dimensional vector. These chunks and vectors are saved as a static file in `data/embeddings.json`.

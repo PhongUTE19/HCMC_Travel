@@ -1,4 +1,4 @@
-# HCMC Travel Assistant (RAG)
+# Student Handbook Assistant (RAG)
 
 A lightweight Ho Chi Minh City travel question-answering assistant using Retrieval-Augmented Generation (RAG) powered by Google Gemini, Qdrant Cloud managed vector database, Express backend, and React frontend, fully containerized with Docker Compose.
 
@@ -77,8 +77,8 @@ QDRANT_COLLECTION_NAME=hcmc_travel
 docker compose up -d
 ```
 This starts two application services:
-* **`hcmc-server`**: Express Backend (:3000), connecting to Qdrant Cloud over HTTPS.
-* **`hcmc-client`**: Nginx + React Frontend (:5173), reverse-proxying `/api` to the backend.
+* **`student-handbook-server`**: Express Backend (:3000), connecting to Qdrant Cloud over HTTPS.
+* **`student-handbook-client`**: Nginx + React Frontend (:5173), reverse-proxying `/api` to the backend.
 
 ### Step 3: Index Knowledge Base into Qdrant Cloud
 Run the indexing process inside the server container:

@@ -1,7 +1,7 @@
 {
-  "name": "hcmc-travel",
+  "name": "student-handbook-",
   "version": "1.0.0",
-  "description": "HCMC Travel Assistant with RAG - Root Orchestration",
+  "description": "Student Handbook Assistant with RAG - Root Orchestration",
   "private": true,
   "scripts": {
     "dev": "npm start",

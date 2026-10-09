@@ -1,7 +1,7 @@
 {
-  "name": "hcmc-travel-server",
+  "name": "student-handbook--server",
   "version": "1.0.0",
-  "description": "Small HCMC Travel Assistant with RAG",
+  "description": "Small Student Handbook Assistant with RAG",
   "type": "module",
   "main": "src/server.js",
   "scripts": {

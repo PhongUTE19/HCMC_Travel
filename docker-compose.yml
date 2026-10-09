@@ -3,7 +3,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: hcmc-server
+    container_name: student-handbook-server
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -32,7 +32,7 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: hcmc-client
+    container_name: student-handbook-client
     restart: unless-stopped
     ports:
       - "5173:80"
