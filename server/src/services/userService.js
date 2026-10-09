@@ -23,39 +23,48 @@ export async function processChat(rawMessage) {
 
   const query = rawMessage.trim();
 
-  // Step 1: Retrieve Top-K candidate chunks directly from vector database
-  const retrievedChunks = await retrieveRelevantChunks(query, config.topK);
-  const bestScore = retrievedChunks[0]?.score || 0;
+  try {
+    // Step 1: Retrieve candidate chunks directly from vector database
+    const retrievedChunks = await retrieveRelevantChunks(query, config.topK);
+    const bestScore = retrievedChunks[0]?.score || 0;
 
-  console.log(`[Chat] Query: "${query}" | Best score: ${bestScore} (Threshold: ${config.similarityThreshold})`);
+    console.log(`[Chat] Query: "${query}" | Best score: ${bestScore} (Threshold: ${config.similarityThreshold})`);
 
-  // Step 2: Out-of-scope guardrail via similarity threshold
-  if (bestScore < config.similarityThreshold) {
-    console.log(
-      `[Chat] Query rejected by similarity threshold (${bestScore} < ${config.similarityThreshold}). Early return before calling generateGroundedAnswer().`
-    );
+    // Step 2: Out-of-scope guardrail via similarity threshold
+    if (bestScore < config.similarityThreshold) {
+      console.log(
+        `[Chat] Query rejected by similarity threshold (${bestScore} < ${config.similarityThreshold}). Early return before calling generateGroundedAnswer().`
+      );
+      return {
+        answer:
+          'The provided Student Handbook does not contain enough information to answer this question.',
+        sources: [],
+      };
+    }
+
+    // Step 3: Grounded LLM generation using retrieved context and dynamically saved prompt
+    console.log(`[Chat] Query accepted (${bestScore} >= ${config.similarityThreshold}). Calling generateGroundedAnswer()...`);
+    const answer = await generateGroundedAnswer(query, retrievedChunks);
+
+    // Step 4: Map source metadata (without exposing internal embedding vectors)
+    const sources = retrievedChunks.map((chunk) => ({
+      id: chunk.id,
+      title: chunk.title,
+      sectionNumber: chunk.sectionNumber,
+      sectionTitle: chunk.sectionTitle,
+      source: chunk.source,
+      score: chunk.score,
+    }));
+
     return {
-      answer:
-        'I do not have verified information about this topic in the student handbook knowledge base. Please ask about Lumen Institute programs, tuition, scholarships, courses, exams, or student rules.',
-      sources: [],
+      answer,
+      sources,
     };
+  } catch (error) {
+    if (error instanceof UserServiceError) {
+      throw error;
+    }
+    console.error('[UserService] Error during chat processing:', error.message);
+    throw new UserServiceError(`Service temporarily unavailable: ${error.message}`, 500);
   }
-
-  // Step 3: Grounded LLM generation using retrieved context and dynamically saved prompt
-  console.log(`[Chat] Query accepted (${bestScore} >= ${config.similarityThreshold}). Calling generateGroundedAnswer()...`);
-  const answer = await generateGroundedAnswer(query, retrievedChunks);
-
-  // Step 4: Map source metadata (without exposing internal embedding vectors)
-  const sources = retrievedChunks.map((chunk) => ({
-    title: chunk.title,
-    sectionNumber: chunk.sectionNumber,
-    sectionTitle: chunk.sectionTitle,
-    source: chunk.source,
-    score: chunk.score,
-  }));
-
-  return {
-    answer,
-    sources,
-  };
 }

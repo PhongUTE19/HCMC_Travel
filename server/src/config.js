@@ -15,7 +15,7 @@ export const config = {
   geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
   embeddingModel: process.env.EMBEDDING_MODEL || 'gemini-embedding-001',
   similarityThreshold: parseFloat(process.env.SIMILARITY_THRESHOLD || '0.60'),
-  topK: parseInt(process.env.TOP_K || '3', 10),
+  topK: parseInt(process.env.TOP_K || '4', 10),
   knowledgeDir: process.env.KNOWLEDGE_DIR || path.join(projectRoot, 'data', 'knowledge'),
   qdrantUrl: process.env.QDRANT_URL || '',
   qdrantApiKey: process.env.QDRANT_API_KEY || '',

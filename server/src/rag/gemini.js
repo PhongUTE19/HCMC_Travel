@@ -16,6 +16,30 @@ function getAIClient() {
   return aiInstance;
 }
 
+async function withRetry(operation, maxRetries = 3, initialDelayMs = 1200) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await operation();
+    } catch (error) {
+      attempt++;
+      const isTransient =
+        error?.message?.includes('503') ||
+        error?.message?.includes('UNAVAILABLE') ||
+        error?.message?.includes('429') ||
+        error?.message?.includes('RESOURCE_EXHAUSTED');
+
+      if (attempt <= maxRetries && isTransient) {
+        const delay = initialDelayMs * Math.pow(2, attempt - 1);
+        console.warn(`[Gemini] Transient API error: retrying attempt ${attempt}/${maxRetries} after ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
 /**
  * Generates an embedding vector for the provided text using the configured embedding model.
  * 
@@ -24,10 +48,12 @@ function getAIClient() {
  */
 export async function embedText(text) {
   const ai = getAIClient();
-  const response = await ai.models.embedContent({
-    model: config.embeddingModel,
-    contents: text,
-  });
+  const response = await withRetry(() =>
+    ai.models.embedContent({
+      model: config.embeddingModel,
+      contents: text,
+    })
+  );
 
   const values = response.embedding?.values || response.embeddings?.[0]?.values;
 
@@ -46,10 +72,12 @@ export async function embedText(text) {
  */
 export async function generateAnswer(prompt) {
   const ai = getAIClient();
-  const response = await ai.models.generateContent({
-    model: config.geminiModel,
-    contents: prompt,
-  });
+  const response = await withRetry(() =>
+    ai.models.generateContent({
+      model: config.geminiModel,
+      contents: prompt,
+    })
+  );
 
   return response.text || '';
 }

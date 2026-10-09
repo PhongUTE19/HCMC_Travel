@@ -12,7 +12,10 @@ import { getSystemPrompt } from '../services/adminService.js';
  */
 export function buildGroundedPrompt(question, chunks, customPrompt) {
   const contextSections = chunks
-    .map((chunk, index) => `[Source ${index + 1}: ${chunk.title} (${chunk.source})]\n${chunk.content}`)
+    .map(
+      (chunk, index) =>
+        `[Source ${index + 1}: Document: ${chunk.source} | Section: ${chunk.title} | Chunk ID: ${chunk.id}]\n${chunk.content}`
+    )
     .join('\n\n');
 
   const systemPrompt = customPrompt || getSystemPrompt();

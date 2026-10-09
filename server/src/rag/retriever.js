@@ -40,12 +40,12 @@ export function cosineSimilarity(a, b) {
  * @param {number} param3 - Optional topK if param2 was legacy chunks array
  * @returns {Promise<Array<{id: string, title: string, content: string, source: string, score: number}>>}
  */
-export async function retrieveRelevantChunks(query, param2 = 3, param3 = 3) {
+export async function retrieveRelevantChunks(query, param2 = 4, param3 = 4) {
   if (!query || !query.trim()) {
     return [];
   }
 
-  const topK = typeof param2 === 'number' ? param2 : (typeof param3 === 'number' ? param3 : 3);
+  const topK = typeof param2 === 'number' ? param2 : (typeof param3 === 'number' ? param3 : 4);
 
   const client = getVectorStore();
   const exists = await client.collectionExists(config.qdrantCollection);
@@ -56,17 +56,19 @@ export async function retrieveRelevantChunks(query, param2 = 3, param3 = 3) {
   // 1. Generate query embedding vector
   const queryEmbedding = await embedText(query.trim());
 
-  // 2. Query Qdrant for Top-K points using cosine similarity
+  // 2. Query Qdrant for candidate points using cosine similarity
+  // Query up to 6 candidates to inspect for relevant amendments or related sections
+  const candidateLimit = Math.max(topK, 6);
   const response = await client.query(config.qdrantCollection, {
     query: queryEmbedding,
-    limit: topK,
+    limit: candidateLimit,
     with_payload: true,
   });
 
   const points = response?.points || [];
 
   // 3. Map to clean chunk results
-  return points.map((p) => ({
+  const candidates = points.map((p) => ({
     id: p.payload?.id || String(p.id),
     sectionNumber: p.payload?.sectionNumber ?? null,
     sectionTitle: p.payload?.sectionTitle || '',
@@ -75,4 +77,27 @@ export async function retrieveRelevantChunks(query, param2 = 3, param3 = 3) {
     source: p.payload?.source || '',
     score: Number(p.score.toFixed(4)),
   }));
+
+  if (candidates.length === 0) {
+    return [];
+  }
+
+  // Primary topK slice
+  let selected = candidates.slice(0, topK);
+
+  // General Amendment-Aware Grounding:
+  // If an amendments section exists in the candidate pool with relevant similarity (score >= 0.55),
+  // ensure it is included so the model evaluates overrides alongside original policy sections.
+  const amendmentChunk = candidates.find(
+    (c) =>
+      (c.title?.toLowerCase().includes('amendment') ||
+        c.sectionTitle?.toLowerCase().includes('amendment')) &&
+      c.score >= 0.55
+  );
+
+  if (amendmentChunk && !selected.some((c) => c.id === amendmentChunk.id)) {
+    selected.push(amendmentChunk);
+  }
+
+  return selected;
 }
