@@ -60,6 +60,7 @@ export default function UserChatView() {
         <AnswerSection
           answer={answerData.answer}
           sources={answerData.sources}
+          retrieval={answerData.retrieval}
         />
       )}
     </main>

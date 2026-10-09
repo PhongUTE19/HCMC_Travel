@@ -23,26 +23,70 @@ export async function processChat(rawMessage) {
 
   const query = rawMessage.trim();
 
+  let retrievedChunks = [];
+  let retrievalError = null;
+
   try {
     // Step 1: Retrieve candidate chunks directly from vector database
-    const retrievedChunks = await retrieveRelevantChunks(query, config.topK);
-    const bestScore = retrievedChunks[0]?.score || 0;
+    retrievedChunks = await retrieveRelevantChunks(query, config.topK);
+  } catch (err) {
+    console.error('[UserService] Error during chunk retrieval:', err.message);
+    retrievalError = err.message;
+  }
 
-    console.log(`[Chat] Query: "${query}" | Best score: ${bestScore} (Threshold: ${config.similarityThreshold})`);
+  // Handle retrieval failure gracefully
+  if (retrievalError) {
+    return {
+      answer: 'Failed to retrieve relevant handbook information due to a vector database error.',
+      sources: [],
+      retrieval: {
+        error: retrievalError,
+        retrievedChunks: [],
+        usedChunks: [],
+        similarityThreshold: config.similarityThreshold,
+        bestScore: 0,
+      },
+    };
+  }
 
-    // Step 2: Out-of-scope guardrail via similarity threshold
-    if (bestScore < config.similarityThreshold) {
-      console.log(
-        `[Chat] Query rejected by similarity threshold (${bestScore} < ${config.similarityThreshold}). Early return before calling generateGroundedAnswer().`
-      );
-      return {
-        answer:
-          'The provided Student Handbook does not contain enough information to answer this question.',
-        sources: [],
-      };
-    }
+  const bestScore = retrievedChunks[0]?.score || 0;
+  const passedThreshold = bestScore >= config.similarityThreshold;
 
-    // Step 3: Grounded LLM generation using retrieved context and dynamically saved prompt
+  console.log(`[Chat] Query: "${query}" | Best score: ${bestScore} (Threshold: ${config.similarityThreshold})`);
+
+  // Map all retrieved chunks with diagnostic properties before threshold filtering
+  const diagnosticChunks = retrievedChunks.map((chunk, index) => ({
+    rank: index + 1,
+    id: chunk.id,
+    title: chunk.title,
+    sectionNumber: chunk.sectionNumber,
+    sectionTitle: chunk.sectionTitle,
+    source: chunk.source,
+    score: chunk.score,
+    content: chunk.content,
+    passedToLLM: passedThreshold,
+  }));
+
+  // Step 2: Out-of-scope guardrail via similarity threshold
+  if (!passedThreshold) {
+    console.log(
+      `[Chat] Query rejected by similarity threshold (${bestScore} < ${config.similarityThreshold}). Early return before calling generateGroundedAnswer().`
+    );
+    return {
+      answer:
+        'The provided Student Handbook does not contain enough information to answer this question.',
+      sources: [],
+      retrieval: {
+        similarityThreshold: config.similarityThreshold,
+        bestScore,
+        retrievedChunks: diagnosticChunks,
+        usedChunks: [],
+      },
+    };
+  }
+
+  try {
+    // Step 3: Grounded LLM generation using retrieved context and prompt
     console.log(`[Chat] Query accepted (${bestScore} >= ${config.similarityThreshold}). Calling generateGroundedAnswer()...`);
     const answer = await generateGroundedAnswer(query, retrievedChunks);
 
@@ -59,12 +103,18 @@ export async function processChat(rawMessage) {
     return {
       answer,
       sources,
+      retrieval: {
+        similarityThreshold: config.similarityThreshold,
+        bestScore,
+        retrievedChunks: diagnosticChunks,
+        usedChunks: diagnosticChunks,
+      },
     };
   } catch (error) {
     if (error instanceof UserServiceError) {
       throw error;
     }
-    console.error('[UserService] Error during chat processing:', error.message);
+    console.error('[UserService] Error during LLM generation:', error.message);
     throw new UserServiceError(`Service temporarily unavailable: ${error.message}`, 500);
   }
 }
