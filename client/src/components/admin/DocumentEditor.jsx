@@ -1,4 +1,5 @@
 import React from 'react';
+import { UI_LABELS } from '../../constants';
 
 export default function DocumentEditor({ editingDoc, onChange, onSave, onCancel }) {
   if (!editingDoc) return null;
@@ -6,41 +7,45 @@ export default function DocumentEditor({ editingDoc, onChange, onSave, onCancel 
   return (
     <div className="editor-card">
       <div className="editor-header">
-        <h3>{editingDoc.isNew ? 'Add New Document' : `Edit: ${editingDoc.filename}`}</h3>
+        <h3>
+          {editingDoc.isNew
+            ? UI_LABELS.DOCUMENT_EDITOR.ADD_NEW_DOC
+            : `${UI_LABELS.DOCUMENT_EDITOR.EDIT_DOC_PREFIX}${editingDoc.filename}`}
+        </h3>
         <button className="btn btn-secondary btn-sm" onClick={onCancel}>
-          Cancel
+          {UI_LABELS.COMMON.CANCEL}
         </button>
       </div>
       <form onSubmit={onSave}>
         <div className="form-group">
-          <label>Filename (must end in .md)</label>
+          <label>{UI_LABELS.DOCUMENT_EDITOR.FILENAME_LABEL}</label>
           <input
             type="text"
             className="form-input"
             value={editingDoc.filename}
             disabled={!editingDoc.isNew}
-            placeholder="e.g. academic_regulations.md"
+            placeholder={UI_LABELS.DOCUMENT_EDITOR.FILENAME_PLACEHOLDER}
             onChange={(e) => onChange({ ...editingDoc, filename: e.target.value })}
             required
           />
         </div>
         <div className="form-group">
-          <label>Content (Use "## Section Title" for chunks)</label>
+          <label>{UI_LABELS.DOCUMENT_EDITOR.CONTENT_LABEL}</label>
           <textarea
             className="form-textarea"
             rows={12}
             value={editingDoc.content}
             onChange={(e) => onChange({ ...editingDoc, content: e.target.value })}
-            placeholder="## Section Title&#10;&#10;Description..."
+            placeholder={UI_LABELS.DOCUMENT_EDITOR.CONTENT_PLACEHOLDER}
             required
           />
         </div>
         <div className="editor-actions">
           <button type="submit" className="btn btn-primary">
-            Save Document
+            {UI_LABELS.DOCUMENT_EDITOR.SAVE_BTN}
           </button>
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
-            Cancel
+            {UI_LABELS.COMMON.CANCEL}
           </button>
         </div>
       </form>

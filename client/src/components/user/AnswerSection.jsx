@@ -1,33 +1,31 @@
 import React, { useState } from 'react';
+import { UI_LABELS } from '../../constants';
+import { formatSectionTitle, formatScore } from '../../utils/formatters';
 
 function RetrievedChunkItem({ chunk, threshold }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const displayTitle =
-    chunk.title ||
-    (chunk.sectionNumber
-      ? `Section ${chunk.sectionNumber}: ${chunk.sectionTitle}`
-      : 'Handbook Section');
+  const displayTitle = formatSectionTitle(chunk);
 
   return (
     <div className={`chunk-card ${chunk.passedToLLM ? 'chunk-card-passed' : 'chunk-card-filtered'}`}>
       <div className="chunk-card-header">
         <div className="chunk-card-title-group">
-          <span className="chunk-rank-badge" title="Retriever rank">#{chunk.rank}</span>
-          <span className="chunk-id-badge" title="Chunk identifier">{chunk.id}</span>
-          <span className="chunk-source-badge" title="Source document">{chunk.source}</span>
+          <span className="chunk-rank-badge" title={UI_LABELS.ANSWER_SECTION.RETRIEVER_RANK_TITLE}>#{chunk.rank}</span>
+          <span className="chunk-id-badge" title={UI_LABELS.ANSWER_SECTION.CHUNK_ID_TITLE}>{chunk.id}</span>
+          <span className="chunk-source-badge" title={UI_LABELS.ANSWER_SECTION.SOURCE_DOC_TITLE}>{chunk.source}</span>
           {chunk.passedToLLM ? (
-            <span className="chunk-status-badge status-passed" title="Passed to LLM generation context">
-              ✓ Passed to LLM
+            <span className="chunk-status-badge status-passed" title={UI_LABELS.ANSWER_SECTION.PASSED_TO_LLM_TITLE}>
+              {UI_LABELS.ANSWER_SECTION.PASSED_TO_LLM_BADGE}
             </span>
           ) : (
-            <span className="chunk-status-badge status-filtered" title={`Filtered out by similarity threshold (< ${threshold})`}>
-              ✕ Filtered out (&lt; {threshold})
+            <span className="chunk-status-badge status-filtered" title={UI_LABELS.ANSWER_SECTION.FILTERED_OUT_TITLE(threshold)}>
+              {UI_LABELS.ANSWER_SECTION.FILTERED_OUT_BADGE(threshold)}
             </span>
           )}
           {chunk.score !== undefined && (
-            <span className="chunk-score-badge" title="Cosine similarity score">
-              Score: {typeof chunk.score === 'number' ? chunk.score.toFixed(4) : chunk.score}
+            <span className="chunk-score-badge" title={UI_LABELS.ANSWER_SECTION.COSINE_SCORE_TITLE}>
+              {UI_LABELS.ANSWER_SECTION.SCORE_LABEL}{formatScore(chunk.score)}
             </span>
           )}
           <h4 className="chunk-title">{displayTitle}</h4>
@@ -37,7 +35,7 @@ function RetrievedChunkItem({ chunk, threshold }) {
           className="btn-toggle"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          {isExpanded ? 'Collapse' : 'Expand content'}
+          {isExpanded ? UI_LABELS.COMMON.COLLAPSE : UI_LABELS.ANSWER_SECTION.EXPAND_CONTENT}
         </button>
       </div>
       <div className="chunk-card-body">
@@ -62,7 +60,7 @@ export default function AnswerSection({ answer, sources, retrieval }) {
 
   return (
     <div className="answer-section">
-      <h3 className="answer-title">Assistant Response</h3>
+      <h3 className="answer-title">{UI_LABELS.ANSWER_SECTION.ASSISTANT_RESPONSE}</h3>
       <div className="answer-content">
         <p className="answer-text">{answer}</p>
       </div>
@@ -70,7 +68,7 @@ export default function AnswerSection({ answer, sources, retrieval }) {
       {/* Supporting Sources List (used in answer) */}
       {sources && sources.length > 0 && (
         <div className="sources-container">
-          <h4 className="sources-title">Supporting Sources & Evidence:</h4>
+          <h4 className="sources-title">{UI_LABELS.ANSWER_SECTION.SUPPORTING_SOURCES}</h4>
           <ul className="sources-list">
             {sources.map((src, index) => {
               if (typeof src === 'string') {
@@ -82,12 +80,8 @@ export default function AnswerSection({ answer, sources, retrieval }) {
                 );
               }
 
-              const displayTitle =
-                src.title ||
-                (src.sectionNumber
-                  ? `Section ${src.sectionNumber}: ${src.sectionTitle}`
-                  : 'Handbook Section');
-              const docName = src.source || 'Student Handbook';
+              const displayTitle = formatSectionTitle(src);
+              const docName = src.source || UI_LABELS.ANSWER_SECTION.DEFAULT_DOC_NAME;
               const chunkId = src.id;
 
               return (
@@ -96,8 +90,8 @@ export default function AnswerSection({ answer, sources, retrieval }) {
                   <span className="source-title"><strong>{displayTitle}</strong></span>
                   <span className="source-meta">({docName}{chunkId ? ` • ${chunkId}` : ''})</span>
                   {src.score !== undefined && (
-                    <span className="source-score" title="Cosine Similarity Score">
-                      {typeof src.score === 'number' ? src.score.toFixed(4) : src.score}
+                    <span className="source-score" title={UI_LABELS.ANSWER_SECTION.COSINE_SCORE_TITLE}>
+                      {formatScore(src.score)}
                     </span>
                   )}
                 </li>
@@ -116,11 +110,11 @@ export default function AnswerSection({ answer, sources, retrieval }) {
             className="btn-toggle-diagnostics"
             onClick={() => setShowChunks(!showChunks)}
           >
-            {showChunks ? '▼ Hide retrieved chunks' : `▶ Show retrieved chunks (${retrievedChunks.length})`}
+            {showChunks ? UI_LABELS.ANSWER_SECTION.HIDE_CHUNKS : UI_LABELS.ANSWER_SECTION.SHOW_CHUNKS(retrievedChunks.length)}
           </button>
           {retrieval && (
             <span className="diagnostics-pill">
-              Retrieved: <strong>{retrievedChunks.length}</strong> | Passed to LLM: <strong>{usedChunks.length}</strong> | Threshold: <strong>{threshold}</strong>
+              {UI_LABELS.ANSWER_SECTION.RETRIEVED_LABEL}<strong>{retrievedChunks.length}</strong> | {UI_LABELS.ANSWER_SECTION.PASSED_TO_LLM_LABEL}<strong>{usedChunks.length}</strong> | {UI_LABELS.ANSWER_SECTION.THRESHOLD_LABEL}<strong>{threshold}</strong>
             </span>
           )}
         </div>
@@ -129,22 +123,22 @@ export default function AnswerSection({ answer, sources, retrieval }) {
           <div className="diagnostics-panel" id="retrieval-diagnostics-panel">
             {hasRetrievalError ? (
               <div className="retrieval-error-banner" role="alert">
-                <strong>Retrieval Failure:</strong> {retrieval.error}
+                <strong>{UI_LABELS.ANSWER_SECTION.RETRIEVAL_FAILURE}</strong> {retrieval.error}
               </div>
             ) : retrievedChunks.length === 0 ? (
               <div className="retrieval-empty-banner">
-                No chunks were retrieved from the knowledge base for this question.
+                {UI_LABELS.ANSWER_SECTION.NO_CHUNKS_RETRIEVED}
               </div>
             ) : (
               <>
                 <div className="diagnostics-summary-bar">
-                  <span><strong>Candidate Pool:</strong> {retrievedChunks.length} chunks</span>
-                  <span><strong>Threshold:</strong> {threshold}</span>
+                  <span><strong>{UI_LABELS.ANSWER_SECTION.CANDIDATE_POOL}</strong> {retrievedChunks.length}{UI_LABELS.ANSWER_SECTION.CHUNKS_SUFFIX}</span>
+                  <span><strong>{UI_LABELS.ANSWER_SECTION.THRESHOLD_LABEL}</strong> {threshold}</span>
                   {bestScore !== undefined && (
-                    <span><strong>Top Similarity Score:</strong> {typeof bestScore === 'number' ? bestScore.toFixed(4) : bestScore}</span>
+                    <span><strong>{UI_LABELS.ANSWER_SECTION.TOP_SIMILARITY_SCORE}</strong> {formatScore(bestScore)}</span>
                   )}
                   <span>
-                    <strong>Status:</strong> {usedChunks.length > 0 ? 'Passed to LLM generation' : 'Filtered out before generation'}
+                    <strong>{UI_LABELS.ANSWER_SECTION.STATUS_LABEL}</strong> {usedChunks.length > 0 ? UI_LABELS.ANSWER_SECTION.STATUS_PASSED : UI_LABELS.ANSWER_SECTION.STATUS_FILTERED}
                   </span>
                 </div>
 

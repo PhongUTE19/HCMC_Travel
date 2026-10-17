@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 import { embedText } from './gemini.js';
 import { getVectorStore } from './vector_store.js';
+import { RETRIEVAL_CONFIG } from '../constants/index.js';
 
 /**
  * Calculates cosine similarity between two numeric vectors.
@@ -40,12 +41,18 @@ export function cosineSimilarity(a, b) {
  * @param {number} param3 - Optional topK if param2 was legacy chunks array
  * @returns {Promise<Array<{id: string, title: string, content: string, source: string, score: number}>>}
  */
-export async function retrieveRelevantChunks(query, param2 = 4, param3 = 4) {
+export async function retrieveRelevantChunks(
+  query,
+  param2 = RETRIEVAL_CONFIG.DEFAULT_TOP_K,
+  param3 = RETRIEVAL_CONFIG.DEFAULT_TOP_K
+) {
   if (!query || !query.trim()) {
     return [];
   }
 
-  const topK = typeof param2 === 'number' ? param2 : (typeof param3 === 'number' ? param3 : 4);
+  const topK = typeof param2 === 'number'
+    ? param2
+    : (typeof param3 === 'number' ? param3 : RETRIEVAL_CONFIG.DEFAULT_TOP_K);
 
   const client = getVectorStore();
   const exists = await client.collectionExists(config.qdrantCollection);
@@ -57,8 +64,8 @@ export async function retrieveRelevantChunks(query, param2 = 4, param3 = 4) {
   const queryEmbedding = await embedText(query.trim());
 
   // 2. Query Qdrant for candidate points using cosine similarity
-  // Query up to 6 candidates to inspect for relevant amendments or related sections
-  const candidateLimit = Math.max(topK, 6);
+  // Query candidate pool to inspect for relevant amendments or related sections
+  const candidateLimit = Math.max(topK, RETRIEVAL_CONFIG.MIN_CANDIDATE_POOL);
   const response = await client.query(config.qdrantCollection, {
     query: queryEmbedding,
     limit: candidateLimit,
@@ -75,7 +82,7 @@ export async function retrieveRelevantChunks(query, param2 = 4, param3 = 4) {
     title: p.payload?.title || '',
     content: p.payload?.content || '',
     source: p.payload?.source || '',
-    score: Number(p.score.toFixed(4)),
+    score: Number(p.score.toFixed(RETRIEVAL_CONFIG.SCORE_PRECISION)),
   }));
 
   if (candidates.length === 0) {
@@ -86,13 +93,13 @@ export async function retrieveRelevantChunks(query, param2 = 4, param3 = 4) {
   let selected = candidates.slice(0, topK);
 
   // General Amendment-Aware Grounding:
-  // If an amendments section exists in the candidate pool with relevant similarity (score >= 0.55),
+  // If an amendments section exists in the candidate pool with relevant similarity,
   // ensure it is included so the model evaluates overrides alongside original policy sections.
   const amendmentChunk = candidates.find(
     (c) =>
       (c.title?.toLowerCase().includes('amendment') ||
         c.sectionTitle?.toLowerCase().includes('amendment')) &&
-      c.score >= 0.55
+      c.score >= RETRIEVAL_CONFIG.AMENDMENT_SCORE_THRESHOLD
   );
 
   if (amendmentChunk && !selected.some((c) => c.id === amendmentChunk.id)) {

@@ -4,6 +4,7 @@ import { config } from './config.js';
 import { initVectorStore, getVectorStoreCount } from './rag/vector_store.js';
 import adminRouter from './routes/adminRoute.js';
 import userRouter from './routes/userRoute.js';
+import { STATUS_KEYS, HTTP_STATUS } from './constants/index.js';
 
 const app = express();
 
@@ -14,20 +15,19 @@ app.use(express.json());
 // Mounted API routes
 app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
-app.use('/api', userRouter); // Backward compatibility for POST /api/chat
 
 // Health check endpoint (queries vector database count)
 app.get('/api/health', async (req, res) => {
   try {
     const indexedChunks = await getVectorStoreCount();
     res.json({
-      status: 'ok',
+      status: STATUS_KEYS.OK,
       indexedChunks,
     });
   } catch (error) {
     console.error('[Server] Health check error:', error.message);
-    res.status(500).json({
-      status: 'error',
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      status: STATUS_KEYS.ERROR,
       detail: error.message,
     });
   }

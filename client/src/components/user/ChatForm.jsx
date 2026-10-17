@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { UI_LABELS } from '../../constants';
 
 export default function ChatForm({ onSubmit, loading }) {
   const [inputMessage, setInputMessage] = useState('');
@@ -16,7 +17,7 @@ export default function ChatForm({ onSubmit, loading }) {
         <input
           type="text"
           className="chat-input"
-          placeholder="Ask about tuition, programs, scholarships, dorms, or exam rules..."
+          placeholder={UI_LABELS.CHAT_FORM.INPUT_PLACEHOLDER}
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           disabled={loading}
@@ -26,7 +27,7 @@ export default function ChatForm({ onSubmit, loading }) {
           className="submit-btn"
           disabled={loading || !inputMessage.trim()}
         >
-          Send
+          {UI_LABELS.CHAT_FORM.SEND_BUTTON}
         </button>
       </div>
     </form>

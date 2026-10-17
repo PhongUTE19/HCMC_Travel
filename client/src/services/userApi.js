@@ -2,30 +2,22 @@
  * User API service to communicate with Express backend chat and health endpoints.
  */
 
-export async function fetchHealth() {
-  const res = await fetch('/api/health');
-  if (!res.ok) {
-    throw new Error(`Health check failed (HTTP ${res.status})`);
-  }
-  return await res.json();
+import { API_ENDPOINTS, APP_MESSAGES } from '../constants';
+import { apiRequest, apiJsonRequest } from './apiClient';
+
+export function fetchHealth() {
+  return apiRequest(API_ENDPOINTS.HEALTH, {}, APP_MESSAGES.API_ERROR.HEALTH_CHECK_FAILED);
 }
 
 export async function sendChatMessage(message) {
   const trimmed = message.trim();
   if (!trimmed) {
-    throw new Error('Message cannot be empty');
+    throw new Error(APP_MESSAGES.ERROR.MESSAGE_EMPTY);
   }
-  const res = await fetch('/api/user/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message: trimmed }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || `Server responded with HTTP ${res.status}`);
-  }
-
-  return data;
+  return apiJsonRequest(
+    API_ENDPOINTS.USER_CHAT,
+    'POST',
+    { message: trimmed },
+    APP_MESSAGES.API_ERROR.SERVER_ERROR
+  );
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ErrorMessage from '../ErrorMessage';
 import SuccessMessage from '../SuccessMessage';
-import { fetchSystemPrompt, updateSystemPrompt } from '../../services/adminApi';
+import { fetchSystemPrompt, updateSystemPrompt, resetSystemPrompt } from '../../services/adminApi';
+import { UI_LABELS, APP_MESSAGES } from '../../constants';
 
 export default function SystemPromptEditor() {
   const [prompt, setPrompt] = useState('');
@@ -19,7 +20,7 @@ export default function SystemPromptEditor() {
       setPrompt(data.prompt || '');
       setInitialPrompt(data.prompt || '');
     } catch (err) {
-      setError(err.message || 'Failed to load system prompt.');
+      setError(err.message || APP_MESSAGES.ERROR.LOAD_PROMPT_FAILED);
     } finally {
       setLoading(false);
     }
@@ -32,7 +33,7 @@ export default function SystemPromptEditor() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!prompt.trim()) {
-      setError('System prompt cannot be empty.');
+      setError(APP_MESSAGES.ERROR.PROMPT_EMPTY);
       return;
     }
 
@@ -42,10 +43,10 @@ export default function SystemPromptEditor() {
 
     try {
       const result = await updateSystemPrompt(prompt);
-      setSuccess(result.message || 'System prompt updated successfully.');
+      setSuccess(result.message || APP_MESSAGES.SUCCESS.PROMPT_UPDATED);
       setInitialPrompt(result.prompt || prompt);
     } catch (err) {
-      setError(err.message || 'Failed to update system prompt.');
+      setError(err.message || APP_MESSAGES.ERROR.UPDATE_PROMPT_FAILED);
     } finally {
       setSaving(false);
     }
@@ -57,15 +58,34 @@ export default function SystemPromptEditor() {
     setSuccess(null);
   };
 
+  const handleResetToDefault = async () => {
+    if (!window.confirm(UI_LABELS.SYSTEM_PROMPT_EDITOR.RESET_CONFIRMATION)) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const result = await resetSystemPrompt();
+      setPrompt(result.prompt);
+      setInitialPrompt(result.prompt);
+      setSuccess(result.message || APP_MESSAGES.SUCCESS.PROMPT_RESET);
+    } catch (err) {
+      setError(err.message || APP_MESSAGES.ERROR.UPDATE_PROMPT_FAILED);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const isDirty = prompt !== initialPrompt;
 
   return (
     <div className="admin-panel">
       <div className="panel-header">
         <div>
-          <h3 className="panel-title">System Prompt Configuration</h3>
+          <h3 className="panel-title">{UI_LABELS.SYSTEM_PROMPT_EDITOR.TITLE}</h3>
           <span className="panel-subtitle">
-            Configure the assistant persona, grounding constraints, and answer instructions for Gemini.
+            {UI_LABELS.SYSTEM_PROMPT_EDITOR.SUBTITLE}
           </span>
         </div>
       </div>
@@ -75,13 +95,13 @@ export default function SystemPromptEditor() {
 
       {loading ? (
         <div className="empty-state">
-          <span className="spinner"></span> Loading system prompt...
+          <span className="spinner"></span> {UI_LABELS.SYSTEM_PROMPT_EDITOR.LOADING}
         </div>
       ) : (
         <form onSubmit={handleSave} className="prompt-editor-form">
           <div className="form-group">
             <label htmlFor="system-prompt-textarea">
-              Active System Prompt (Persistent across restarts)
+              {UI_LABELS.SYSTEM_PROMPT_EDITOR.ACTIVE_PROMPT_LABEL}
             </label>
             <textarea
               id="system-prompt-textarea"
@@ -89,7 +109,7 @@ export default function SystemPromptEditor() {
               rows={10}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Enter system prompt instructions..."
+              placeholder={UI_LABELS.SYSTEM_PROMPT_EDITOR.TEXTAREA_PLACEHOLDER}
               disabled={saving}
               required
             />
@@ -103,10 +123,10 @@ export default function SystemPromptEditor() {
             >
               {saving ? (
                 <>
-                  <span className="spinner"></span> Saving...
+                  <span className="spinner"></span> {UI_LABELS.SYSTEM_PROMPT_EDITOR.SAVING_BTN}
                 </>
               ) : (
-                '💾 Save System Prompt'
+                UI_LABELS.SYSTEM_PROMPT_EDITOR.SAVE_BTN
               )}
             </button>
             <button
@@ -115,7 +135,16 @@ export default function SystemPromptEditor() {
               onClick={handleReset}
               disabled={saving || !isDirty}
             >
-              Discard Changes
+              {UI_LABELS.SYSTEM_PROMPT_EDITOR.DISCARD_BTN}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleResetToDefault}
+              disabled={saving}
+              title="Reset prompt back to system default configuration"
+            >
+              {UI_LABELS.SYSTEM_PROMPT_EDITOR.RESET_DEFAULT_BTN}
             </button>
           </div>
         </form>

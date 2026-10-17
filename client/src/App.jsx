@@ -3,9 +3,10 @@ import HealthBadge from './components/HealthBadge';
 import UserChatView from './components/user/UserChatView';
 import AdminDashboard from './components/admin/AdminDashboard';
 import { fetchHealth } from './services/userApi';
+import { USER_ROLES, STATUS_KEYS, UI_LABELS } from './constants';
 
 export default function App() {
-  const [role, setRole] = useState('user'); // 'user' | 'admin'
+  const [role, setRole] = useState(USER_ROLES.USER);
   const [health, setHealth] = useState({
     status: '',
     indexedChunks: 0,
@@ -26,7 +27,7 @@ export default function App() {
       })
       .catch((err) => {
         setHealth({
-          status: 'error',
+          status: STATUS_KEYS.ERROR,
           indexedChunks: 0,
           loading: false,
           error: err.message,
@@ -39,27 +40,27 @@ export default function App() {
   }, [role]);
 
   return (
-    <div className={`app-container ${role === 'admin' ? 'app-container--admin' : ''}`}>
+    <div className={`app-container ${role === USER_ROLES.ADMIN ? 'app-container--admin' : ''}`}>
       <header className="app-header">
         <div className="header-top-row">
           <div>
-            <h1 className="app-title">Student Handbook Assistant</h1>
+            <h1 className="app-title">{UI_LABELS.APP.TITLE}</h1>
             <p className="app-subtitle">
-              {role === 'user'
-                ? 'React Frontend with RAG & Google Gemini'
-                : 'Admin Knowledge Base Manager'}
+              {role === USER_ROLES.USER
+                ? UI_LABELS.APP.USER_SUBTITLE
+                : UI_LABELS.APP.ADMIN_SUBTITLE}
             </p>
           </div>
           <div className="header-actions">
             <button
               id="role-switch-btn"
-              className={`role-switch-btn ${role === 'admin' ? 'role-switch-btn--admin' : ''}`}
+              className={`role-switch-btn ${role === USER_ROLES.ADMIN ? 'role-switch-btn--admin' : ''}`}
               onClick={() => {
-                setRole(role === 'user' ? 'admin' : 'user');
+                setRole(role === USER_ROLES.USER ? USER_ROLES.ADMIN : USER_ROLES.USER);
               }}
-              title={role === 'user' ? 'Switch to Knowledge Management' : 'Switch back to Chat Interface'}
+              title={role === USER_ROLES.USER ? UI_LABELS.APP.SWITCH_TO_ADMIN_TITLE : UI_LABELS.APP.SWITCH_TO_USER_TITLE}
             >
-              {role === 'user' ? '⚙ Switch to Admin' : '💬 Switch to User'}
+              {role === USER_ROLES.USER ? UI_LABELS.APP.SWITCH_TO_ADMIN_BTN : UI_LABELS.APP.SWITCH_TO_USER_BTN}
             </button>
           </div>
         </div>
@@ -72,7 +73,7 @@ export default function App() {
         />
       </header>
 
-      {role === 'user' ? <UserChatView /> : <AdminDashboard />}
+      {role === USER_ROLES.USER ? <UserChatView /> : <AdminDashboard />}
     </div>
   );
 }

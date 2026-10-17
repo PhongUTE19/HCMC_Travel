@@ -1,8 +1,9 @@
 import * as adminService from '../services/adminService.js';
+import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
 
 function handleError(res, error) {
-  const statusCode = error.statusCode || 500;
-  res.status(statusCode).json({ error: error.message || 'An unexpected error occurred.' });
+  const statusCode = error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
+  res.status(statusCode).json({ error: error.message || SERVER_MESSAGES.ERRORS.UNEXPECTED });
 }
 
 /**
@@ -48,7 +49,7 @@ export async function createDocument(req, res) {
   try {
     const { filename, content, overwrite } = req.body;
     const result = await adminService.saveDocument({ filename, content, overwrite });
-    res.status(201).json({
+    res.status(HTTP_STATUS.CREATED).json({
       success: true,
       filename: result.filename,
       message: result.message,
@@ -143,6 +144,23 @@ export function updatePrompt(req, res) {
   try {
     const { prompt } = req.body;
     const result = adminService.saveSystemPrompt(prompt);
+    res.json({
+      success: true,
+      message: result.message,
+      prompt: result.prompt,
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+}
+
+/**
+ * POST /api/admin/prompt/reset
+ * Resets active prompt back to the isolated default configuration template.
+ */
+export function resetPrompt(req, res) {
+  try {
+    const result = adminService.resetSystemPrompt();
     res.json({
       success: true,
       message: result.message,

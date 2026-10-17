@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { config } from '../config.js';
+import { SERVER_MESSAGES, RETRY_CONFIG, SERVER_CONFIG_DEFAULTS } from '../constants/index.js';
 
 let aiInstance = null;
 
@@ -7,8 +8,8 @@ let aiInstance = null;
  * Returns a singleton instance of the Google GenAI client.
  */
 function getAIClient() {
-  if (!config.geminiApiKey || config.geminiApiKey === 'your_gemini_api_key_here') {
-    throw new Error('GEMINI_API_KEY is not configured in .env');
+  if (!config.geminiApiKey || config.geminiApiKey === SERVER_CONFIG_DEFAULTS.PLACEHOLDER_KEY) {
+    throw new Error(SERVER_MESSAGES.ERRORS.GEMINI_API_KEY_NOT_CONFIGURED);
   }
   if (!aiInstance) {
     aiInstance = new GoogleGenAI({ apiKey: config.geminiApiKey });
@@ -16,7 +17,11 @@ function getAIClient() {
   return aiInstance;
 }
 
-async function withRetry(operation, maxRetries = 3, initialDelayMs = 1200) {
+async function withRetry(
+  operation,
+  maxRetries = RETRY_CONFIG.MAX_RETRIES,
+  initialDelayMs = RETRY_CONFIG.INITIAL_DELAY_MS
+) {
   let attempt = 0;
   while (true) {
     try {
@@ -58,7 +63,7 @@ export async function embedText(text) {
   const values = response.embedding?.values || response.embeddings?.[0]?.values;
 
   if (!values || !Array.isArray(values)) {
-    throw new Error('Failed to obtain embedding values from Gemini API response');
+    throw new Error(SERVER_MESSAGES.ERRORS.EMBEDDING_FAILED);
   }
 
   return values;

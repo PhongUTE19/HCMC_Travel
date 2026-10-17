@@ -1,15 +1,22 @@
 import fs from 'fs';
 import path from 'path';
 import { config } from '../config.js';
+import { DEFAULT_SYSTEM_PROMPT } from '../config/promptConfig.js';
 import { loadAndChunkMarkdown } from '../rag/chunker.js';
 import { runIndexer } from '../rag/indexer.js';
 import { getVectorStoreCount } from '../rag/vector_store.js';
+import {
+  SERVER_MESSAGES,
+  HTTP_STATUS,
+  PAGINATION_LIMITS,
+  PROMPT_CONSTRAINTS,
+} from '../constants/index.js';
 
 let isIndexing = false;
 let lastIndexedAt = null;
 
 export class AdminServiceError extends Error {
-  constructor(message, statusCode = 400) {
+  constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
     super(message);
     this.statusCode = statusCode;
   }
@@ -20,7 +27,7 @@ export class AdminServiceError extends Error {
  */
 export function sanitizeFilename(rawName) {
   if (!rawName || typeof rawName !== 'string') {
-    throw new AdminServiceError('Filename is required.', 400);
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED, HTTP_STATUS.BAD_REQUEST);
   }
   let name = rawName.trim();
   if (!name.endsWith('.md')) {
@@ -29,8 +36,8 @@ export function sanitizeFilename(rawName) {
   const base = path.basename(name);
   if (!/^[a-zA-Z0-9_\-.]+\.md$/.test(base)) {
     throw new AdminServiceError(
-      'Invalid filename. Only alphanumeric characters, hyphens, and underscores are allowed.',
-      400
+      SERVER_MESSAGES.ERRORS.INVALID_FILENAME,
+      HTTP_STATUS.BAD_REQUEST
     );
   }
   return base;
@@ -41,14 +48,14 @@ export function sanitizeFilename(rawName) {
  */
 function validateMarkdownContent(content) {
   if (content === undefined || content === null || typeof content !== 'string' || !content.trim()) {
-    throw new AdminServiceError('Document content cannot be empty.', 400);
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_CONTENT_EMPTY, HTTP_STATUS.BAD_REQUEST);
   }
 
   const hasHeader = content.split('\n').some((line) => line.startsWith('## '));
   if (!hasHeader) {
     throw new AdminServiceError(
-      'Document must contain at least one section starting with "## " (Level 2 header) to allow chunking.',
-      400
+      SERVER_MESSAGES.ERRORS.MISSING_SECTION_HEADER,
+      HTTP_STATUS.BAD_REQUEST
     );
   }
 }
@@ -113,7 +120,7 @@ export async function readDocument(rawFilename) {
   const filePath = path.join(config.knowledgeDir, filename);
 
   if (!fs.existsSync(filePath)) {
-    throw new AdminServiceError(`Document "${filename}" not found.`, 404);
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_NOT_FOUND(filename), HTTP_STATUS.NOT_FOUND);
   }
 
   const content = fs.readFileSync(filePath, 'utf-8');
@@ -134,15 +141,15 @@ export async function saveDocument({ filename: rawFilename, content, overwrite =
   const filePath = path.join(config.knowledgeDir, filename);
   if (fs.existsSync(filePath) && !overwrite) {
     throw new AdminServiceError(
-      `Document "${filename}" already exists. Set overwrite to true or choose a different name.`,
-      409
+      SERVER_MESSAGES.ERRORS.DOC_ALREADY_EXISTS(filename),
+      HTTP_STATUS.CONFLICT
     );
   }
 
   fs.writeFileSync(filePath, content.trim(), 'utf-8');
   return {
     filename,
-    message: `Document "${filename}" saved successfully.`,
+    message: SERVER_MESSAGES.SUCCESS.DOC_SAVED(filename),
   };
 }
 
@@ -155,13 +162,13 @@ export async function updateDocument(rawFilename, content) {
 
   const filePath = path.join(config.knowledgeDir, filename);
   if (!fs.existsSync(filePath)) {
-    throw new AdminServiceError(`Document "${filename}" does not exist.`, 404);
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_DOES_NOT_EXIST(filename), HTTP_STATUS.NOT_FOUND);
   }
 
   fs.writeFileSync(filePath, content.trim(), 'utf-8');
   return {
     filename,
-    message: `Document "${filename}" updated successfully.`,
+    message: SERVER_MESSAGES.SUCCESS.DOC_UPDATED(filename),
   };
 }
 
@@ -173,32 +180,36 @@ export async function removeDocument(rawFilename) {
   const filePath = path.join(config.knowledgeDir, filename);
 
   if (!fs.existsSync(filePath)) {
-    throw new AdminServiceError(`Document "${filename}" not found.`, 404);
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_NOT_FOUND(filename), HTTP_STATUS.NOT_FOUND);
   }
 
   fs.unlinkSync(filePath);
   return {
     filename,
-    message: `Document "${filename}" deleted successfully.`,
+    message: SERVER_MESSAGES.SUCCESS.DOC_DELETED(filename),
   };
 }
 
 /**
  * Returns parsed chunks with pagination and keyword filtering.
  */
-export async function getPaginatedChunks({ limit = 10, offset = 0, search = '' }) {
+export async function getPaginatedChunks({
+  limit = PAGINATION_LIMITS.DEFAULT_LIMIT,
+  offset = PAGINATION_LIMITS.DEFAULT_OFFSET,
+  search = '',
+}) {
   const rawChunks = loadAndChunkMarkdown(config.knowledgeDir);
 
   let parsedLimit = parseInt(limit, 10);
-  if (isNaN(parsedLimit) || parsedLimit < 1) {
-    parsedLimit = 10;
-  } else if (parsedLimit > 50) {
-    parsedLimit = 50;
+  if (isNaN(parsedLimit) || parsedLimit < PAGINATION_LIMITS.MIN_LIMIT) {
+    parsedLimit = PAGINATION_LIMITS.DEFAULT_LIMIT;
+  } else if (parsedLimit > PAGINATION_LIMITS.MAX_LIMIT) {
+    parsedLimit = PAGINATION_LIMITS.MAX_LIMIT;
   }
 
   let parsedOffset = parseInt(offset, 10);
-  if (isNaN(parsedOffset) || parsedOffset < 0) {
-    parsedOffset = 0;
+  if (isNaN(parsedOffset) || parsedOffset < PAGINATION_LIMITS.DEFAULT_OFFSET) {
+    parsedOffset = PAGINATION_LIMITS.DEFAULT_OFFSET;
   }
 
   const query = (search || '').trim().toLowerCase();
@@ -233,7 +244,7 @@ export async function getPaginatedChunks({ limit = 10, offset = 0, search = '' }
  */
 export async function executeIndexing() {
   if (isIndexing) {
-    throw new AdminServiceError('Indexing is already in progress. Please wait.', 409);
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.INDEXING_IN_PROGRESS, HTTP_STATUS.CONFLICT);
   }
 
   isIndexing = true;
@@ -242,27 +253,13 @@ export async function executeIndexing() {
     const result = await runIndexer();
     lastIndexedAt = new Date().toISOString();
     return {
-      message: `Indexing completed successfully. Indexed ${result.indexedChunks} chunks.`,
+      message: SERVER_MESSAGES.SUCCESS.INDEXING_COMPLETED(result.indexedChunks),
       indexedChunks: result.indexedChunks,
     };
   } finally {
     isIndexing = false;
   }
 }
-
-export const DEFAULT_SYSTEM_PROMPT = `You are the Student Handbook Assistant for Lumen Institute of Technology.
-Answer the user's question using ONLY the provided context below.
-
-Strict rules:
-1. Grounding: Rely ONLY on the facts explicitly stated in the context. Do NOT invent, assume, or extrapolate facts outside the context.
-2. Insufficient Evidence & Ambiguity: If the retrieved evidence is missing or insufficient to answer the question, or if the question is ambiguous and unsupported by the context, state clearly:
-"The provided Student Handbook does not contain enough information to answer this question."
-Do NOT provide an unsupported definitive answer or guess.
-3. Amendments and Conflicting Rules: If a later section (especially Section 11: Amendments) conflicts with or modifies an earlier section (e.g. Section 3 on installment plans, Section 5 on library fines, or Section 7 on make-up exam fees), the later amendment strictly overrides and supersedes the earlier text. Always evaluate whether an amendment applies, and state the active amended policy (noting any effective dates if specified) rather than obsolete superseded rules.
-4. Source Citations: Every substantive answer must include its supporting source information cited in brackets, including Document name, Section number and title, and Chunk identifier as given in the context headers:
-[Document: KB-A_Lumen-Institute-Student-Handbook.md | Section: <Section Number and Title> | Chunk ID: <Chunk ID>]
-Only cite sources that are present in the provided context and directly used to support your answer. Never invent citations.
-5. Conciseness: Keep answers concise, factual, and directly responsive.`;
 
 /**
  * Gets the current system prompt from persistent storage.
@@ -293,15 +290,15 @@ export function getSystemPrompt() {
  */
 export function saveSystemPrompt(rawPrompt) {
   if (rawPrompt === undefined || rawPrompt === null || typeof rawPrompt !== 'string' || !rawPrompt.trim()) {
-    throw new AdminServiceError('System prompt cannot be empty.', 400);
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.PROMPT_EMPTY, HTTP_STATUS.BAD_REQUEST);
   }
 
   const trimmed = rawPrompt.trim();
-  if (trimmed.length < 20) {
-    throw new AdminServiceError('System prompt must be at least 20 characters long.', 400);
+  if (trimmed.length < PROMPT_CONSTRAINTS.MIN_LENGTH) {
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.PROMPT_TOO_SHORT, HTTP_STATUS.BAD_REQUEST);
   }
-  if (trimmed.length > 10000) {
-    throw new AdminServiceError('System prompt exceeds maximum length of 10,000 characters.', 400);
+  if (trimmed.length > PROMPT_CONSTRAINTS.MAX_LENGTH) {
+    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.PROMPT_TOO_LONG, HTTP_STATUS.BAD_REQUEST);
   }
 
   const dir = path.dirname(config.promptFile);
@@ -312,6 +309,22 @@ export function saveSystemPrompt(rawPrompt) {
   fs.writeFileSync(config.promptFile, trimmed, 'utf-8');
   return {
     prompt: trimmed,
-    message: 'System prompt updated successfully.',
+    message: SERVER_MESSAGES.SUCCESS.PROMPT_UPDATED,
+  };
+}
+
+/**
+ * Resets the active system prompt file back to the default configuration template.
+ * @returns {{ prompt: string, message: string }}
+ */
+export function resetSystemPrompt() {
+  const dir = path.dirname(config.promptFile);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(config.promptFile, DEFAULT_SYSTEM_PROMPT, 'utf-8');
+  return {
+    prompt: DEFAULT_SYSTEM_PROMPT,
+    message: SERVER_MESSAGES.SUCCESS.PROMPT_RESET,
   };
 }

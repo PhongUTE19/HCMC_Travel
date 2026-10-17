@@ -16,6 +16,7 @@ import {
   fetchChunks,
   triggerIndexing,
 } from '../../services/adminApi';
+import { UI_LABELS, APP_MESSAGES, FILE_EXTENSIONS, PAGINATION } from '../../constants';
 
 export default function AdminDashboard() {
   const [status, setStatus] = useState(null);
@@ -32,8 +33,8 @@ export default function AdminDashboard() {
   // Paginated Chunks state
   const [chunks, setChunks] = useState([]);
   const [totalChunks, setTotalChunks] = useState(0);
-  const [chunkLimit, setChunkLimit] = useState(10);
-  const [chunkOffset, setChunkOffset] = useState(0);
+  const [chunkLimit, setChunkLimit] = useState(PAGINATION.DEFAULT_LIMIT);
+  const [chunkOffset, setChunkOffset] = useState(PAGINATION.DEFAULT_OFFSET);
   const [hasMore, setHasMore] = useState(false);
   const [chunkSearch, setChunkSearch] = useState('');
   const [chunksLoading, setChunksLoading] = useState(false);
@@ -48,7 +49,7 @@ export default function AdminDashboard() {
       setStatus(statusData);
       setDocuments(docsData.documents || []);
     } catch (err) {
-      setError(err.message || 'Failed to load status and documents.');
+      setError(err.message || APP_MESSAGES.ERROR.LOAD_OVERVIEW_FAILED);
     }
   };
 
@@ -61,21 +62,30 @@ export default function AdminDashboard() {
       setTotalChunks(chunksData.totalChunks || 0);
       setHasMore(Boolean(chunksData.hasMore));
     } catch (err) {
-      setError(err.message || 'Failed to load chunks.');
+      setError(err.message || APP_MESSAGES.ERROR.LOAD_CHUNKS_FAILED);
     } finally {
       setChunksLoading(false);
     }
   }, []);
+
+  const clearFeedback = () => {
+    setError(null);
+    setSuccess(null);
+  };
+
+  const refreshData = async () => {
+    await Promise.all([
+      loadOverview(),
+      loadChunksData(chunkLimit, chunkOffset, chunkSearch),
+    ]);
+  };
 
   // Initial load
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       setError(null);
-      await Promise.all([
-        loadOverview(),
-        loadChunksData(chunkLimit, chunkOffset, chunkSearch),
-      ]);
+      await refreshData();
       setLoading(false);
     };
     init();
@@ -83,18 +93,14 @@ export default function AdminDashboard() {
 
   // Trigger Indexing
   const handleTriggerIndexing = async () => {
-    setError(null);
-    setSuccess(null);
+    clearFeedback();
     setIndexing(true);
     try {
       const result = await triggerIndexing();
-      setSuccess(result.message || 'Indexing completed successfully.');
-      await Promise.all([
-        loadOverview(),
-        loadChunksData(chunkLimit, chunkOffset, chunkSearch),
-      ]);
+      setSuccess(result.message || APP_MESSAGES.SUCCESS.REINDEX_COMPLETED);
+      await refreshData();
     } catch (err) {
-      setError(err.message || 'Failed to trigger indexing.');
+      setError(err.message || APP_MESSAGES.ERROR.REINDEX_FAILED);
     } finally {
       setIndexing(false);
     }
@@ -105,11 +111,10 @@ export default function AdminDashboard() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setError(null);
-    setSuccess(null);
+    clearFeedback();
 
-    if (!file.name.endsWith('.md')) {
-      setError('Invalid file type. Only Markdown (.md) files are supported.');
+    if (!file.name.endsWith(FILE_EXTENSIONS.MARKDOWN)) {
+      setError(APP_MESSAGES.ERROR.INVALID_FILE_TYPE);
       event.target.value = '';
       return;
     }
@@ -117,19 +122,16 @@ export default function AdminDashboard() {
     try {
       const text = await file.text();
       if (!text.trim()) {
-        setError('Uploaded file is empty.');
+        setError(APP_MESSAGES.ERROR.UPLOADED_FILE_EMPTY);
         event.target.value = '';
         return;
       }
 
       await saveDocument(file.name, text, true);
-      setSuccess(`File "${file.name}" uploaded successfully. Remember to re-index!`);
-      await Promise.all([
-        loadOverview(),
-        loadChunksData(chunkLimit, chunkOffset, chunkSearch),
-      ]);
+      setSuccess(APP_MESSAGES.SUCCESS.FILE_UPLOADED(file.name));
+      await refreshData();
     } catch (err) {
-      setError(err.message || 'Failed to upload document.');
+      setError(err.message || APP_MESSAGES.ERROR.UPLOAD_DOC_FAILED);
     } finally {
       event.target.value = '';
     }
@@ -139,17 +141,15 @@ export default function AdminDashboard() {
   const handleNewDocument = () => {
     setEditingDoc({
       filename: '',
-      content: '## New Section Title\n\nEnter section details here...\n',
+      content: UI_LABELS.ADMIN_DASHBOARD.DEFAULT_DOC_CONTENT,
       isNew: true,
     });
-    setError(null);
-    setSuccess(null);
+    clearFeedback();
   };
 
   // Open Document Editor for Edit
   const handleEditDocument = async (filename) => {
-    setError(null);
-    setSuccess(null);
+    clearFeedback();
     setEditorLoading(true);
     try {
       const doc = await fetchDocumentContent(filename);
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
         isNew: false,
       });
     } catch (err) {
-      setError(err.message || 'Failed to load document content.');
+      setError(err.message || APP_MESSAGES.ERROR.LOAD_DOC_CONTENT_FAILED);
     } finally {
       setEditorLoading(false);
     }
@@ -170,54 +170,46 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!editingDoc) return;
 
-    setError(null);
-    setSuccess(null);
+    clearFeedback();
 
     const { filename, content, isNew } = editingDoc;
     if (!filename.trim()) {
-      setError('Filename is required.');
+      setError(APP_MESSAGES.ERROR.FILENAME_REQUIRED);
       return;
     }
     if (!content.trim()) {
-      setError('Document content cannot be empty.');
+      setError(APP_MESSAGES.ERROR.DOC_CONTENT_EMPTY);
       return;
     }
 
     try {
       if (isNew) {
         await saveDocument(filename.trim(), content, false);
-        setSuccess(`Document "${filename}" created successfully.`);
+        setSuccess(APP_MESSAGES.SUCCESS.DOC_CREATED(filename));
       } else {
         await updateDocument(filename, content);
-        setSuccess(`Document "${filename}" updated successfully.`);
+        setSuccess(APP_MESSAGES.SUCCESS.DOC_UPDATED(filename));
       }
       setEditingDoc(null);
-      await Promise.all([
-        loadOverview(),
-        loadChunksData(chunkLimit, chunkOffset, chunkSearch),
-      ]);
+      await refreshData();
     } catch (err) {
-      setError(err.message || 'Failed to save document.');
+      setError(err.message || APP_MESSAGES.ERROR.SAVE_DOC_FAILED);
     }
   };
 
   // Delete Document
   const handleDeleteDocument = async (filename) => {
-    if (!window.confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+    if (!window.confirm(UI_LABELS.ADMIN_DASHBOARD.DELETE_CONFIRMATION(filename))) {
       return;
     }
 
-    setError(null);
-    setSuccess(null);
+    clearFeedback();
     try {
       await deleteDocument(filename);
-      setSuccess(`Document "${filename}" deleted successfully.`);
-      await Promise.all([
-        loadOverview(),
-        loadChunksData(chunkLimit, chunkOffset, chunkSearch),
-      ]);
+      setSuccess(APP_MESSAGES.SUCCESS.DOC_DELETED(filename));
+      await refreshData();
     } catch (err) {
-      setError(err.message || 'Failed to delete document.');
+      setError(err.message || APP_MESSAGES.ERROR.DELETE_DOC_FAILED);
     }
   };
 
@@ -250,9 +242,9 @@ export default function AdminDashboard() {
     <div className="admin-container">
       <div className="admin-header-row">
         <div>
-          <h2 className="admin-section-title">Knowledge Base Management</h2>
+          <h2 className="admin-section-title">{UI_LABELS.ADMIN_DASHBOARD.TITLE}</h2>
           <p className="admin-section-desc">
-            Manage Markdown documents, review indexed chunks, and sync with Qdrant Cloud.
+            {UI_LABELS.ADMIN_DASHBOARD.DESCRIPTION}
           </p>
         </div>
         <button
@@ -262,10 +254,10 @@ export default function AdminDashboard() {
         >
           {indexing ? (
             <>
-              <span className="spinner"></span> Indexing...
+              <span className="spinner"></span> {UI_LABELS.ADMIN_DASHBOARD.INDEXING_BTN}
             </>
           ) : (
-            '⚡ Re-index Knowledge Base'
+            UI_LABELS.ADMIN_DASHBOARD.REINDEX_BTN
           )}
         </button>
       </div>

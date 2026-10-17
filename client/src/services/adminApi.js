@@ -2,128 +2,81 @@
  * Admin API service to communicate with Express backend admin endpoints.
  */
 
-export async function fetchAdminStatus() {
-  const res = await fetch('/api/admin/status');
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Failed to fetch admin status (HTTP ${res.status})`);
-  }
-  return await res.json();
+import { API_ENDPOINTS, APP_MESSAGES } from '../constants';
+import { apiRequest, apiJsonRequest } from './apiClient';
+
+export function fetchAdminStatus() {
+  return apiRequest(API_ENDPOINTS.ADMIN_STATUS, {}, APP_MESSAGES.API_ERROR.FETCH_STATUS);
 }
 
-export async function fetchDocuments() {
-  const res = await fetch('/api/admin/documents');
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Failed to fetch documents (HTTP ${res.status})`);
-  }
-  return await res.json();
+export function fetchDocuments() {
+  return apiRequest(API_ENDPOINTS.ADMIN_DOCUMENTS, {}, APP_MESSAGES.API_ERROR.FETCH_DOCS);
 }
 
-export async function fetchDocumentContent(filename) {
-  const res = await fetch(`/api/admin/documents/${encodeURIComponent(filename)}`);
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Failed to fetch document content (HTTP ${res.status})`);
-  }
-  return await res.json();
+export function fetchDocumentContent(filename) {
+  const url = `${API_ENDPOINTS.ADMIN_DOCUMENTS}/${encodeURIComponent(filename)}`;
+  return apiRequest(url, {}, APP_MESSAGES.API_ERROR.FETCH_DOC_CONTENT);
 }
 
-export async function saveDocument(filename, content, overwrite = false) {
-  const res = await fetch('/api/admin/documents', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ filename, content, overwrite }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Failed to save document (HTTP ${res.status})`);
-  }
-  return data;
+export function saveDocument(filename, content, overwrite = false) {
+  return apiJsonRequest(
+    API_ENDPOINTS.ADMIN_DOCUMENTS,
+    'POST',
+    { filename, content, overwrite },
+    APP_MESSAGES.API_ERROR.SAVE_DOC
+  );
 }
 
-export async function updateDocument(filename, content) {
-  const res = await fetch(`/api/admin/documents/${encodeURIComponent(filename)}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ content }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Failed to update document (HTTP ${res.status})`);
-  }
-  return data;
+export function updateDocument(filename, content) {
+  const url = `${API_ENDPOINTS.ADMIN_DOCUMENTS}/${encodeURIComponent(filename)}`;
+  return apiJsonRequest(url, 'PUT', { content }, APP_MESSAGES.API_ERROR.UPDATE_DOC);
 }
 
-export async function deleteDocument(filename) {
-  const res = await fetch(`/api/admin/documents/${encodeURIComponent(filename)}`, {
-    method: 'DELETE',
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Failed to delete document (HTTP ${res.status})`);
-  }
-  return data;
+export function deleteDocument(filename) {
+  const url = `${API_ENDPOINTS.ADMIN_DOCUMENTS}/${encodeURIComponent(filename)}`;
+  return apiJsonRequest(url, 'DELETE', undefined, APP_MESSAGES.API_ERROR.DELETE_DOC);
 }
 
 /**
  * Fetches parsed markdown chunks with optional pagination and keyword search.
- * @param {Object} options
+ * @param {Object} [options]
  * @param {number} [options.limit=10] - Number of items per page (10, 30, 50)
  * @param {number} [options.offset=0] - Offset index for pagination
  * @param {string} [options.search=''] - Keyword search term
  */
-export async function fetchChunks({ limit = 10, offset = 0, search = '' } = {}) {
+export function fetchChunks({ limit = 10, offset = 0, search = '' } = {}) {
   const params = new URLSearchParams();
   if (limit) params.set('limit', limit.toString());
   if (offset !== undefined) params.set('offset', offset.toString());
   if (search && search.trim()) params.set('q', search.trim());
 
   const qs = params.toString();
-  const url = `/api/admin/chunks${qs ? `?${qs}` : ''}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Failed to fetch chunks (HTTP ${res.status})`);
-  }
-  return await res.json();
+  const url = `${API_ENDPOINTS.ADMIN_CHUNKS}${qs ? `?${qs}` : ''}`;
+  return apiRequest(url, {}, APP_MESSAGES.API_ERROR.FETCH_CHUNKS);
 }
 
-export async function triggerIndexing() {
-  const res = await fetch('/api/admin/index', {
-    method: 'POST',
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Indexing failed (HTTP ${res.status})`);
-  }
-  return data;
+export function triggerIndexing() {
+  return apiJsonRequest(API_ENDPOINTS.ADMIN_INDEX, 'POST', undefined, APP_MESSAGES.API_ERROR.TRIGGER_INDEX);
 }
 
-export async function fetchSystemPrompt() {
-  const res = await fetch('/api/admin/prompt');
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Failed to fetch system prompt (HTTP ${res.status})`);
-  }
-  return await res.json();
+export function fetchSystemPrompt() {
+  return apiRequest(API_ENDPOINTS.ADMIN_PROMPT, {}, APP_MESSAGES.API_ERROR.FETCH_PROMPT);
 }
 
-export async function updateSystemPrompt(prompt) {
-  const res = await fetch('/api/admin/prompt', {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Failed to update system prompt (HTTP ${res.status})`);
-  }
-  return data;
+export function updateSystemPrompt(prompt) {
+  return apiJsonRequest(
+    API_ENDPOINTS.ADMIN_PROMPT,
+    'PUT',
+    { prompt },
+    APP_MESSAGES.API_ERROR.UPDATE_PROMPT
+  );
+}
+
+export function resetSystemPrompt() {
+  return apiJsonRequest(
+    `${API_ENDPOINTS.ADMIN_PROMPT}/reset`,
+    'POST',
+    undefined,
+    APP_MESSAGES.API_ERROR.RESET_PROMPT
+  );
 }

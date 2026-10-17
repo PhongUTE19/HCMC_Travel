@@ -1,9 +1,10 @@
 import { config } from '../config.js';
 import { retrieveRelevantChunks } from '../rag/retriever.js';
 import { generateGroundedAnswer } from '../rag/generator.js';
+import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
 
 export class UserServiceError extends Error {
-  constructor(message, statusCode = 400) {
+  constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
     super(message);
     this.statusCode = statusCode;
   }
@@ -18,7 +19,7 @@ export class UserServiceError extends Error {
  */
 export async function processChat(rawMessage) {
   if (!rawMessage || typeof rawMessage !== 'string' || !rawMessage.trim()) {
-    throw new UserServiceError('Query message is required.', 400);
+    throw new UserServiceError(SERVER_MESSAGES.ERRORS.QUERY_REQUIRED, HTTP_STATUS.BAD_REQUEST);
   }
 
   const query = rawMessage.trim();
@@ -37,7 +38,7 @@ export async function processChat(rawMessage) {
   // Handle retrieval failure gracefully
   if (retrievalError) {
     return {
-      answer: 'Failed to retrieve relevant handbook information due to a vector database error.',
+      answer: SERVER_MESSAGES.ERRORS.RETRIEVAL_FAILED,
       sources: [],
       retrieval: {
         error: retrievalError,
@@ -73,8 +74,7 @@ export async function processChat(rawMessage) {
       `[Chat] Query rejected by similarity threshold (${bestScore} < ${config.similarityThreshold}). Early return before calling generateGroundedAnswer().`
     );
     return {
-      answer:
-        'The provided Student Handbook does not contain enough information to answer this question.',
+      answer: SERVER_MESSAGES.ERRORS.INSUFFICIENT_INFORMATION,
       sources: [],
       retrieval: {
         similarityThreshold: config.similarityThreshold,
@@ -115,6 +115,9 @@ export async function processChat(rawMessage) {
       throw error;
     }
     console.error('[UserService] Error during LLM generation:', error.message);
-    throw new UserServiceError(`Service temporarily unavailable: ${error.message}`, 500);
+    throw new UserServiceError(
+      `${SERVER_MESSAGES.ERRORS.SERVICE_UNAVAILABLE_PREFIX}${error.message}`,
+      HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
   }
 }

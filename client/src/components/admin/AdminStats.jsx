@@ -1,40 +1,41 @@
 import React from 'react';
+import { UI_LABELS } from '../../constants';
 
 export default function AdminStats({ status, indexing }) {
   return (
     <div className="admin-stats-grid">
       <div className="stat-card">
-        <span className="stat-label">Knowledge Files</span>
-        <span className="stat-value">{status ? status.documentCount : '...'}</span>
-        <span className="stat-sub">.md documents</span>
+        <span className="stat-label">{UI_LABELS.ADMIN_STATS.KNOWLEDGE_FILES}</span>
+        <span className="stat-value">{status ? status.documentCount : UI_LABELS.ADMIN_STATS.PLACEHOLDER}</span>
+        <span className="stat-sub">{UI_LABELS.ADMIN_STATS.MD_DOCUMENTS}</span>
       </div>
       <div className="stat-card">
-        <span className="stat-label">File Chunks</span>
-        <span className="stat-value">{status ? status.totalFileChunks : '...'}</span>
-        <span className="stat-sub">Parsed sections</span>
+        <span className="stat-label">{UI_LABELS.ADMIN_STATS.FILE_CHUNKS}</span>
+        <span className="stat-value">{status ? status.totalFileChunks : UI_LABELS.ADMIN_STATS.PLACEHOLDER}</span>
+        <span className="stat-sub">{UI_LABELS.ADMIN_STATS.PARSED_SECTIONS}</span>
       </div>
       <div className="stat-card">
-        <span className="stat-label">Qdrant Cloud Vectors</span>
-        <span className="stat-value">{status ? status.indexedChunks : '...'}</span>
-        <span className="stat-sub">Vector points in DB</span>
+        <span className="stat-label">{UI_LABELS.ADMIN_STATS.QDRANT_VECTORS}</span>
+        <span className="stat-value">{status ? status.indexedChunks : UI_LABELS.ADMIN_STATS.PLACEHOLDER}</span>
+        <span className="stat-sub">{UI_LABELS.ADMIN_STATS.VECTOR_POINTS_IN_DB}</span>
       </div>
       <div className="stat-card">
-        <span className="stat-label">Sync Status</span>
+        <span className="stat-label">{UI_LABELS.ADMIN_STATS.SYNC_STATUS}</span>
         <span
           className={`stat-badge ${
             status?.isSynced ? 'stat-badge--synced' : 'stat-badge--unsynced'
           }`}
         >
           {indexing
-            ? '● Indexing in progress'
+            ? UI_LABELS.ADMIN_STATS.INDEXING_IN_PROGRESS
             : status?.isSynced
-            ? '● In Sync'
-            : '● Out of Sync'}
+            ? UI_LABELS.ADMIN_STATS.IN_SYNC
+            : UI_LABELS.ADMIN_STATS.OUT_OF_SYNC}
         </span>
         <span className="stat-sub">
           {status?.lastIndexedAt
-            ? `Last indexed: ${new Date(status.lastIndexedAt).toLocaleTimeString()}`
-            : 'Ready to sync'}
+            ? `${UI_LABELS.ADMIN_STATS.LAST_INDEXED_PREFIX}${new Date(status.lastIndexedAt).toLocaleTimeString()}`
+            : UI_LABELS.ADMIN_STATS.READY_TO_SYNC}
         </span>
       </div>
     </div>

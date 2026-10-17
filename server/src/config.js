@@ -1,6 +1,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { VECTOR_CONFIG, SERVER_CONFIG_DEFAULTS } from './constants/index.js';
+import { DEFAULT_SYSTEM_PROMPT } from './config/promptConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,17 +12,19 @@ const projectRoot = path.resolve(serverRoot, '..');
 dotenv.config({ path: path.join(projectRoot, '.env') });
 
 export const config = {
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || SERVER_CONFIG_DEFAULTS.DEFAULT_PORT_STR, 10),
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
-  embeddingModel: process.env.EMBEDDING_MODEL || 'gemini-embedding-001',
-  similarityThreshold: parseFloat(process.env.SIMILARITY_THRESHOLD || '0.60'),
-  topK: parseInt(process.env.TOP_K || '4', 10),
+  geminiModel: process.env.GEMINI_MODEL || SERVER_CONFIG_DEFAULTS.GEMINI_MODEL,
+  embeddingModel: process.env.EMBEDDING_MODEL || SERVER_CONFIG_DEFAULTS.EMBEDDING_MODEL,
+  similarityThreshold: parseFloat(process.env.SIMILARITY_THRESHOLD || SERVER_CONFIG_DEFAULTS.DEFAULT_SIMILARITY_THRESHOLD_STR),
+  topK: parseInt(process.env.TOP_K || SERVER_CONFIG_DEFAULTS.DEFAULT_TOP_K_STR, 10),
   knowledgeDir: process.env.KNOWLEDGE_DIR || path.join(projectRoot, 'data', 'knowledge'),
   qdrantUrl: process.env.QDRANT_URL || '',
   qdrantApiKey: process.env.QDRANT_API_KEY || '',
-  qdrantCollection: process.env.QDRANT_COLLECTION_NAME || 'Student_Handbook',
+  qdrantCollection: process.env.QDRANT_COLLECTION_NAME || SERVER_CONFIG_DEFAULTS.QDRANT_COLLECTION,
   promptFile: process.env.PROMPT_FILE || path.join(projectRoot, 'data', 'system_prompt.txt'),
-  vectorSize: 3072,
-  vectorDistance: 'Cosine',
+  defaultSystemPrompt: DEFAULT_SYSTEM_PROMPT,
+  vectorSize: VECTOR_CONFIG.DEFAULT_SIZE,
+  vectorDistance: VECTOR_CONFIG.DISTANCE_COSINE,
 };
+

@@ -1,5 +1,6 @@
 import React from 'react';
 import ChunkCard from './ChunkCard';
+import { UI_LABELS, PAGINATION } from '../../constants';
 
 export default function ChunkReview({
   chunks,
@@ -21,16 +22,16 @@ export default function ChunkReview({
     <div className="admin-panel">
       <div className="panel-header">
         <div>
-          <h3 className="panel-title">Indexed Chunk Review ({totalChunks})</h3>
+          <h3 className="panel-title">{UI_LABELS.CHUNK_REVIEW.TITLE} ({totalChunks})</h3>
           <span className="panel-subtitle">
-            Inspect how documents are chunked by "## " headers before vectorization.
+            {UI_LABELS.CHUNK_REVIEW.SUBTITLE}
           </span>
         </div>
         <div className="panel-search-bar">
           <input
             type="text"
             className="search-input"
-            placeholder="Search chunks by title, source, or text..."
+            placeholder={UI_LABELS.CHUNK_REVIEW.SEARCH_PLACEHOLDER}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
@@ -41,19 +42,21 @@ export default function ChunkReview({
       <div className="chunk-pagination-bar">
         <div className="pagination-info">
           <span>
-            Showing <strong>{startIdx}–{endIdx}</strong> of <strong>{totalChunks}</strong> chunks
+            {UI_LABELS.CHUNK_REVIEW.SHOWING} <strong>{startIdx}–{endIdx}</strong> {UI_LABELS.CHUNK_REVIEW.OF} <strong>{totalChunks}</strong> {UI_LABELS.CHUNK_REVIEW.CHUNKS}
           </span>
           <div className="page-size-selector">
-            <label htmlFor="limit-select">Per page:</label>
+            <label htmlFor="limit-select">{UI_LABELS.CHUNK_REVIEW.PER_PAGE}</label>
             <select
               id="limit-select"
               className="page-size-select"
               value={limit}
               onChange={(e) => onLimitChange(Number(e.target.value))}
             >
-              <option value={10}>10</option>
-              <option value={30}>30</option>
-              <option value={50}>50</option>
+              {PAGINATION.OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -63,30 +66,30 @@ export default function ChunkReview({
             className="btn btn-secondary btn-sm"
             disabled={offset === 0 || loading}
             onClick={onPrevPage}
-            title="Load previous batch of chunks"
+            title={UI_LABELS.CHUNK_REVIEW.PREVIOUS_TITLE}
           >
-            ← Previous
+            {UI_LABELS.CHUNK_REVIEW.PREVIOUS}
           </button>
           <button
             className="btn btn-secondary btn-sm"
             disabled={!hasMore || loading}
             onClick={onNextPage}
-            title="Load next batch of chunks"
+            title={UI_LABELS.CHUNK_REVIEW.NEXT_TITLE}
           >
-            Next →
+            {UI_LABELS.CHUNK_REVIEW.NEXT}
           </button>
         </div>
       </div>
 
       {loading ? (
         <div className="empty-state">
-          <span className="spinner"></span> Loading chunks...
+          <span className="spinner"></span> {UI_LABELS.CHUNK_REVIEW.LOADING_CHUNKS}
         </div>
       ) : chunks.length === 0 ? (
         <div className="empty-state">
           {searchQuery
-            ? 'No chunks match the search filter.'
-            : 'No chunks available in knowledge base.'}
+            ? UI_LABELS.CHUNK_REVIEW.NO_MATCHING_CHUNKS
+            : UI_LABELS.CHUNK_REVIEW.NO_CHUNKS_AVAILABLE}
         </div>
       ) : (
         <div className="chunks-list">

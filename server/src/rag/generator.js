@@ -1,5 +1,6 @@
 import { generateAnswer } from './gemini.js';
 import { getSystemPrompt } from '../services/adminService.js';
+import { SERVER_MESSAGES } from '../constants/index.js';
 
 /**
  * Builds the strict grounded prompt injecting the retrieved context sections.
@@ -41,7 +42,7 @@ Answer:`;
  */
 export async function generateGroundedAnswer(question, chunks) {
   if (!chunks || chunks.length === 0) {
-    return 'The knowledge base does not contain enough information to answer this question.';
+    return SERVER_MESSAGES.ERRORS.KNOWLEDGE_BASE_INSUFFICIENT;
   }
 
   const prompt = buildGroundedPrompt(question, chunks);

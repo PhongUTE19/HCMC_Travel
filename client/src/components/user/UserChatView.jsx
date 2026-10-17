@@ -3,12 +3,7 @@ import ChatForm from './ChatForm';
 import AnswerSection from './AnswerSection';
 import ErrorMessage from '../ErrorMessage';
 import { sendChatMessage } from '../../services/userApi';
-
-const SAMPLE_QUESTIONS = [
-  'What is the tuition fee for the Standard Program?',
-  'What are the requirements for the Aurora Scholarship?',
-  'What is linear algebra?',
-];
+import { SAMPLE_QUESTIONS, UI_LABELS, APP_MESSAGES } from '../../constants';
 
 export default function UserChatView() {
   const [loading, setLoading] = useState(false);
@@ -23,7 +18,7 @@ export default function UserChatView() {
       const data = await sendChatMessage(message);
       setAnswerData(data);
     } catch (err) {
-      setError(err.message || 'Failed to communicate with assistant.');
+      setError(err.message || APP_MESSAGES.ERROR.CHAT_COMMUNICATION_FAILED);
       setAnswerData(null);
     } finally {
       setLoading(false);
@@ -33,7 +28,7 @@ export default function UserChatView() {
   return (
     <main className="app-main">
       <div className="sample-chips">
-        <span className="chips-label">Quick test:</span>
+        <span className="chips-label">{UI_LABELS.USER_CHAT.QUICK_TEST}</span>
         {SAMPLE_QUESTIONS.map((q, idx) => (
           <button
             key={idx}
@@ -50,7 +45,7 @@ export default function UserChatView() {
 
       {loading && (
         <div className="status-msg loading-msg">
-          <span className="spinner"></span> Thinking... Retrieving context and generating response...
+          <span className="spinner"></span> {UI_LABELS.USER_CHAT.THINKING_MESSAGE}
         </div>
       )}
 

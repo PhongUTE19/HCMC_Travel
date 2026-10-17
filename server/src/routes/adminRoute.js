@@ -22,5 +22,6 @@ router.post('/index', adminController.triggerIndexing);
 // System prompt management
 router.get('/prompt', adminController.getPrompt);
 router.put('/prompt', adminController.updatePrompt);
+router.post('/prompt/reset', adminController.resetPrompt);
 
 export default router;

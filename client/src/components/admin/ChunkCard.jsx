@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { UI_LABELS } from '../../constants';
 
 export default function ChunkCard({ chunk }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -15,7 +16,7 @@ export default function ChunkCard({ chunk }) {
           className="btn-toggle"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          {isExpanded ? 'Collapse' : 'Expand'}
+          {isExpanded ? UI_LABELS.COMMON.COLLAPSE : UI_LABELS.COMMON.EXPAND}
         </button>
       </div>
       <div className="chunk-card-body">
