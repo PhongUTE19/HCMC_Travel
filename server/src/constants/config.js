@@ -30,6 +30,14 @@ export const PROMPT_CONSTRAINTS = Object.freeze({
   MAX_LENGTH: 10000,
 });
 
+export const CHUNKING_CONFIG = Object.freeze({
+  DEFAULT_CHUNK_SIZE: 1200,
+  DEFAULT_CHUNK_OVERLAP: 200,
+  MIN_CHUNK_SIZE: 100,
+  MAX_CHUNK_SIZE: 4000,
+  SEPARATORS: Object.freeze(['\n\n', '\n', '. ', '? ', '! ', '; ', ' ', '']),
+});
+
 export const PAGINATION_LIMITS = Object.freeze({
   DEFAULT_LIMIT: 10,
   MIN_LIMIT: 1,

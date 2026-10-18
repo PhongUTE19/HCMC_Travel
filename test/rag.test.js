@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { loadAndChunkMarkdown } from '../server/src/rag/chunker.js';
+import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/rag/chunker.js';
 import { buildGroundedPrompt, generateGroundedAnswer } from '../server/src/rag/generator.js';
 import { cosineSimilarity } from '../server/src/rag/retriever.js';
 import { config } from '../server/src/config.js';
@@ -68,6 +68,36 @@ describe('1. Document Loading and Section-Aware Chunking', () => {
     assert.ok(sec11.content.includes('make-up exam fee in Section 7 is increased to 200,000 VND'));
     assert.ok(sec11.content.includes('library late fine in Section 5 is increased to 3,000 VND per book per day'));
     assert.ok(sec11.content.includes('installment plan in Section 3 is no longer available to Honors Program students'));
+  });
+
+  it('splits text recursively using fallback hierarchy respecting chunkSize and chunkOverlap', () => {
+    const sampleText = 'Paragraph 1: General rules and conduct.\n\n' +
+      'Paragraph 2: Detailed payment terms and semester schedules.\n\n' +
+      'Paragraph 3: Library fine regulations and textbook borrowing policy.';
+
+    const chunks = recursiveCharacterTextSplit(sampleText, {
+      chunkSize: 70,
+      chunkOverlap: 15,
+    });
+
+    assert.ok(chunks.length > 1, 'Should split into multiple chunks');
+    for (const chunk of chunks) {
+      assert.ok(chunk.length <= 75, `Chunk "${chunk}" exceeds expected limit`);
+      assert.ok(chunk.trim().length > 0, 'Chunk must not be empty');
+    }
+  });
+
+  it('splits oversized sections into sub-chunks with parent headings and metadata', () => {
+    const chunks = loadAndChunkMarkdown(knowledgeDir, { chunkSize: 250, chunkOverlap: 50 });
+    assert.ok(chunks.length > 12, 'Oversized sections must split into more than 12 chunks');
+
+    const subChunk = chunks.find((c) => c.totalParts > 1);
+    assert.ok(subChunk, 'Sub-chunk with totalParts > 1 must exist');
+    assert.ok(subChunk.id.includes('_p'), 'Sub-chunk ID must contain part indicator');
+    assert.ok(subChunk.title.includes('Part '), 'Sub-chunk title must retain parent heading with part info');
+    assert.ok(subChunk.sectionNumber > 0, 'Must preserve sectionNumber');
+    assert.ok(subChunk.sectionTitle.length > 0, 'Must preserve sectionTitle');
+    assert.equal(subChunk.source, 'KB-A_Lumen-Institute-Student-Handbook.md');
   });
 });
 

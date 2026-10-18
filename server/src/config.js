@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { VECTOR_CONFIG, SERVER_CONFIG_DEFAULTS } from './constants/index.js';
+import { VECTOR_CONFIG, SERVER_CONFIG_DEFAULTS, CHUNKING_CONFIG } from './constants/index.js';
 import { DEFAULT_SYSTEM_PROMPT } from './config/promptConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +18,8 @@ export const config = {
   embeddingModel: process.env.EMBEDDING_MODEL || SERVER_CONFIG_DEFAULTS.EMBEDDING_MODEL,
   similarityThreshold: parseFloat(process.env.SIMILARITY_THRESHOLD || SERVER_CONFIG_DEFAULTS.DEFAULT_SIMILARITY_THRESHOLD_STR),
   topK: parseInt(process.env.TOP_K || SERVER_CONFIG_DEFAULTS.DEFAULT_TOP_K_STR, 10),
+  chunkSize: parseInt(process.env.CHUNK_SIZE || CHUNKING_CONFIG.DEFAULT_CHUNK_SIZE.toString(), 10),
+  chunkOverlap: parseInt(process.env.CHUNK_OVERLAP || CHUNKING_CONFIG.DEFAULT_CHUNK_OVERLAP.toString(), 10),
   knowledgeDir: process.env.KNOWLEDGE_DIR || path.join(projectRoot, 'data', 'knowledge'),
   qdrantUrl: process.env.QDRANT_URL || '',
   qdrantApiKey: process.env.QDRANT_API_KEY || '',
