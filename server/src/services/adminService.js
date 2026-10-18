@@ -1,16 +1,33 @@
 import fs from 'fs';
-import path from 'path';
 import { config } from '../config.js';
-import { DEFAULT_SYSTEM_PROMPT } from '../config/promptConfig.js';
 import { loadAndChunkMarkdown } from '../rag/chunker.js';
 import { runIndexer } from '../rag/indexer.js';
-import { getVectorStoreCount } from '../rag/vector_store.js';
+import { getVectorStoreCount } from '../rag/vectorStore.js';
 import {
   SERVER_MESSAGES,
   HTTP_STATUS,
   PAGINATION_LIMITS,
-  PROMPT_CONSTRAINTS,
 } from '../constants/index.js';
+
+// Import and re-export document management functionality
+export {
+  sanitizeFilename,
+  validateMarkdownContent,
+  listDocuments,
+  readDocument,
+  saveDocument,
+  updateDocument,
+  removeDocument,
+  DocumentServiceError,
+} from './documentService.js';
+
+// Import and re-export system prompt management functionality
+export {
+  getSystemPrompt,
+  saveSystemPrompt,
+  resetSystemPrompt,
+  PromptServiceError,
+} from './promptService.js';
 
 let isIndexing = false;
 let lastIndexedAt = null;
@@ -23,45 +40,17 @@ export class AdminServiceError extends Error {
 }
 
 /**
- * Validates and sanitizes document filenames.
- */
-export function sanitizeFilename(rawName) {
-  if (!rawName || typeof rawName !== 'string') {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED, HTTP_STATUS.BAD_REQUEST);
-  }
-  let name = rawName.trim();
-  if (!name.endsWith('.md')) {
-    name = `${name}.md`;
-  }
-  const base = path.basename(name);
-  if (!/^[a-zA-Z0-9_\-.]+\.md$/.test(base)) {
-    throw new AdminServiceError(
-      SERVER_MESSAGES.ERRORS.INVALID_FILENAME,
-      HTTP_STATUS.BAD_REQUEST
-    );
-  }
-  return base;
-}
-
-/**
- * Validates markdown content has at least one ## section header.
- */
-function validateMarkdownContent(content) {
-  if (content === undefined || content === null || typeof content !== 'string' || !content.trim()) {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_CONTENT_EMPTY, HTTP_STATUS.BAD_REQUEST);
-  }
-
-  const hasHeader = content.split('\n').some((line) => line.startsWith('## '));
-  if (!hasHeader) {
-    throw new AdminServiceError(
-      SERVER_MESSAGES.ERRORS.MISSING_SECTION_HEADER,
-      HTTP_STATUS.BAD_REQUEST
-    );
-  }
-}
-
-/**
  * Computes current system status, file count, chunk count, and cloud sync status.
+ * Coordinates knowledge base file inspection and vector store synchronization state.
+ * 
+ * @returns {Promise<{
+ *   documentCount: number,
+ *   totalFileChunks: number,
+ *   indexedChunks: number,
+ *   isIndexing: boolean,
+ *   lastIndexedAt: string | null,
+ *   isSynced: boolean
+ * }>}
  */
 export async function getAdminStatus() {
   const files = fs.existsSync(config.knowledgeDir)
@@ -89,109 +78,19 @@ export async function getAdminStatus() {
 }
 
 /**
- * Lists all markdown documents with size, section count, and modified timestamp.
- */
-export async function listDocuments() {
-  if (!fs.existsSync(config.knowledgeDir)) {
-    return [];
-  }
-
-  const files = fs.readdirSync(config.knowledgeDir).filter((f) => f.endsWith('.md'));
-  return files.map((file) => {
-    const filePath = path.join(config.knowledgeDir, file);
-    const stat = fs.statSync(filePath);
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const sectionCount = content.split('\n').filter((l) => l.startsWith('## ')).length;
-
-    return {
-      filename: file,
-      size: stat.size,
-      modifiedAt: stat.mtime.toISOString(),
-      sectionCount,
-    };
-  });
-}
-
-/**
- * Reads the content of a single markdown document.
- */
-export async function readDocument(rawFilename) {
-  const filename = sanitizeFilename(rawFilename);
-  const filePath = path.join(config.knowledgeDir, filename);
-
-  if (!fs.existsSync(filePath)) {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_NOT_FOUND(filename), HTTP_STATUS.NOT_FOUND);
-  }
-
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return { filename, content };
-}
-
-/**
- * Saves a new document or writes an uploaded file.
- */
-export async function saveDocument({ filename: rawFilename, content, overwrite = false }) {
-  const filename = sanitizeFilename(rawFilename);
-  validateMarkdownContent(content);
-
-  if (!fs.existsSync(config.knowledgeDir)) {
-    fs.mkdirSync(config.knowledgeDir, { recursive: true });
-  }
-
-  const filePath = path.join(config.knowledgeDir, filename);
-  if (fs.existsSync(filePath) && !overwrite) {
-    throw new AdminServiceError(
-      SERVER_MESSAGES.ERRORS.DOC_ALREADY_EXISTS(filename),
-      HTTP_STATUS.CONFLICT
-    );
-  }
-
-  fs.writeFileSync(filePath, content.trim(), 'utf-8');
-  return {
-    filename,
-    message: SERVER_MESSAGES.SUCCESS.DOC_SAVED(filename),
-  };
-}
-
-/**
- * Updates an existing document's content.
- */
-export async function updateDocument(rawFilename, content) {
-  const filename = sanitizeFilename(rawFilename);
-  validateMarkdownContent(content);
-
-  const filePath = path.join(config.knowledgeDir, filename);
-  if (!fs.existsSync(filePath)) {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_DOES_NOT_EXIST(filename), HTTP_STATUS.NOT_FOUND);
-  }
-
-  fs.writeFileSync(filePath, content.trim(), 'utf-8');
-  return {
-    filename,
-    message: SERVER_MESSAGES.SUCCESS.DOC_UPDATED(filename),
-  };
-}
-
-/**
- * Deletes a document from the knowledge base directory.
- */
-export async function removeDocument(rawFilename) {
-  const filename = sanitizeFilename(rawFilename);
-  const filePath = path.join(config.knowledgeDir, filename);
-
-  if (!fs.existsSync(filePath)) {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.DOC_NOT_FOUND(filename), HTTP_STATUS.NOT_FOUND);
-  }
-
-  fs.unlinkSync(filePath);
-  return {
-    filename,
-    message: SERVER_MESSAGES.SUCCESS.DOC_DELETED(filename),
-  };
-}
-
-/**
  * Returns parsed chunks with pagination and keyword filtering.
+ * 
+ * @param {object} params
+ * @param {number|string} [params.limit=10]
+ * @param {number|string} [params.offset=0]
+ * @param {string} [params.search='']
+ * @returns {Promise<{
+ *   totalChunks: number,
+ *   chunks: Array<object>,
+ *   limit: number,
+ *   offset: number,
+ *   hasMore: boolean
+ * }>}
  */
 export async function getPaginatedChunks({
   limit = PAGINATION_LIMITS.DEFAULT_LIMIT,
@@ -241,6 +140,9 @@ export async function getPaginatedChunks({
 
 /**
  * Executes re-indexing of knowledge chunks to Qdrant Cloud.
+ * Guards against concurrent indexing operations.
+ * 
+ * @returns {Promise<{ message: string, indexedChunks: number }>}
  */
 export async function executeIndexing() {
   if (isIndexing) {
@@ -249,7 +151,7 @@ export async function executeIndexing() {
 
   isIndexing = true;
   try {
-    console.log('[Admin] Re-indexing triggered from Admin interface...');
+    console.log('[AdminService] Re-indexing triggered from Admin interface...');
     const result = await runIndexer();
     lastIndexedAt = new Date().toISOString();
     return {
@@ -259,72 +161,4 @@ export async function executeIndexing() {
   } finally {
     isIndexing = false;
   }
-}
-
-/**
- * Gets the current system prompt from persistent storage.
- * If file does not exist, seeds it with default and returns default.
- */
-export function getSystemPrompt() {
-  try {
-    if (fs.existsSync(config.promptFile)) {
-      const content = fs.readFileSync(config.promptFile, 'utf-8');
-      if (content && content.trim()) {
-        return content.trim();
-      }
-    }
-    const dir = path.dirname(config.promptFile);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(config.promptFile, DEFAULT_SYSTEM_PROMPT, 'utf-8');
-    return DEFAULT_SYSTEM_PROMPT;
-  } catch (err) {
-    console.warn('[Prompt] Failed to read prompt file, fallback to default:', err.message);
-    return DEFAULT_SYSTEM_PROMPT;
-  }
-}
-
-/**
- * Validates and saves a new system prompt to persistent storage.
- */
-export function saveSystemPrompt(rawPrompt) {
-  if (rawPrompt === undefined || rawPrompt === null || typeof rawPrompt !== 'string' || !rawPrompt.trim()) {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.PROMPT_EMPTY, HTTP_STATUS.BAD_REQUEST);
-  }
-
-  const trimmed = rawPrompt.trim();
-  if (trimmed.length < PROMPT_CONSTRAINTS.MIN_LENGTH) {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.PROMPT_TOO_SHORT, HTTP_STATUS.BAD_REQUEST);
-  }
-  if (trimmed.length > PROMPT_CONSTRAINTS.MAX_LENGTH) {
-    throw new AdminServiceError(SERVER_MESSAGES.ERRORS.PROMPT_TOO_LONG, HTTP_STATUS.BAD_REQUEST);
-  }
-
-  const dir = path.dirname(config.promptFile);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  fs.writeFileSync(config.promptFile, trimmed, 'utf-8');
-  return {
-    prompt: trimmed,
-    message: SERVER_MESSAGES.SUCCESS.PROMPT_UPDATED,
-  };
-}
-
-/**
- * Resets the active system prompt file back to the default configuration template.
- * @returns {{ prompt: string, message: string }}
- */
-export function resetSystemPrompt() {
-  const dir = path.dirname(config.promptFile);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(config.promptFile, DEFAULT_SYSTEM_PROMPT, 'utf-8');
-  return {
-    prompt: DEFAULT_SYSTEM_PROMPT,
-    message: SERVER_MESSAGES.SUCCESS.PROMPT_RESET,
-  };
 }

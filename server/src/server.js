@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from './config.js';
-import { initVectorStore, getVectorStoreCount } from './rag/vector_store.js';
+import { initVectorStore, getVectorStoreCount } from './rag/vectorStore.js';
 import adminRouter from './routes/adminRoute.js';
 import userRouter from './routes/userRoute.js';
 import { STATUS_KEYS, HTTP_STATUS } from './constants/index.js';

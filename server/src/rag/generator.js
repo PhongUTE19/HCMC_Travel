@@ -1,40 +1,12 @@
 import { generateAnswer, generateAnswerStream } from './gemini.js';
-import { getSystemPrompt } from '../services/adminService.js';
+import { buildGroundedPrompt, formatContextSections } from './promptBuilder.js';
 import { SERVER_MESSAGES } from '../constants/index.js';
 
-/**
- * Builds the strict grounded prompt injecting the retrieved context sections.
- * Dynamically obtains the current system prompt from persistent storage.
- * 
- * @param {string} question - User question
- * @param {Array<{title: string, content: string, source: string}>} chunks - Retrieved context chunks
- * @param {string} [customPrompt] - Optional override prompt
- * @returns {string} Formatted prompt string
- */
-export function buildGroundedPrompt(question, chunks, customPrompt) {
-  const contextSections = chunks
-    .map(
-      (chunk, index) =>
-        `[Source ${index + 1}: Document: ${chunk.source} | Section: ${chunk.title} | Chunk ID: ${chunk.id}]\n${chunk.content}`
-    )
-    .join('\n\n');
-
-  const systemPrompt = customPrompt || getSystemPrompt();
-
-  return `${systemPrompt}
-
-Context:
-${contextSections}
-
-User Question:
-${question}
-
-Answer:`;
-}
+export { buildGroundedPrompt, formatContextSections };
 
 /**
  * Generates a grounded response based solely on the retrieved chunks.
- * Reuses generateAnswer from gemini.js.
+ * Maintained as a backward-compatible facade delegating to promptBuilder and Gemini generator.
  * 
  * @param {string} question - User query
  * @param {Array<{title: string, content: string, source: string}>} chunks - Top-K context chunks

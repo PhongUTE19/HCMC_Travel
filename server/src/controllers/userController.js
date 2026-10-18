@@ -1,4 +1,4 @@
-import * as userService from '../services/userService.js';
+import * as chatOrchestrator from '../services/chatOrchestrator.js';
 import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
 
 function handleError(res, error) {
@@ -19,7 +19,7 @@ export async function chat(req, res) {
 
   try {
     const { message } = req.body;
-    const result = await userService.processChat(message);
+    const result = await chatOrchestrator.orchestrateChat(message);
     res.json(result);
   } catch (error) {
     console.error('[UserController] Chat error:', error.message);
@@ -71,7 +71,7 @@ export async function chatStream(req, res) {
   };
 
   try {
-    await userService.processChatStream(message, sendEvent, {
+    await chatOrchestrator.orchestrateChatStream(message, sendEvent, {
       signal: abortController.signal,
     });
   } catch (error) {

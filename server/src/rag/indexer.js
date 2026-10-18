@@ -1,7 +1,7 @@
 import { config } from '../config.js';
 import { loadAndChunkMarkdown } from './chunker.js';
 import { embedText } from './gemini.js';
-import { initVectorStore } from './vector_store.js';
+import { initVectorStore } from './vectorStore.js';
 
 /**
  * Indexes all markdown knowledge files by generating embeddings and inserting them into Qdrant.

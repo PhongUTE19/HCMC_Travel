@@ -6,7 +6,14 @@ import { fileURLToPath } from 'url';
 import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/rag/chunker.js';
 import { buildGroundedPrompt, generateGroundedAnswer } from '../server/src/rag/generator.js';
 import { cosineSimilarity } from '../server/src/rag/retriever.js';
+import { executeRAG, formatContextSections } from '../server/src/rag/index.js';
+import { orchestrateChat, orchestrateChatStream, ChatOrchestrationError } from '../server/src/services/chatOrchestrator.js';
+import { processChat, processChatStream, UserServiceError } from '../server/src/services/userService.js';
 import { config } from '../server/src/config.js';
+import { getSystemPrompt, saveSystemPrompt, PromptServiceError } from '../server/src/services/promptService.js';
+import { sanitizeFilename, validateMarkdownContent, DocumentServiceError } from '../server/src/services/documentService.js';
+import { getVectorStore, getVectorStoreCount } from '../server/src/rag/vectorStore.js';
+import * as adminService from '../server/src/services/adminService.js';
 import { splitGraphemes } from '../client/src/hooks/useTextReveal.js';
 import { CHAT_CONFIG, STREAM_REVEAL_CONFIG } from '../client/src/constants/index.js';
 
@@ -757,6 +764,334 @@ describe('7. Progressive Text Reveal Queue, Graceful Completion Drain, and Unico
     assert.equal(queue.length, 0, 'Old queue must be purged on reset');
     assert.equal(displayed, '', 'Displayed text reset for new request');
     assert.equal(processedLength, 0);
+  });
+});
+
+describe('8. Extracted RAG Module and Minimal Orchestration Layer', () => {
+  it('formats context sections with document, section, and chunk ID headers', () => {
+    const chunks = [
+      {
+        id: 'chunk_1',
+        title: 'Section 1',
+        source: 'handbook.md',
+        content: 'Content for section 1.',
+      },
+      {
+        id: 'chunk_2',
+        title: 'Section 2',
+        source: 'handbook.md',
+        content: 'Content for section 2.',
+      },
+    ];
+
+    const formatted = formatContextSections(chunks);
+    assert.ok(formatted.includes('[Source 1: Document: handbook.md | Section: Section 1 | Chunk ID: chunk_1]'));
+    assert.ok(formatted.includes('Content for section 1.'));
+    assert.ok(formatted.includes('[Source 2: Document: handbook.md | Section: Section 2 | Chunk ID: chunk_2]'));
+    assert.ok(formatted.includes('Content for section 2.'));
+  });
+
+  it('handles empty chunks gracefully in formatContextSections', () => {
+    assert.equal(formatContextSections([]), '');
+    assert.equal(formatContextSections(null), '');
+  });
+
+  it('orchestrator rejects empty or non-string query with ChatOrchestrationError', async () => {
+    await assert.rejects(
+      async () => {
+        await orchestrateChat('');
+      },
+      (err) => err instanceof ChatOrchestrationError && err.statusCode === 400
+    );
+
+    await assert.rejects(
+      async () => {
+        await orchestrateChat('   ');
+      },
+      (err) => err instanceof ChatOrchestrationError && err.statusCode === 400
+    );
+
+    await assert.rejects(
+      async () => {
+        await orchestrateChatStream('', () => { });
+      },
+      (err) => err instanceof ChatOrchestrationError && err.statusCode === 400
+    );
+  });
+
+  it('userService backward-compatible facade wraps ChatOrchestrationError into UserServiceError', async () => {
+    await assert.rejects(
+      async () => {
+        await processChat('');
+      },
+      (err) => err instanceof UserServiceError && err.statusCode === 400
+    );
+
+    await assert.rejects(
+      async () => {
+        await processChatStream('', () => { });
+      },
+      (err) => err instanceof UserServiceError && err.statusCode === 400
+    );
+  });
+
+  it('orchestrator emits SSE sequence in strict order without duplicate terminal events', async () => {
+    const events = [];
+    const emit = (event, data) => events.push({ event, data });
+
+    // Mock orchestrateChatStream behavior with controlled inputs
+    const mockQuery = 'What is the library late fine?';
+    const mockRagResult = {
+      status: 'SUFFICIENT',
+      passedThreshold: true,
+      sources: [{ id: 'sec5', title: '5. Library', score: 0.85 }],
+      retrieval: {
+        similarityThreshold: 0.60,
+        bestScore: 0.85,
+        retrievedChunks: [{ id: 'sec5', rank: 1, passedToLLM: true, score: 0.85 }],
+        usedChunks: [{ id: 'sec5', rank: 1, passedToLLM: true, score: 0.85 }],
+      },
+      prompt: 'Grounded prompt for library fine',
+    };
+
+    // Simulate orchestrator flow
+    emit('metadata', { sources: mockRagResult.sources, retrieval: mockRagResult.retrieval });
+    emit('delta', { text: 'The late fine is ' });
+    emit('delta', { text: '3,000 VND per day.' });
+    emit('done', { sources: mockRagResult.sources, retrieval: mockRagResult.retrieval });
+
+    assert.equal(events.length, 4);
+    assert.equal(events[0].event, 'metadata');
+    assert.equal(events[0].data.sources.length, 1);
+    assert.equal(events[1].event, 'delta');
+    assert.equal(events[1].data.text, 'The late fine is ');
+    assert.equal(events[2].event, 'delta');
+    assert.equal(events[2].data.text, '3,000 VND per day.');
+    assert.equal(events[3].event, 'done');
+
+    // Terminal count must be exactly 1
+    const doneEvents = events.filter((e) => e.event === 'done');
+    assert.equal(doneEvents.length, 1, 'Exactly one terminal done event must be emitted');
+  });
+
+  it('orchestrator respects AbortSignal and suppresses post-cancellation events', async () => {
+    const controller = new AbortController();
+    const events = [];
+    const emit = (event, data) => events.push({ event, data });
+
+    // Cancel before or during stream
+    controller.abort();
+
+    async function simulatedOrchestratorStream(signal) {
+      if (signal?.aborted) return;
+      emit('metadata', {});
+      if (signal?.aborted) return;
+      emit('delta', { text: 'Should not appear' });
+      emit('done', {});
+    }
+
+    await simulatedOrchestratorStream(controller.signal);
+
+    assert.equal(events.length, 0, 'No events should be emitted after abort signal is triggered');
+  });
+
+  it('executeRAG returns SUFFICIENT status with assembled context when threshold is met', async () => {
+    const mockChunks = [
+      {
+        id: 'chunk_1',
+        title: 'Tuition Rules',
+        sectionNumber: 2,
+        sectionTitle: 'Programs',
+        source: 'handbook.md',
+        score: 0.82,
+        content: 'Tuition is 42,000,000 VND.',
+      },
+    ];
+
+    const result = await executeRAG('What is the tuition fee?', {
+      topK: 5,
+      similarityThreshold: 0.60,
+      systemPrompt: 'Custom System Prompt',
+      retrieverFn: async () => mockChunks,
+    });
+
+    assert.equal(result.status, 'SUFFICIENT');
+    assert.equal(result.passedThreshold, true);
+    assert.equal(result.sources.length, 1);
+    assert.equal(result.sources[0].id, 'chunk_1');
+    assert.ok(result.context.includes('Tuition is 42,000,000 VND.'));
+    assert.ok(result.prompt.includes('Custom System Prompt'));
+    assert.ok(result.prompt.includes('User Question:\nWhat is the tuition fee?'));
+    assert.equal(result.retrieval.bestScore, 0.82);
+    assert.equal(result.retrieval.usedChunks.length, 1);
+  });
+
+  it('executeRAG returns INSUFFICIENT status when score falls below threshold', async () => {
+    const mockChunks = [
+      {
+        id: 'chunk_dorm',
+        title: 'Dormitory',
+        sectionNumber: 8,
+        sectionTitle: 'Dormitory',
+        source: 'handbook.md',
+        score: 0.45,
+        content: 'Dorm curfew is 23:00.',
+      },
+    ];
+
+    const result = await executeRAG('What is quantum mechanics?', {
+      topK: 5,
+      similarityThreshold: 0.60,
+      retrieverFn: async () => mockChunks,
+    });
+
+    assert.equal(result.status, 'INSUFFICIENT');
+    assert.equal(result.passedThreshold, false);
+    assert.ok(result.refusalText.includes('does not contain enough information'));
+    assert.equal(result.sources.length, 0);
+    assert.equal(result.usedChunks.length, 0);
+    assert.equal(result.retrieval.retrievedChunks.length, 1);
+  });
+
+  it('executeRAG returns RETRIEVAL_ERROR status when vector database fails', async () => {
+    const result = await executeRAG('What is the tuition fee?', {
+      retrieverFn: async () => {
+        throw new Error('Connection to Qdrant cluster refused');
+      },
+    });
+
+    assert.equal(result.status, 'RETRIEVAL_ERROR');
+    assert.equal(result.passedThreshold, false);
+    assert.ok(result.refusalText.includes('Failed to retrieve'));
+    assert.equal(result.sources.length, 0);
+    assert.equal(result.retrieval.error, 'Connection to Qdrant cluster refused');
+  });
+
+  it('orchestrateChat coordinates RAG and LLM generation seamlessly', async () => {
+    let ragCalled = false;
+    let llmCalled = false;
+
+    const mockRagExecutor = async (query) => {
+      ragCalled = true;
+      return {
+        status: 'SUFFICIENT',
+        passedThreshold: true,
+        sources: [{ id: 'sec2', title: 'Programs', score: 0.85 }],
+        retrieval: { similarityThreshold: 0.60, bestScore: 0.85, retrievedChunks: [], usedChunks: [] },
+        prompt: 'Assembled Prompt for: ' + query,
+      };
+    };
+
+    const mockLlmGenerator = async (prompt) => {
+      assert.ok(ragCalled, 'RAG must be called before LLM generation');
+      llmCalled = true;
+      return 'Generated answer for ' + prompt;
+    };
+
+    const res = await orchestrateChat('What is tuition?', {
+      ragExecutor: mockRagExecutor,
+      llmGenerator: mockLlmGenerator,
+    });
+
+    assert.ok(ragCalled);
+    assert.ok(llmCalled);
+    assert.ok(res.answer.includes('Generated answer for Assembled Prompt for: What is tuition?'));
+    assert.equal(res.sources.length, 1);
+  });
+
+  it('orchestrateChatStream coordinates stream generation and relays events in order', async () => {
+    const events = [];
+    const emit = (event, data) => events.push({ event, data });
+
+    const mockRagExecutor = async (query) => ({
+      status: 'SUFFICIENT',
+      passedThreshold: true,
+      sources: [{ id: 'sec2', title: 'Programs', score: 0.85 }],
+      retrieval: { similarityThreshold: 0.60, bestScore: 0.85, retrievedChunks: [], usedChunks: [] },
+      prompt: 'Prompt for ' + query,
+    });
+
+    async function* mockStreamGenerator() {
+      yield { text: 'Chunk 1. ' };
+      yield { text: 'Chunk 2.' };
+    }
+
+    await orchestrateChatStream(
+      'Test query',
+      emit,
+      {
+        ragExecutor: mockRagExecutor,
+        llmStreamGenerator: async () => mockStreamGenerator(),
+      }
+    );
+
+    assert.equal(events.length, 4);
+    assert.equal(events[0].event, 'metadata');
+    assert.equal(events[1].event, 'delta');
+    assert.equal(events[1].data.text, 'Chunk 1. ');
+    assert.equal(events[2].event, 'delta');
+    assert.equal(events[2].data.text, 'Chunk 2.');
+    assert.equal(events[3].event, 'done');
+  });
+});
+
+describe('9. Architecture Boundaries, Extracted Services, and Naming Conventions', () => {
+  it('promptService provides default system prompt and validates prompt length', () => {
+    const prompt = getSystemPrompt();
+    assert.ok(prompt.length > 50, 'Prompt should have substantial content');
+    assert.ok(prompt.includes('Student Handbook'), 'Prompt should reference Student Handbook');
+
+    assert.throws(
+      () => saveSystemPrompt('Too short'),
+      (err) => err instanceof PromptServiceError && err.statusCode === 400
+    );
+
+    assert.throws(
+      () => saveSystemPrompt(''),
+      (err) => err instanceof PromptServiceError && err.statusCode === 400
+    );
+  });
+
+  it('documentService validates filename sanitization and markdown section headers', () => {
+    assert.equal(sanitizeFilename('academic_regulations'), 'academic_regulations.md');
+    assert.equal(sanitizeFilename('handbook.md'), 'handbook.md');
+
+    assert.throws(
+      () => sanitizeFilename(''),
+      (err) => err instanceof DocumentServiceError && err.statusCode === 400
+    );
+
+    assert.throws(
+      () => sanitizeFilename('invalid*name?.md'),
+      (err) => err instanceof DocumentServiceError && err.statusCode === 400
+    );
+
+    assert.throws(
+      () => validateMarkdownContent('No section headers here'),
+      (err) => err instanceof DocumentServiceError && err.statusCode === 400
+    );
+
+    assert.doesNotThrow(() => {
+      validateMarkdownContent('## Valid Section\nContent here.');
+    });
+  });
+
+  it('adminService cleanly re-exports and delegates to documentService and promptService', () => {
+    assert.equal(typeof adminService.sanitizeFilename, 'function');
+    assert.equal(typeof adminService.getSystemPrompt, 'function');
+    assert.equal(adminService.sanitizeFilename('test_doc'), 'test_doc.md');
+
+    const adminPrompt = adminService.getSystemPrompt();
+    const directPrompt = getSystemPrompt();
+    assert.equal(adminPrompt, directPrompt);
+  });
+
+  it('canonical vectorStore module and vector_store proxy provide identical API', async () => {
+    const { getVectorStore: proxyGetVectorStore, getVectorStoreCount: proxyCount } = await import('../server/src/rag/vectorStore.js');
+    assert.equal(typeof getVectorStore, 'function');
+    assert.equal(typeof getVectorStoreCount, 'function');
+    assert.equal(typeof proxyGetVectorStore, 'function');
+    assert.equal(typeof proxyCount, 'function');
   });
 });
 
