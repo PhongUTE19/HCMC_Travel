@@ -1,5 +1,6 @@
 import React from 'react';
-import { useSystemPrompt, useToast } from '../../hooks';
+import { useSystemPrompt } from '../../hooks';
+import { useToast } from '../../context/ToastContext';
 import { UI_LABELS } from '../../constants';
 
 export default function SystemPromptEditor() {

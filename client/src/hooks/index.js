@@ -3,4 +3,5 @@ export { useKnowledgeBase } from './useKnowledgeBase';
 export { useDocuments } from './useDocuments';
 export { useChunks } from './useChunks';
 export { useSystemPrompt } from './useSystemPrompt';
-export { useToast } from './useToast';
+export { useChat } from './useChat';
+export { useTextReveal } from './useTextReveal';

@@ -16,6 +16,7 @@ export const APP_MESSAGES = Object.freeze({
     PROMPT_EMPTY: 'System prompt cannot be empty.',
     UPDATE_PROMPT_FAILED: 'Failed to update system prompt.',
     MESSAGE_EMPTY: 'Message cannot be empty',
+    STREAM_INTERRUPTED: 'Response generation was interrupted.',
   },
   SUCCESS: {
     REINDEX_COMPLETED: 'Indexing completed successfully.',

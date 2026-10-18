@@ -54,3 +54,16 @@ export const TOAST_DURATIONS = Object.freeze({
   WARNING: 6000,
   ERROR: 8000,
 });
+
+export const CHAT_CONFIG = Object.freeze({
+  DEFAULT_SHOW_DEBUG: false,
+});
+
+export const STREAM_REVEAL_CONFIG = Object.freeze({
+  BASE_CHARS_PER_TICK: 2,
+  TICK_INTERVAL_MS: 25,
+  CATCHUP_THRESHOLD: 40,
+  CATCHUP_CHARS_PER_TICK: 6,
+  MAX_BATCH_SIZE: 16,
+});
+

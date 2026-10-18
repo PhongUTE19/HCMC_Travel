@@ -39,13 +39,15 @@ export const UI_LABELS = Object.freeze({
   CHAT_FORM: {
     INPUT_PLACEHOLDER: 'Ask about tuition, programs, scholarships, dorms, or exam rules...',
     SEND_BUTTON: 'Send',
+    STOP_BUTTON: 'Stop',
   },
   USER_CHAT: {
     QUICK_TEST: 'Quick test:',
-    THINKING_MESSAGE: 'Thinking... Retrieving context and generating response...',
+    THINKING_MESSAGE: 'Thinking...',
+    EMPTY_STATE: 'Ask a question to start the conversation.',
+    CLEAR_CHAT: 'Clear',
   },
   ANSWER_SECTION: {
-    ASSISTANT_RESPONSE: 'Assistant Response',
     SUPPORTING_SOURCES: 'Supporting Sources & Evidence:',
     DEFAULT_DOC_NAME: 'Student Handbook',
     DEFAULT_SECTION_TITLE: 'Handbook Section',
@@ -73,6 +75,7 @@ export const UI_LABELS = Object.freeze({
     STATUS_LABEL: 'Status:',
     STATUS_PASSED: 'Passed to LLM generation',
     STATUS_FILTERED: 'Filtered out before generation',
+    INTERRUPTED_MESSAGE: 'Response generation was interrupted.',
   },
   ADMIN_DASHBOARD: {
     TITLE: 'Knowledge Base Management',

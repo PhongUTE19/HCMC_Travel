@@ -4,7 +4,8 @@ import DocumentEditor from './DocumentEditor';
 import DocumentTable from './DocumentTable';
 import ChunkReview from './ChunkReview';
 import SystemPromptEditor from './SystemPromptEditor';
-import { useDrawer, useKnowledgeBase, useDocuments, useChunks, useToast } from '../../hooks';
+import { useDrawer, useKnowledgeBase, useDocuments, useChunks } from '../../hooks';
+import { useToast } from '../../context/ToastContext';
 import { UI_LABELS, ADMIN_PANELS } from '../../constants';
 
 export default function AdminDashboard() {

@@ -1,28 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import ChatForm from './ChatForm';
-import AnswerSection from './AnswerSection';
-import { useToast } from '../../hooks';
-import { sendChatMessage } from '../../services/userApi';
-import { SAMPLE_QUESTIONS, UI_LABELS, APP_MESSAGES } from '../../constants';
+import ConversationList from './ConversationList';
+import { useChat } from '../../hooks';
+import { SAMPLE_QUESTIONS, UI_LABELS, CHAT_CONFIG } from '../../constants';
 
-export default function UserChatView() {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [answerData, setAnswerData] = useState(null);
-
-  const handleSendMessage = async (message) => {
-    setLoading(true);
-
-    try {
-      const data = await sendChatMessage(message);
-      setAnswerData(data);
-    } catch (err) {
-      toast.error(err.message || APP_MESSAGES.ERROR.CHAT_COMMUNICATION_FAILED);
-      setAnswerData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+/**
+ * Main Chat View coordinating quick questions, conversation flow, and prompt submission.
+ */
+export default function UserChatView({
+  health,
+  onRefreshHealth,
+  showDebug = CHAT_CONFIG.DEFAULT_SHOW_DEBUG,
+}) {
+  const { messages, loading, sendMessage, stopGeneration, clearChat } = useChat({
+    health,
+    onRefreshHealth,
+  });
 
   return (
     <main className="app-main">
@@ -34,28 +27,30 @@ export default function UserChatView() {
             type="button"
             className="btn btn-chip"
             disabled={loading}
-            onClick={() => handleSendMessage(q)}
+            onClick={() => sendMessage(q)}
           >
             {q}
           </button>
         ))}
+        {messages.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={loading}
+            onClick={clearChat}
+          >
+            {UI_LABELS.USER_CHAT.CLEAR_CHAT}
+          </button>
+        )}
       </div>
 
-      <ChatForm onSubmit={handleSendMessage} loading={loading} />
+      <ConversationList messages={messages} showDebug={showDebug} />
 
-      {loading && (
-        <div className="alert alert-info">
-          <span className="spinner"></span> {UI_LABELS.USER_CHAT.THINKING_MESSAGE}
-        </div>
-      )}
-
-      {answerData && (
-        <AnswerSection
-          answer={answerData.answer}
-          sources={answerData.sources}
-          retrieval={answerData.retrieval}
-        />
-      )}
+      <ChatForm
+        onSubmit={sendMessage}
+        loading={loading}
+        onStop={stopGeneration}
+      />
     </main>
   );
 }

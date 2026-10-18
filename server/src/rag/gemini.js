@@ -86,3 +86,27 @@ export async function generateAnswer(prompt) {
 
   return response.text || '';
 }
+
+/**
+ * Calls Gemini text generation with streaming for the given prompt.
+ * 
+ * @param {string} prompt - Prompt or question for Gemini
+ * @param {object} [options]
+ * @param {AbortSignal} [options.signal] - Optional AbortSignal for request cancellation
+ * @returns {Promise<AsyncIterable<any>>} Async iterable of chunks
+ */
+export async function generateAnswerStream(prompt, options = {}) {
+  const ai = getAIClient();
+  const requestConfig = {};
+  if (options.signal) {
+    requestConfig.abortSignal = options.signal;
+  }
+
+  return await withRetry(() =>
+    ai.models.generateContentStream({
+      model: config.geminiModel,
+      contents: prompt,
+      config: requestConfig,
+    })
+  );
+}

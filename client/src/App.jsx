@@ -76,7 +76,11 @@ export default function App() {
           />
         </header>
 
-        {role === USER_ROLES.USER ? <UserChatView /> : <AdminDashboard />}
+        {role === USER_ROLES.USER ? (
+          <UserChatView health={health} onRefreshHealth={checkHealth} />
+        ) : (
+          <AdminDashboard />
+        )}
       </div>
     </ToastProvider>
   );

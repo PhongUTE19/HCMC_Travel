@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UI_LABELS } from '../../constants';
 
-export default function ChatForm({ onSubmit, loading }) {
+export default function ChatForm({ onSubmit, loading, onStop }) {
   const [inputMessage, setInputMessage] = useState('');
 
   const handleSubmit = (e) => {
@@ -22,13 +22,23 @@ export default function ChatForm({ onSubmit, loading }) {
           onChange={(e) => setInputMessage(e.target.value)}
           disabled={loading}
         />
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={loading || !inputMessage.trim()}
-        >
-          {UI_LABELS.CHAT_FORM.SEND_BUTTON}
-        </button>
+        {loading && onStop ? (
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={onStop}
+          >
+            {UI_LABELS.CHAT_FORM.STOP_BUTTON}
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading || !inputMessage.trim()}
+          >
+            {UI_LABELS.CHAT_FORM.SEND_BUTTON}
+          </button>
+        )}
       </div>
     </form>
   );
