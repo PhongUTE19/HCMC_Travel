@@ -5,14 +5,14 @@ export default function DocumentEditor({ editingDoc, onChange, onSave, onCancel 
   if (!editingDoc) return null;
 
   return (
-    <div className="editor-card">
-      <div className="editor-header">
-        <h3>
+    <div className="panel">
+      <div className="panel-header split-layout">
+        <h3 className="panel-title">
           {editingDoc.isNew
             ? UI_LABELS.DOCUMENT_EDITOR.ADD_NEW_DOC
             : `${UI_LABELS.DOCUMENT_EDITOR.EDIT_DOC_PREFIX}${editingDoc.filename}`}
         </h3>
-        <button className="btn btn-secondary btn-sm" onClick={onCancel}>
+        <button type="button" className="btn btn-secondary" onClick={onCancel}>
           {UI_LABELS.COMMON.CANCEL}
         </button>
       </div>
@@ -40,7 +40,7 @@ export default function DocumentEditor({ editingDoc, onChange, onSave, onCancel 
             required
           />
         </div>
-        <div className="editor-actions">
+        <div className="row-layout">
           <button type="submit" className="btn btn-primary">
             {UI_LABELS.DOCUMENT_EDITOR.SAVE_BTN}
           </button>

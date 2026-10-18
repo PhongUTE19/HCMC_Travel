@@ -19,32 +19,22 @@ export default function ChunkReview({
   const endIdx = totalChunks === 0 ? 0 : Math.min(offset + chunks.length, totalChunks);
 
   return (
-    <div className="admin-panel">
-      <div className="panel-header">
-        <div>
-          <h3 className="panel-title">{UI_LABELS.CHUNK_REVIEW.TITLE} ({totalChunks})</h3>
-          <span className="panel-subtitle">
-            {UI_LABELS.CHUNK_REVIEW.SUBTITLE}
-          </span>
-        </div>
-        <div className="panel-search-bar">
-          <input
-            type="text"
-            className="search-input"
-            placeholder={UI_LABELS.CHUNK_REVIEW.SEARCH_PLACEHOLDER}
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-      </div>
+    <div>
+      <input
+        type="text"
+        className="search-input"
+        placeholder={UI_LABELS.CHUNK_REVIEW.SEARCH_PLACEHOLDER}
+        value={searchQuery}
+        onChange={(e) => onSearchChange(e.target.value)}
+      />
 
       {/* Pagination Controls Bar */}
-      <div className="chunk-pagination-bar">
-        <div className="pagination-info">
+      <div className="pagination-bar split-layout">
+        <div className="pagination-info row-layout">
           <span>
             {UI_LABELS.CHUNK_REVIEW.SHOWING} <strong>{startIdx}–{endIdx}</strong> {UI_LABELS.CHUNK_REVIEW.OF} <strong>{totalChunks}</strong> {UI_LABELS.CHUNK_REVIEW.CHUNKS}
           </span>
-          <div className="page-size-selector">
+          <div className="row-layout">
             <label htmlFor="limit-select">{UI_LABELS.CHUNK_REVIEW.PER_PAGE}</label>
             <select
               id="limit-select"
@@ -61,9 +51,10 @@ export default function ChunkReview({
           </div>
         </div>
 
-        <div className="pagination-nav-actions">
+        <div className="row-layout">
           <button
-            className="btn btn-secondary btn-sm"
+            type="button"
+            className="btn btn-secondary"
             disabled={offset === 0 || loading}
             onClick={onPrevPage}
             title={UI_LABELS.CHUNK_REVIEW.PREVIOUS_TITLE}
@@ -71,7 +62,8 @@ export default function ChunkReview({
             {UI_LABELS.CHUNK_REVIEW.PREVIOUS}
           </button>
           <button
-            className="btn btn-secondary btn-sm"
+            type="button"
+            className="btn btn-secondary"
             disabled={!hasMore || loading}
             onClick={onNextPage}
             title={UI_LABELS.CHUNK_REVIEW.NEXT_TITLE}
@@ -92,7 +84,7 @@ export default function ChunkReview({
             : UI_LABELS.CHUNK_REVIEW.NO_CHUNKS_AVAILABLE}
         </div>
       ) : (
-        <div className="chunks-list">
+        <div className="card-list">
           {chunks.map((chunk) => (
             <ChunkCard key={chunk.id} chunk={chunk} />
           ))}

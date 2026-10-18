@@ -2,7 +2,7 @@
  * Admin API service to communicate with Express backend admin endpoints.
  */
 
-import { API_ENDPOINTS, APP_MESSAGES } from '../constants';
+import { API_ENDPOINTS, APP_MESSAGES, HTTP_METHODS } from '../constants';
 import { apiRequest, apiJsonRequest } from './apiClient';
 
 export function fetchAdminStatus() {
@@ -21,7 +21,7 @@ export function fetchDocumentContent(filename) {
 export function saveDocument(filename, content, overwrite = false) {
   return apiJsonRequest(
     API_ENDPOINTS.ADMIN_DOCUMENTS,
-    'POST',
+    HTTP_METHODS.POST,
     { filename, content, overwrite },
     APP_MESSAGES.API_ERROR.SAVE_DOC
   );
@@ -29,12 +29,12 @@ export function saveDocument(filename, content, overwrite = false) {
 
 export function updateDocument(filename, content) {
   const url = `${API_ENDPOINTS.ADMIN_DOCUMENTS}/${encodeURIComponent(filename)}`;
-  return apiJsonRequest(url, 'PUT', { content }, APP_MESSAGES.API_ERROR.UPDATE_DOC);
+  return apiJsonRequest(url, HTTP_METHODS.PUT, { content }, APP_MESSAGES.API_ERROR.UPDATE_DOC);
 }
 
 export function deleteDocument(filename) {
   const url = `${API_ENDPOINTS.ADMIN_DOCUMENTS}/${encodeURIComponent(filename)}`;
-  return apiJsonRequest(url, 'DELETE', undefined, APP_MESSAGES.API_ERROR.DELETE_DOC);
+  return apiJsonRequest(url, HTTP_METHODS.DELETE, undefined, APP_MESSAGES.API_ERROR.DELETE_DOC);
 }
 
 /**
@@ -56,7 +56,7 @@ export function fetchChunks({ limit = 10, offset = 0, search = '' } = {}) {
 }
 
 export function triggerIndexing() {
-  return apiJsonRequest(API_ENDPOINTS.ADMIN_INDEX, 'POST', undefined, APP_MESSAGES.API_ERROR.TRIGGER_INDEX);
+  return apiJsonRequest(API_ENDPOINTS.ADMIN_INDEX, HTTP_METHODS.POST, undefined, APP_MESSAGES.API_ERROR.TRIGGER_INDEX);
 }
 
 export function fetchSystemPrompt() {
@@ -66,7 +66,7 @@ export function fetchSystemPrompt() {
 export function updateSystemPrompt(prompt) {
   return apiJsonRequest(
     API_ENDPOINTS.ADMIN_PROMPT,
-    'PUT',
+    HTTP_METHODS.PUT,
     { prompt },
     APP_MESSAGES.API_ERROR.UPDATE_PROMPT
   );
@@ -75,7 +75,7 @@ export function updateSystemPrompt(prompt) {
 export function resetSystemPrompt() {
   return apiJsonRequest(
     `${API_ENDPOINTS.ADMIN_PROMPT}/reset`,
-    'POST',
+    HTTP_METHODS.POST,
     undefined,
     APP_MESSAGES.API_ERROR.RESET_PROMPT
   );

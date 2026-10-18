@@ -27,3 +27,30 @@ export const API_ENDPOINTS = Object.freeze({
   ADMIN_INDEX: '/api/admin/index',
   ADMIN_PROMPT: '/api/admin/prompt',
 });
+
+export const HTTP_METHODS = Object.freeze({
+  GET: 'GET',
+  POST: 'POST',
+  PUT: 'PUT',
+  DELETE: 'DELETE',
+});
+
+export const ADMIN_PANELS = Object.freeze({
+  DOCUMENTS: 'documents',
+  CHUNKS: 'chunks',
+  PROMPT: 'prompt',
+});
+
+export const TOAST_TYPES = Object.freeze({
+  SUCCESS: 'success',
+  ERROR: 'error',
+  INFO: 'info',
+  WARNING: 'warning',
+});
+
+export const TOAST_DURATIONS = Object.freeze({
+  SUCCESS: 4000,
+  INFO: 4000,
+  WARNING: 6000,
+  ERROR: 8000,
+});

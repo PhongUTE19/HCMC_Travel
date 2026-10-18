@@ -16,7 +16,7 @@ export default function ChatForm({ onSubmit, loading }) {
       <div className="input-group">
         <input
           type="text"
-          className="chat-input"
+          className="form-input"
           placeholder={UI_LABELS.CHAT_FORM.INPUT_PLACEHOLDER}
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
@@ -24,7 +24,7 @@ export default function ChatForm({ onSubmit, loading }) {
         />
         <button
           type="submit"
-          className="submit-btn"
+          className="btn btn-primary"
           disabled={loading || !inputMessage.trim()}
         >
           {UI_LABELS.CHAT_FORM.SEND_BUTTON}

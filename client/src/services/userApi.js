@@ -2,7 +2,7 @@
  * User API service to communicate with Express backend chat and health endpoints.
  */
 
-import { API_ENDPOINTS, APP_MESSAGES } from '../constants';
+import { API_ENDPOINTS, APP_MESSAGES, HTTP_METHODS } from '../constants';
 import { apiRequest, apiJsonRequest } from './apiClient';
 
 export function fetchHealth() {
@@ -16,7 +16,7 @@ export async function sendChatMessage(message) {
   }
   return apiJsonRequest(
     API_ENDPOINTS.USER_CHAT,
-    'POST',
+    HTTP_METHODS.POST,
     { message: trimmed },
     APP_MESSAGES.API_ERROR.SERVER_ERROR
   );

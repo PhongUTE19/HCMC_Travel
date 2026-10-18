@@ -301,12 +301,12 @@ Student_Handbook/
 
 ## 8. Out-of-Scope List
 
-* ❌ Heavy relational / NoSQL database servers (PostgreSQL, MongoDB).
-* ❌ User authentication, sessions, or login.
-* ❌ Multi-turn conversational chat history.
-* ❌ Real-time web scraping / Google Search live grounding.
-* ❌ Admin document upload UI.
-* ❌ Agent / Tool Calling workflows.
+* Heavy relational / NoSQL database servers (PostgreSQL, MongoDB).
+* User authentication, sessions, or login.
+* Multi-turn conversational chat history.
+* Real-time web scraping / Google Search live grounding.
+* Admin document upload UI.
+* Agent / Tool Calling workflows.
 
 ---
 

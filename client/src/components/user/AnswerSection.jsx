@@ -8,38 +8,34 @@ function RetrievedChunkItem({ chunk, threshold }) {
   const displayTitle = formatSectionTitle(chunk);
 
   return (
-    <div className={`chunk-card ${chunk.passedToLLM ? 'chunk-card-passed' : 'chunk-card-filtered'}`}>
-      <div className="chunk-card-header">
-        <div className="chunk-card-title-group">
-          <span className="chunk-rank-badge" title={UI_LABELS.ANSWER_SECTION.RETRIEVER_RANK_TITLE}>#{chunk.rank}</span>
-          <span className="chunk-id-badge" title={UI_LABELS.ANSWER_SECTION.CHUNK_ID_TITLE}>{chunk.id}</span>
-          <span className="chunk-source-badge" title={UI_LABELS.ANSWER_SECTION.SOURCE_DOC_TITLE}>{chunk.source}</span>
-          {chunk.passedToLLM ? (
-            <span className="chunk-status-badge status-passed" title={UI_LABELS.ANSWER_SECTION.PASSED_TO_LLM_TITLE}>
-              {UI_LABELS.ANSWER_SECTION.PASSED_TO_LLM_BADGE}
-            </span>
-          ) : (
-            <span className="chunk-status-badge status-filtered" title={UI_LABELS.ANSWER_SECTION.FILTERED_OUT_TITLE(threshold)}>
-              {UI_LABELS.ANSWER_SECTION.FILTERED_OUT_BADGE(threshold)}
-            </span>
-          )}
+    <div className="card">
+      <div className="card-header split-layout">
+        <div className="row-layout">
+          <span className="badge">#{chunk.rank}</span>
+          <span className="badge">{chunk.id}</span>
+          <span className="badge">{chunk.source}</span>
+          <span className="badge">
+            {chunk.passedToLLM
+              ? UI_LABELS.ANSWER_SECTION.PASSED_TO_LLM_BADGE
+              : UI_LABELS.ANSWER_SECTION.FILTERED_OUT_BADGE(threshold)}
+          </span>
           {chunk.score !== undefined && (
-            <span className="chunk-score-badge" title={UI_LABELS.ANSWER_SECTION.COSINE_SCORE_TITLE}>
+            <span className="badge">
               {UI_LABELS.ANSWER_SECTION.SCORE_LABEL}{formatScore(chunk.score)}
             </span>
           )}
-          <h4 className="chunk-title">{displayTitle}</h4>
+          <h4 className="card-title">{displayTitle}</h4>
         </div>
         <button
           type="button"
-          className="btn-toggle"
+          className="btn"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           {isExpanded ? UI_LABELS.COMMON.COLLAPSE : UI_LABELS.ANSWER_SECTION.EXPAND_CONTENT}
         </button>
       </div>
-      <div className="chunk-card-body">
-        <pre className={`chunk-content-text ${isExpanded ? 'expanded' : 'collapsed'}`}>
+      <div className="card-body">
+        <pre className={`card-content ${isExpanded ? 'expanded' : ''}`}>
           {chunk.content}
         </pre>
       </div>
@@ -59,22 +55,22 @@ export default function AnswerSection({ answer, sources, retrieval }) {
   const hasRetrievalError = Boolean(retrieval?.error);
 
   return (
-    <div className="answer-section">
-      <h3 className="answer-title">{UI_LABELS.ANSWER_SECTION.ASSISTANT_RESPONSE}</h3>
-      <div className="answer-content">
-        <p className="answer-text">{answer}</p>
+    <div className="panel">
+      <h3 className="panel-title">{UI_LABELS.ANSWER_SECTION.ASSISTANT_RESPONSE}</h3>
+      <div className="panel-body">
+        <p>{answer}</p>
       </div>
 
       {/* Supporting Sources List (used in answer) */}
       {sources && sources.length > 0 && (
-        <div className="sources-container">
-          <h4 className="sources-title">{UI_LABELS.ANSWER_SECTION.SUPPORTING_SOURCES}</h4>
-          <ul className="sources-list">
+        <div className="panel-body">
+          <h4 className="card-title">{UI_LABELS.ANSWER_SECTION.SUPPORTING_SOURCES}</h4>
+          <ul className="card-list">
             {sources.map((src, index) => {
               if (typeof src === 'string') {
                 return (
-                  <li key={index} className="source-item">
-                    <span className="source-badge">[{index + 1}]</span>
+                  <li key={index} className="card">
+                    <span className="badge">[{index + 1}]</span>
                     <span>{src}</span>
                   </li>
                 );
@@ -85,12 +81,12 @@ export default function AnswerSection({ answer, sources, retrieval }) {
               const chunkId = src.id;
 
               return (
-                <li key={index} className="source-item">
-                  <span className="source-badge">[{index + 1}]</span>
-                  <span className="source-title"><strong>{displayTitle}</strong></span>
-                  <span className="source-meta">({docName}{chunkId ? ` • ${chunkId}` : ''})</span>
+                <li key={index} className="card">
+                  <span className="badge">[{index + 1}]</span>
+                  <span><strong>{displayTitle}</strong></span>
+                  <span>({docName}{chunkId ? ` • ${chunkId}` : ''})</span>
                   {src.score !== undefined && (
-                    <span className="source-score" title={UI_LABELS.ANSWER_SECTION.COSINE_SCORE_TITLE}>
+                    <span className="badge">
                       {formatScore(src.score)}
                     </span>
                   )}
@@ -102,36 +98,36 @@ export default function AnswerSection({ answer, sources, retrieval }) {
       )}
 
       {/* Diagnostics / Retrieved Chunks Inspection Control */}
-      <div className="retrieval-diagnostics">
-        <div className="diagnostics-header">
+      <div className="panel-body">
+        <div className="panel-header split-layout">
           <button
             type="button"
             id="toggle-retrieved-chunks-btn"
-            className="btn-toggle-diagnostics"
+            className="btn btn-secondary"
             onClick={() => setShowChunks(!showChunks)}
           >
             {showChunks ? UI_LABELS.ANSWER_SECTION.HIDE_CHUNKS : UI_LABELS.ANSWER_SECTION.SHOW_CHUNKS(retrievedChunks.length)}
           </button>
           {retrieval && (
-            <span className="diagnostics-pill">
+            <span className="badge">
               {UI_LABELS.ANSWER_SECTION.RETRIEVED_LABEL}<strong>{retrievedChunks.length}</strong> | {UI_LABELS.ANSWER_SECTION.PASSED_TO_LLM_LABEL}<strong>{usedChunks.length}</strong> | {UI_LABELS.ANSWER_SECTION.THRESHOLD_LABEL}<strong>{threshold}</strong>
             </span>
           )}
         </div>
 
         {showChunks && (
-          <div className="diagnostics-panel" id="retrieval-diagnostics-panel">
+          <div className="panel-body" id="retrieval-diagnostics-panel">
             {hasRetrievalError ? (
-              <div className="retrieval-error-banner" role="alert">
+              <div className="alert alert-error" role="alert">
                 <strong>{UI_LABELS.ANSWER_SECTION.RETRIEVAL_FAILURE}</strong> {retrieval.error}
               </div>
             ) : retrievedChunks.length === 0 ? (
-              <div className="retrieval-empty-banner">
+              <div className="empty-state">
                 {UI_LABELS.ANSWER_SECTION.NO_CHUNKS_RETRIEVED}
               </div>
             ) : (
               <>
-                <div className="diagnostics-summary-bar">
+                <div className="card-header split-layout">
                   <span><strong>{UI_LABELS.ANSWER_SECTION.CANDIDATE_POOL}</strong> {retrievedChunks.length}{UI_LABELS.ANSWER_SECTION.CHUNKS_SUFFIX}</span>
                   <span><strong>{UI_LABELS.ANSWER_SECTION.THRESHOLD_LABEL}</strong> {threshold}</span>
                   {bestScore !== undefined && (
@@ -142,7 +138,7 @@ export default function AnswerSection({ answer, sources, retrieval }) {
                   </span>
                 </div>
 
-                <div className="chunks-list">
+                <div className="card-list">
                   {retrievedChunks.map((chunk) => (
                     <RetrievedChunkItem
                       key={chunk.id || chunk.rank}

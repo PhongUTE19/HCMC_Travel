@@ -150,14 +150,14 @@ npm run test:all
 
 Every answer returned by the chatbot includes interactive retrieval diagnostics:
 
-1. **Visible Control**: Click the **`▶ Show retrieved chunks`** button located directly beneath any assistant answer.
+1. **Visible Control**: Click the **`Show retrieved chunks`** button located directly beneath any assistant answer.
 2. **Diagnostics Summary Bar**: Displays candidate pool count, active similarity threshold (0.60), top similarity score, and generation status.
 3. **Chunk Card Badges**:
    * **Rank (`#1`, `#2`, ...)**: The retrieval order returned by the vector database.
    * **Similarity Score (`Score: 0.7313`)**: The cosine similarity between the query embedding and the section vector (scale 0.0 to 1.0).
    * **Status Badge**:
-     - `✓ Passed to LLM`: Green badge indicating the chunk met the threshold and was provided to Gemini as context.
-     - `✕ Filtered out (< 0.6)`: Red badge indicating the chunk fell below the relevance threshold and was withheld from generation.
+     - `Passed to LLM`: Green badge indicating the chunk met the threshold and was provided to Gemini as context.
+     - `Filtered out (< 0.6)`: Red badge indicating the chunk fell below the relevance threshold and was withheld from generation.
    * **Source & Chunk ID**: Filename (`KB-A_Lumen-Institute-Student-Handbook.md`) and section ID (`..._secN`).
    * **Section Title**: Heading of the section.
    * **Content View**: Click **`Expand content`** to inspect the exact retrieved text, ensuring full transparency of vector search results.

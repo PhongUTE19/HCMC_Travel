@@ -323,10 +323,10 @@ If vector database connection fails:
 
 #### 6. Frontend Debug Controls
 * Located in [`client/src/components/user/AnswerSection.jsx`](file:///d:/HCMUTE/2627S1/New_Technologies_In_Software_Engineering/Student_Handbook/client/src/components/user/AnswerSection.jsx#L95-L162).
-* Toggle button: `▶ Show retrieved chunks (N)` / `▼ Hide retrieved chunks`.
+* Toggle button: `Show retrieved chunks (N)` / `Hide retrieved chunks`.
 * Visual badges:
   - Rank badge (`#1`, `#2`)
-  - Status badge: `✓ Passed to LLM` (green) vs `✕ Filtered out (< 0.6)` (red)
+  - Status badge: `Passed to LLM` (green) vs `Filtered out (< 0.6)` (red)
   - Score badge: `Score: 0.7076`
   - Chunk identifier badge: `KB-A_Lumen-Institute-Student-Handbook_secN`
   - Expand/Collapse content button toggling full text display.
