@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from './config.js';
-import { initVectorStore, getVectorStoreCount } from './rag/vectorStore.js';
+import { initVectorStore, getVectorStoreCount } from './features/knowledge/vectorStore.js';
 import adminRouter from './routes/adminRoute.js';
-import userRouter from './routes/userRoute.js';
+import chatRouter from './features/chat/chat.routes.js';
 import { STATUS_KEYS, HTTP_STATUS } from './constants/index.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { errorHandler } from './shared/middleware/errorHandler.js';
 
 const app = express();
 
@@ -15,7 +15,7 @@ app.use(express.json());
 
 // Mounted API routes
 app.use('/api/admin', adminRouter);
-app.use('/api/user', userRouter);
+app.use('/api/user', chatRouter);
 
 // Health check endpoint (queries vector database count)
 app.get('/api/health', async (req, res) => {

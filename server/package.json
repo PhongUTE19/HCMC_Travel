@@ -6,7 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",
-    "index": "node src/rag/indexer.js"
+    "index": "node src/features/knowledge/indexer.js"
   },
   "keywords": [
     "student",

@@ -4,24 +4,25 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
 import express from '../server/node_modules/express/index.js';
-import userRoute from '../server/src/routes/userRoute.js';
+import chatRouter from '../server/src/features/chat/chat.routes.js';
 import adminRoute from '../server/src/routes/adminRoute.js';
 
-import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/rag/chunker.js';
-import { buildGroundedPrompt, generateGroundedAnswer } from '../server/src/rag/generator.js';
-import { cosineSimilarity } from '../server/src/rag/retriever.js';
-import { executeRAG, formatContextSections } from '../server/src/rag/index.js';
-import { orchestrateChat, orchestrateChatStream, ChatOrchestrationError } from '../server/src/services/chatOrchestrator.js';
-import { processChat, processChatStream, UserServiceError } from '../server/src/services/userService.js';
+import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/features/knowledge/chunker.js';
+import { generateGroundedAnswer } from '../server/src/features/knowledge/generator.js';
+import { buildGroundedPrompt, formatContextSections } from '../server/src/features/knowledge/promptBuilder.js';
+import { cosineSimilarity } from '../server/src/features/knowledge/retriever.js';
+import { executeRAG } from '../server/src/features/knowledge/ragService.js';
+import { orchestrateChat, orchestrateChatStream, ChatOrchestrationError } from '../server/src/features/chat/chat.service.js';
 import { config } from '../server/src/config.js';
-import { getSystemPrompt, saveSystemPrompt, PromptServiceError } from '../server/src/services/promptService.js';
-import { sanitizeFilename, validateMarkdownContent, DocumentServiceError } from '../server/src/services/documentService.js';
-import { getVectorStore, getVectorStoreCount } from '../server/src/rag/vectorStore.js';
-import * as adminService from '../server/src/services/adminService.js';
-import { AppError } from '../server/src/errors/AppError.js';
-import { errorHandler } from '../server/src/middleware/errorHandler.js';
-import * as userController from '../server/src/controllers/userController.js';
-import * as adminController from '../server/src/controllers/adminController.js';
+import { getSystemPrompt, saveSystemPrompt, PromptServiceError } from '../server/src/features/prompts/prompts.service.js';
+import { sanitizeFilename, validateMarkdownContent, DocumentServiceError, removeDocument } from '../server/src/features/documents/documents.service.js';
+import { getVectorStore, getVectorStoreCount } from '../server/src/features/knowledge/vectorStore.js';
+import { KnowledgeServiceError, AdminServiceError } from '../server/src/features/knowledge/knowledge.service.js';
+import { AppError } from '../server/src/shared/errors/index.js';
+import { errorHandler } from '../server/src/shared/middleware/errorHandler.js';
+import * as chatController from '../server/src/features/chat/chat.controller.js';
+import * as documentsController from '../server/src/features/documents/documents.controller.js';
+import * as promptsController from '../server/src/features/prompts/prompts.controller.js';
 import {
   ValidationError,
   validate,
@@ -846,19 +847,19 @@ describe('8. Extracted RAG Module and Minimal Orchestration Layer', () => {
     );
   });
 
-  it('userService backward-compatible facade wraps ChatOrchestrationError into UserServiceError', async () => {
+  it('chat service validates query string and rejects empty messages with ChatOrchestrationError', async () => {
     await assert.rejects(
       async () => {
-        await processChat('');
+        await orchestrateChat('');
       },
-      (err) => err instanceof UserServiceError && err.statusCode === 400
+      (err) => err instanceof ChatOrchestrationError && err.statusCode === 400
     );
 
     await assert.rejects(
       async () => {
-        await processChatStream('', () => { });
+        await orchestrateChatStream('', () => { });
       },
-      (err) => err instanceof UserServiceError && err.statusCode === 400
+      (err) => err instanceof ChatOrchestrationError && err.statusCode === 400
     );
   });
 
@@ -1103,22 +1104,21 @@ describe('9. Architecture Boundaries, Extracted Services, and Naming Conventions
     });
   });
 
-  it('adminService cleanly re-exports and delegates to documentService and promptService', () => {
-    assert.equal(typeof adminService.sanitizeFilename, 'function');
-    assert.equal(typeof adminService.getSystemPrompt, 'function');
-    assert.equal(adminService.sanitizeFilename('test_doc'), 'test_doc.md');
+  it('feature services provide clean interfaces for document and prompt operations', () => {
+    assert.equal(typeof sanitizeFilename, 'function');
+    assert.equal(typeof getSystemPrompt, 'function');
+    assert.equal(sanitizeFilename('test_doc'), 'test_doc.md');
 
-    const adminPrompt = adminService.getSystemPrompt();
     const directPrompt = getSystemPrompt();
-    assert.equal(adminPrompt, directPrompt);
+    assert.ok(directPrompt && directPrompt.length > 0);
   });
 
-  it('canonical vectorStore module and vector_store proxy provide identical API', async () => {
-    const { getVectorStore: proxyGetVectorStore, getVectorStoreCount: proxyCount } = await import('../server/src/rag/vectorStore.js');
+  it('knowledge vectorStore module exports getVectorStore and getVectorStoreCount', async () => {
+    const { getVectorStore: vsGetStore, getVectorStoreCount: vsGetCount } = await import('../server/src/features/knowledge/vectorStore.js');
     assert.equal(typeof getVectorStore, 'function');
     assert.equal(typeof getVectorStoreCount, 'function');
-    assert.equal(typeof proxyGetVectorStore, 'function');
-    assert.equal(typeof proxyCount, 'function');
+    assert.equal(typeof vsGetStore, 'function');
+    assert.equal(typeof vsGetCount, 'function');
   });
 });
 
@@ -1138,9 +1138,8 @@ describe('10. Centralized Backend Error Handling and Operational Errors', () => 
     assert.ok(chatErr instanceof Error);
     assert.equal(chatErr.isOperational, true);
 
-    const userErr = new UserServiceError('User issue', 400);
-    assert.ok(userErr instanceof AppError);
-    assert.ok(userErr instanceof ChatOrchestrationError);
+    const knowledgeErr = new KnowledgeServiceError('Knowledge issue', 400);
+    assert.ok(knowledgeErr instanceof AppError);
 
     const docErr = new DocumentServiceError('Doc issue', 404);
     assert.ok(docErr instanceof AppError);
@@ -1149,7 +1148,7 @@ describe('10. Centralized Backend Error Handling and Operational Errors', () => 
     const promptErr = new PromptServiceError('Prompt issue', 400);
     assert.ok(promptErr instanceof AppError);
 
-    const adminErr = new adminService.AdminServiceError('Admin issue', 409);
+    const adminErr = new AdminServiceError('Admin issue', 409);
     assert.ok(adminErr instanceof AppError);
     assert.equal(adminErr.statusCode, 409);
   });
@@ -1235,16 +1234,16 @@ describe('10. Centralized Backend Error Handling and Operational Errors', () => 
     assert.equal(nextError, midStreamErr, 'Should pass error to next()');
   });
 
-  it('userController.chatStream propagates pre-stream validation error to next()', async () => {
+  it('chatController.chatStream propagates pre-stream validation error to next()', async () => {
     let passedError = null;
     const req = { body: { message: '   ' } };
     const res = {
-      setHeader() {},
+      setHeader() { },
       status() { return this; },
       json() { return this; },
     };
 
-    await userController.chatStream(req, res, (err) => {
+    await chatController.chatStream(req, res, (err) => {
       passedError = err;
     });
 
@@ -1253,14 +1252,14 @@ describe('10. Centralized Backend Error Handling and Operational Errors', () => 
     assert.equal(passedError.message, 'Query message is required.');
   });
 
-  it('adminController handlers catch and propagate domain errors to next()', async () => {
+  it('documentsController handlers catch and propagate domain errors to next()', async () => {
     let passedError = null;
     const req = { params: { filename: 'nonexistent.md' } };
     const res = {
-      json() {},
+      json() { },
     };
 
-    await adminController.getDocument(req, res, (err) => {
+    await documentsController.getDocument(req, res, (err) => {
       passedError = err;
     });
 
@@ -1560,12 +1559,12 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
       },
     };
 
-    errorHandler(capturedErr, { method: 'POST', originalUrl: '/api/user/chat' }, mockRes, () => {});
+    errorHandler(capturedErr, { method: 'POST', originalUrl: '/api/user/chat' }, mockRes, () => { });
     assert.equal(sentStatus, 400);
     assert.deepEqual(sentJson, { error: SERVER_MESSAGES.ERRORS.QUERY_REQUIRED });
   });
 
-  it('userController pre-stream validation catches invalid chat queries before headers are sent', async () => {
+  it('chatController pre-stream validation catches invalid chat queries before headers are sent', async () => {
     let setHeaderCalls = 0;
     let passedError = null;
 
@@ -1575,11 +1574,11 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
       setHeader() {
         setHeaderCalls++;
       },
-      flushHeaders() {},
-      on() {},
+      flushHeaders() { },
+      on() { },
     };
 
-    await userController.chatStream(req, res, (err) => {
+    await chatController.chatStream(req, res, (err) => {
       passedError = err;
     });
 
@@ -1589,10 +1588,10 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
     assert.equal(passedError.message, SERVER_MESSAGES.ERRORS.QUERY_REQUIRED);
   });
 
-  it('adminController handlers validate payloads and parameters before invoking business logic', async () => {
+  it('documentsController and promptsController handlers validate payloads and parameters before invoking business logic', async () => {
     // Missing filename in createDocument
     let passedError = null;
-    await adminController.createDocument({ body: { filename: '', content: '## Valid\nText' } }, {}, (err) => {
+    await documentsController.createDocument({ body: { filename: '', content: '## Valid\nText' } }, {}, (err) => {
       passedError = err;
     });
     assert.ok(passedError instanceof DocumentServiceError);
@@ -1601,7 +1600,7 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
 
     // Invalid content (missing Level-2 header) in updateDocument
     passedError = null;
-    await adminController.updateDocument(
+    await documentsController.updateDocument(
       { params: { filename: 'valid.md' }, body: { content: 'No level 2 header here' } },
       {},
       (err) => {
@@ -1614,7 +1613,7 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
 
     // Prompt too short in updatePrompt
     passedError = null;
-    adminController.updatePrompt({ body: { prompt: 'too short' } }, {}, (err) => {
+    promptsController.updatePrompt({ body: { prompt: 'too short' } }, {}, (err) => {
       passedError = err;
     });
     assert.ok(passedError instanceof PromptServiceError);
@@ -1622,7 +1621,7 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
     assert.equal(passedError.message, SERVER_MESSAGES.ERRORS.PROMPT_TOO_SHORT);
   });
 
-  it('userController.chatStream preserves normal SSE event lifecycle and client abort cancellation', async () => {
+  it('chatController.chatStream preserves normal SSE event lifecycle and client abort cancellation', async () => {
     const emittedEvents = [];
     const headersSet = {};
     const closeCallbacks = [];
@@ -1635,7 +1634,7 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
       setHeader(k, v) {
         headersSet[k] = v;
       },
-      flushHeaders() {},
+      flushHeaders() { },
       on(event, cb) {
         if (event === 'close') closeCallbacks.push(cb);
       },
@@ -1648,7 +1647,7 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
     };
 
     let nextCalled = false;
-    await userController.chatStream(req, res, (err) => {
+    await chatController.chatStream(req, res, (err) => {
       nextCalled = true;
     });
 
@@ -1720,8 +1719,8 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
     assert.equal(req.query.limit, '30', 'req.query getter object must not be mutated');
   });
 
-  it('server/src/errors/index.js exports foundational AppError and ValidationError without circular service dependencies', async () => {
-    const errorsModule = await import('../server/src/errors/index.js');
+  it('server/src/shared/errors/index.js exports foundational AppError and ValidationError without circular service dependencies', async () => {
+    const errorsModule = await import('../server/src/shared/errors/index.js');
     assert.ok(errorsModule.AppError, 'AppError must be exported');
     assert.ok(errorsModule.ValidationError, 'ValidationError must be exported');
 
@@ -1742,7 +1741,7 @@ describe('12. Express Route -> Validation Middleware -> Controller Integration P
   const startTestServer = () => new Promise((resolve) => {
     app = express();
     app.use(express.json());
-    app.use('/api/user', userRoute);
+    app.use('/api/user', chatRouter);
     app.use('/api/admin', adminRoute);
     app.use(errorHandler);
 
@@ -1860,7 +1859,7 @@ describe('12. Express Route -> Validation Middleware -> Controller Integration P
     } finally {
       // Clean up test document
       try {
-        await adminService.removeDocument(`${testDocFilename}.md`);
+        await removeDocument(`${testDocFilename}.md`);
       } catch {
         // Ignore cleanup error
       }
