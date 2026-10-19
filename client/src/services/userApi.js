@@ -74,6 +74,35 @@ function parseBlock(block) {
 }
 
 /**
+ * Dispatches a parsed SSE event to its corresponding callback.
+ */
+function dispatchParsedEvent(parsed, callbacks) {
+  if (!parsed) return;
+  const { onMetadata, onDelta, onDone, onError } = callbacks || {};
+
+  switch (parsed.event) {
+    case 'metadata':
+      if (onMetadata) onMetadata(parsed.data);
+      break;
+    case 'delta':
+      if (onDelta && parsed.data?.text) onDelta(parsed.data.text);
+      break;
+    case 'done':
+      if (onDone) onDone(parsed.data);
+      break;
+    case 'error': {
+      const streamErr = new Error(
+        parsed.data?.error || APP_MESSAGES.ERROR.CHAT_COMMUNICATION_FAILED
+      );
+      if (onError) onError(streamErr);
+      throw streamErr;
+    }
+    default:
+      break;
+  }
+}
+
+/**
  * Initiates an SSE streaming request for the user chat query.
  * Progressively triggers callbacks as events arrive.
  *
@@ -92,7 +121,7 @@ export async function streamChatMessage(message, callbacks = {}, options = {}) {
     throw new Error(APP_MESSAGES.ERROR.MESSAGE_EMPTY);
   }
 
-  const { onDelta, onMetadata, onDone, onError } = callbacks;
+  const { onError } = callbacks;
   const { signal } = options;
 
   const response = await fetch(API_ENDPOINTS.USER_CHAT, {
@@ -141,49 +170,14 @@ export async function streamChatMessage(message, callbacks = {}, options = {}) {
         buffer = buffer.slice(boundary.index + boundary.len);
 
         if (block.trim()) {
-          const parsed = parseBlock(block);
-          if (parsed) {
-            switch (parsed.event) {
-              case 'metadata':
-                if (onMetadata) onMetadata(parsed.data);
-                break;
-              case 'delta':
-                if (onDelta && parsed.data?.text) onDelta(parsed.data.text);
-                break;
-              case 'done':
-                if (onDone) onDone(parsed.data);
-                break;
-              case 'error': {
-                const streamErr = new Error(
-                  parsed.data?.error || APP_MESSAGES.ERROR.CHAT_COMMUNICATION_FAILED
-                );
-                if (onError) onError(streamErr);
-                throw streamErr;
-              }
-              default:
-                break;
-            }
-          }
+          dispatchParsedEvent(parseBlock(block), callbacks);
         }
       }
     }
 
     buffer += decoder.decode();
     if (buffer.trim()) {
-      const parsed = parseBlock(buffer);
-      if (parsed) {
-        if (parsed.event === 'delta' && onDelta && parsed.data?.text) {
-          onDelta(parsed.data.text);
-        } else if (parsed.event === 'done' && onDone) {
-          onDone(parsed.data);
-        } else if (parsed.event === 'error') {
-          const streamErr = new Error(
-            parsed.data?.error || APP_MESSAGES.ERROR.CHAT_COMMUNICATION_FAILED
-          );
-          if (onError) onError(streamErr);
-          throw streamErr;
-        }
-      }
+      dispatchParsedEvent(parseBlock(buffer), callbacks);
     }
   } catch (err) {
     if (signal?.aborted || err.name === 'AbortError') {

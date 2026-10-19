@@ -2,6 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
+import express from '../server/node_modules/express/index.js';
+import userRoute from '../server/src/routes/userRoute.js';
+import adminRoute from '../server/src/routes/adminRoute.js';
 
 import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/rag/chunker.js';
 import { buildGroundedPrompt, generateGroundedAnswer } from '../server/src/rag/generator.js';
@@ -18,6 +22,25 @@ import { AppError } from '../server/src/errors/AppError.js';
 import { errorHandler } from '../server/src/middleware/errorHandler.js';
 import * as userController from '../server/src/controllers/userController.js';
 import * as adminController from '../server/src/controllers/adminController.js';
+import {
+  ValidationError,
+  validate,
+  validateRequest,
+  chatRequestSchema,
+  filenameSchema,
+  documentContentSchema,
+  createDocumentSchema,
+  updateDocumentSchema,
+  documentParamsSchema,
+  updatePromptSchema,
+  paginationQuerySchema,
+} from '../server/src/validation/index.js';
+import {
+  SERVER_MESSAGES,
+  HTTP_STATUS,
+  PROMPT_CONSTRAINTS,
+  PAGINATION_LIMITS,
+} from '../server/src/constants/index.js';
 import { splitGraphemes } from '../client/src/hooks/useTextReveal.js';
 import { CHAT_CONFIG, STREAM_REVEAL_CONFIG } from '../client/src/constants/index.js';
 
@@ -1243,6 +1266,630 @@ describe('10. Centralized Backend Error Handling and Operational Errors', () => 
 
     assert.ok(passedError instanceof DocumentServiceError);
     assert.equal(passedError.statusCode, 404);
+  });
+});
+
+describe('11. Centralized Backend Input Validation with Zod', () => {
+  it('valid inputs and normal accepted payloads pass validation across all schemas', () => {
+    // Chat request
+    const chatParsed = validate(chatRequestSchema, { message: 'What is the tuition fee?' });
+    assert.equal(chatParsed.message, 'What is the tuition fee?');
+
+    const streamChat = validate(chatRequestSchema, { message: '  Hello World  ', stream: true });
+    assert.equal(streamChat.message, 'Hello World');
+    assert.equal(streamChat.stream, true);
+
+    // Filename schema
+    const fn1 = validate(filenameSchema, 'regulations');
+    assert.equal(fn1, 'regulations.md');
+    const fn2 = validate(filenameSchema, 'handbook.md');
+    assert.equal(fn2, 'handbook.md');
+    const fn3 = validate(filenameSchema, 'valid_doc-1.2');
+    assert.equal(fn3, 'valid_doc-1.2.md');
+
+    // Document content schema
+    const content = '## Section 1\nSome valid markdown body.';
+    assert.equal(validate(documentContentSchema, content), content);
+
+    // Create document schema
+    const docCreate = validate(createDocumentSchema, {
+      filename: 'academic_guide',
+      content: '## Overview\nValid handbook text.',
+      overwrite: true,
+    });
+    assert.equal(docCreate.filename, 'academic_guide.md');
+    assert.equal(docCreate.overwrite, true);
+
+    // Update document schema
+    const docUpdate = validate(updateDocumentSchema, {
+      content: '## New Section\nRevised regulations text.',
+    });
+    assert.ok(docUpdate.content.startsWith('## New Section'));
+
+    // Document params schema
+    const docParams = validate(documentParamsSchema, { filename: 'test_doc' });
+    assert.equal(docParams.filename, 'test_doc.md');
+
+    // Prompt update schema
+    const validPrompt = 'You are an intelligent Student Handbook assistant helping students.';
+    const promptParsed = validate(updatePromptSchema, { prompt: validPrompt });
+    assert.equal(promptParsed.prompt, validPrompt);
+
+    // Pagination query schema
+    const queryParsed = validate(paginationQuerySchema, {
+      limit: '15',
+      offset: '20',
+      q: 'scholarship',
+    });
+    assert.deepEqual(queryParsed, {
+      limit: 15,
+      offset: 20,
+      search: 'scholarship',
+    });
+  });
+
+  it('chatRequestSchema rejects missing, empty, whitespace-only, wrong-type, and malformed queries', () => {
+    const invalidInputs = [
+      {},
+      { message: '' },
+      { message: '   ' },
+      { message: null },
+      { message: 12345 },
+      { message: ['invalid'] },
+      { message: { text: 'invalid' } },
+    ];
+
+    for (const input of invalidInputs) {
+      assert.throws(
+        () => validate(chatRequestSchema, input),
+        (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.QUERY_REQUIRED
+      );
+    }
+  });
+
+  it('filenameSchema and sanitizeFilename strictly reject path traversal and malicious paths without silent transformation', () => {
+    // Missing / empty values
+    assert.throws(
+      () => validate(filenameSchema, ''),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED
+    );
+    assert.throws(
+      () => validate(filenameSchema, '   '),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED
+    );
+    assert.throws(
+      () => validate(filenameSchema, null),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED
+    );
+
+    // Malicious path traversal and absolute paths must NEVER be silently transformed into valid basenames
+    const maliciousPaths = [
+      '../academic.md',
+      '..\\academic.md',
+      '/etc/passwd',
+      'C:\\foo\\bar',
+      'sub/dir/notes.md',
+      '..',
+      './test.md',
+    ];
+    for (const badPath of maliciousPaths) {
+      // Must fail schema validation with INVALID_FILENAME
+      assert.throws(
+        () => validate(filenameSchema, badPath),
+        (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.INVALID_FILENAME,
+        `Expected filenameSchema to reject path traversal: ${badPath}`
+      );
+      // Must also fail service-level defense in sanitizeFilename
+      assert.throws(
+        () => sanitizeFilename(badPath),
+        (err) => err instanceof DocumentServiceError && err.message === SERVER_MESSAGES.ERRORS.INVALID_FILENAME,
+        `Expected sanitizeFilename to reject path traversal: ${badPath}`
+      );
+    }
+
+    // Illegal characters
+    const illegalFilenames = [
+      'invalid*name.md',
+      'bad name with spaces.md',
+      'doc?question.md',
+      'colon:test.md',
+      'quote"test.md',
+      'less<test.md',
+    ];
+    for (const bad of illegalFilenames) {
+      assert.throws(
+        () => validate(filenameSchema, bad),
+        (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.INVALID_FILENAME
+      );
+    }
+  });
+
+  it('documentContentSchema enforces non-empty and Level-2 section header rules', () => {
+    assert.throws(
+      () => validate(documentContentSchema, ''),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.DOC_CONTENT_EMPTY
+    );
+    assert.throws(
+      () => validate(documentContentSchema, '   \n  \t  '),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.DOC_CONTENT_EMPTY
+    );
+
+    // Missing ## header
+    const noHeaderContent = '# Level 1 Title Only\n### Level 3 Only\nPlain text without level 2 header';
+    assert.throws(
+      () => validate(documentContentSchema, noHeaderContent),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.MISSING_SECTION_HEADER
+    );
+  });
+
+  it('updatePromptSchema validates 20-10,000 char boundary values accurately', () => {
+    // Empty prompt
+    assert.throws(
+      () => validate(updatePromptSchema, { prompt: '' }),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_EMPTY
+    );
+    assert.throws(
+      () => validate(updatePromptSchema, { prompt: '   ' }),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_EMPTY
+    );
+
+    // Boundary: 19 characters -> TOO_SHORT
+    const nineteenChars = 'a'.repeat(19);
+    assert.throws(
+      () => validate(updatePromptSchema, { prompt: nineteenChars }),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_TOO_SHORT
+    );
+
+    // Boundary: 20 characters -> valid (min length)
+    const twentyChars = 'a'.repeat(20);
+    const lowerBoundResult = validate(updatePromptSchema, { prompt: twentyChars });
+    assert.equal(lowerBoundResult.prompt, twentyChars);
+
+    // Boundary: 10,000 characters -> valid (max length)
+    const tenThousandChars = 'a'.repeat(10000);
+    const upperBoundResult = validate(updatePromptSchema, { prompt: tenThousandChars });
+    assert.equal(upperBoundResult.prompt, tenThousandChars);
+
+    // Boundary: 10,001 characters -> TOO_LONG
+    const tenThousandOneChars = 'a'.repeat(10001);
+    assert.throws(
+      () => validate(updatePromptSchema, { prompt: tenThousandOneChars }),
+      (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_TOO_LONG
+    );
+  });
+
+  it('paginationQuerySchema parses numeric strings, decimals, partial numerics, repeated params, and clamps bounds', () => {
+    // Defaults on empty query
+    const defaultParsed = validate(paginationQuerySchema, {});
+    assert.equal(defaultParsed.limit, PAGINATION_LIMITS.DEFAULT_LIMIT);
+    assert.equal(defaultParsed.offset, PAGINATION_LIMITS.DEFAULT_OFFSET);
+    assert.equal(defaultParsed.search, '');
+
+    // Coercion from valid numeric strings
+    const stringParsed = validate(paginationQuerySchema, { limit: '25', offset: '10' });
+    assert.equal(stringParsed.limit, 25);
+    assert.equal(stringParsed.offset, 10);
+
+    // Zero limit (< 1) -> default; zero offset (>= 0) -> 0
+    const zeroParsed = validate(paginationQuerySchema, { limit: '0', offset: '0' });
+    assert.equal(zeroParsed.limit, PAGINATION_LIMITS.DEFAULT_LIMIT);
+    assert.equal(zeroParsed.offset, 0);
+
+    // Negative values -> clamp to defaults
+    const negativeParsed = validate(paginationQuerySchema, { limit: '-5', offset: '-10' });
+    assert.equal(negativeParsed.limit, PAGINATION_LIMITS.DEFAULT_LIMIT);
+    assert.equal(negativeParsed.offset, PAGINATION_LIMITS.DEFAULT_OFFSET);
+
+    // Values above maximum -> clamp limit to MAX_LIMIT (50)
+    const clampedUpper = validate(paginationQuerySchema, { limit: '999', offset: '50' });
+    assert.equal(clampedUpper.limit, PAGINATION_LIMITS.MAX_LIMIT);
+    assert.equal(clampedUpper.offset, 50);
+
+    // Decimal strings (parseInt truncation preserves pre-Phase-4 behavior)
+    const decimalParsed = validate(paginationQuerySchema, { limit: '12.5', offset: '10.8' });
+    assert.equal(decimalParsed.limit, 12);
+    assert.equal(decimalParsed.offset, 10);
+
+    // Partially numeric strings ("12abc" -> 12, "25xyz" -> 25)
+    const partialParsed = validate(paginationQuerySchema, { limit: '12abc', offset: '25xyz' });
+    assert.equal(partialParsed.limit, 12);
+    assert.equal(partialParsed.offset, 25);
+
+    // Repeated query parameters from Express (arrays)
+    const repeatedParsed = validate(paginationQuerySchema, {
+      limit: ['15', '30'],
+      offset: ['5', '10'],
+      q: ['scholarship', 'exam'],
+    });
+    assert.equal(repeatedParsed.limit, 15);
+    assert.equal(repeatedParsed.offset, 5);
+    assert.equal(repeatedParsed.search, 'scholarship');
+
+    // Search query fallback (prefers q over search if both provided, trims string)
+    const qSearch = validate(paginationQuerySchema, { q: ' tuition fees ' });
+    assert.equal(qSearch.search, 'tuition fees');
+
+    const directSearch = validate(paginationQuerySchema, { search: '  library  ' });
+    assert.equal(directSearch.search, 'library');
+
+    // Malformed NaN strings fallback to defaults
+    const nanParsed = validate(paginationQuerySchema, { limit: 'not_a_num', offset: 'invalid' });
+    assert.equal(nanParsed.limit, PAGINATION_LIMITS.DEFAULT_LIMIT);
+    assert.equal(nanParsed.offset, PAGINATION_LIMITS.DEFAULT_OFFSET);
+  });
+
+  it('validate helper distinguishes unexpected programming bugs from input validation failures', () => {
+    // Passing invalid schema throws TypeError (programming bug, not client validation error)
+    assert.throws(
+      () => validate(null, { test: 123 }),
+      (err) => err instanceof TypeError && err.message.includes('[Validator]')
+    );
+
+    assert.throws(
+      () => validate({}, { test: 123 }),
+      (err) => err instanceof TypeError && err.message.includes('[Validator]')
+    );
+  });
+
+  it('validate helper converts Zod errors to AppError/ValidationError with status 400 and preserves client compatibility', () => {
+    let capturedErr = null;
+    try {
+      validate(chatRequestSchema, { message: '' });
+    } catch (err) {
+      capturedErr = err;
+    }
+
+    assert.ok(capturedErr instanceof ValidationError);
+    assert.ok(capturedErr instanceof AppError);
+    assert.equal(capturedErr.statusCode, 400);
+    assert.equal(capturedErr.isOperational, true);
+    assert.equal(capturedErr.message, SERVER_MESSAGES.ERRORS.QUERY_REQUIRED);
+
+    // Verify compatibility with centralized errorHandler
+    let sentStatus = null;
+    let sentJson = null;
+    const mockRes = {
+      headersSent: false,
+      status(code) {
+        sentStatus = code;
+        return this;
+      },
+      json(data) {
+        sentJson = data;
+        return this;
+      },
+    };
+
+    errorHandler(capturedErr, { method: 'POST', originalUrl: '/api/user/chat' }, mockRes, () => {});
+    assert.equal(sentStatus, 400);
+    assert.deepEqual(sentJson, { error: SERVER_MESSAGES.ERRORS.QUERY_REQUIRED });
+  });
+
+  it('userController pre-stream validation catches invalid chat queries before headers are sent', async () => {
+    let setHeaderCalls = 0;
+    let passedError = null;
+
+    const req = { body: { message: '   ' } };
+    const res = {
+      headersSent: false,
+      setHeader() {
+        setHeaderCalls++;
+      },
+      flushHeaders() {},
+      on() {},
+    };
+
+    await userController.chatStream(req, res, (err) => {
+      passedError = err;
+    });
+
+    assert.equal(setHeaderCalls, 0, 'No headers should be sent when validation fails');
+    assert.ok(passedError instanceof ChatOrchestrationError);
+    assert.equal(passedError.statusCode, 400);
+    assert.equal(passedError.message, SERVER_MESSAGES.ERRORS.QUERY_REQUIRED);
+  });
+
+  it('adminController handlers validate payloads and parameters before invoking business logic', async () => {
+    // Missing filename in createDocument
+    let passedError = null;
+    await adminController.createDocument({ body: { filename: '', content: '## Valid\nText' } }, {}, (err) => {
+      passedError = err;
+    });
+    assert.ok(passedError instanceof DocumentServiceError);
+    assert.equal(passedError.statusCode, 400);
+    assert.equal(passedError.message, SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED);
+
+    // Invalid content (missing Level-2 header) in updateDocument
+    passedError = null;
+    await adminController.updateDocument(
+      { params: { filename: 'valid.md' }, body: { content: 'No level 2 header here' } },
+      {},
+      (err) => {
+        passedError = err;
+      }
+    );
+    assert.ok(passedError instanceof DocumentServiceError);
+    assert.equal(passedError.statusCode, 400);
+    assert.equal(passedError.message, SERVER_MESSAGES.ERRORS.MISSING_SECTION_HEADER);
+
+    // Prompt too short in updatePrompt
+    passedError = null;
+    adminController.updatePrompt({ body: { prompt: 'too short' } }, {}, (err) => {
+      passedError = err;
+    });
+    assert.ok(passedError instanceof PromptServiceError);
+    assert.equal(passedError.statusCode, 400);
+    assert.equal(passedError.message, SERVER_MESSAGES.ERRORS.PROMPT_TOO_SHORT);
+  });
+
+  it('userController.chatStream preserves normal SSE event lifecycle and client abort cancellation', async () => {
+    const emittedEvents = [];
+    const headersSet = {};
+    const closeCallbacks = [];
+
+    const req = { body: { message: 'What is the tuition fee?' } };
+    const res = {
+      headersSent: false,
+      writableEnded: false,
+      closed: false,
+      setHeader(k, v) {
+        headersSet[k] = v;
+      },
+      flushHeaders() {},
+      on(event, cb) {
+        if (event === 'close') closeCallbacks.push(cb);
+      },
+      write(chunk) {
+        emittedEvents.push(chunk);
+      },
+      end() {
+        this.writableEnded = true;
+      },
+    };
+
+    let nextCalled = false;
+    await userController.chatStream(req, res, (err) => {
+      nextCalled = true;
+    });
+
+    assert.equal(nextCalled, false, 'next() should not be called on successful stream initiation');
+    assert.equal(headersSet['Content-Type'], 'text/event-stream; charset=utf-8');
+    assert.equal(headersSet['Cache-Control'], 'no-cache, no-transform');
+    assert.equal(headersSet['Connection'], 'keep-alive');
+    assert.equal(res.writableEnded, true);
+    assert.ok(emittedEvents.length > 0, 'Should have emitted stream events');
+  });
+
+  it('validateRequest middleware validates body/params/query and stores results canonically on res.locals.validated', () => {
+    const middleware = validateRequest({
+      params: documentParamsSchema,
+      body: createDocumentSchema,
+      query: paginationQuerySchema,
+    });
+
+    const req = {
+      params: { filename: 'guide' },
+      body: { filename: 'guide', content: '## Handbook\nDetails', overwrite: true },
+      query: { limit: '20', offset: '5', q: 'exam' },
+    };
+    const res = { locals: {} };
+    let nextCalled = false;
+    let nextError = null;
+
+    middleware(req, res, (err) => {
+      nextCalled = true;
+      nextError = err;
+    });
+
+    assert.equal(nextCalled, true);
+    assert.equal(nextError, undefined);
+    assert.equal(res.locals.validated.params.filename, 'guide.md');
+    assert.equal(res.locals.validated.body.filename, 'guide.md');
+    assert.equal(res.locals.validated.body.overwrite, true);
+    assert.deepEqual(res.locals.validated.query, { limit: 20, offset: 5, search: 'exam' });
+    assert.equal(req.validated, undefined, 'req.validated duplicate storage must be removed');
+  });
+
+  it('validateRequest middleware is compatible with Express 5 getter-only req.query without mutating req.query', () => {
+    const middleware = validateRequest({ query: paginationQuerySchema });
+
+    // Emulate Express 5 getter-only req.query property
+    const req = {};
+    const queryValue = Object.freeze({ limit: '30', offset: '10' });
+    Object.defineProperty(req, 'query', {
+      get() {
+        return queryValue;
+      },
+      configurable: false,
+      enumerable: true,
+    });
+
+    const res = { locals: {} };
+    let nextError = null;
+
+    assert.doesNotThrow(() => {
+      middleware(req, res, (err) => {
+        nextError = err;
+      });
+    });
+
+    assert.equal(nextError, undefined);
+    assert.equal(res.locals.validated.query.limit, 30);
+    assert.equal(res.locals.validated.query.offset, 10);
+    assert.equal(req.validated, undefined, 'req.validated duplicate storage must be removed');
+    assert.equal(req.query.limit, '30', 'req.query getter object must not be mutated');
+  });
+
+  it('server/src/errors/index.js exports foundational AppError and ValidationError without circular service dependencies', async () => {
+    const errorsModule = await import('../server/src/errors/index.js');
+    assert.ok(errorsModule.AppError, 'AppError must be exported');
+    assert.ok(errorsModule.ValidationError, 'ValidationError must be exported');
+
+    // Confirm that ValidationError is an instance of AppError
+    const valErr = new errorsModule.ValidationError('Test error');
+    assert.ok(valErr instanceof errorsModule.AppError);
+    assert.equal(valErr.statusCode, 400);
+    assert.equal(valErr.isOperational, true);
+  });
+});
+
+describe('12. Express Route -> Validation Middleware -> Controller Integration Pipeline', () => {
+  let app;
+  let server;
+  let baseUrl;
+
+  // Helper to start ephemeral Express server for route integration tests
+  const startTestServer = () => new Promise((resolve) => {
+    app = express();
+    app.use(express.json());
+    app.use('/api/user', userRoute);
+    app.use('/api/admin', adminRoute);
+    app.use(errorHandler);
+
+    server = http.createServer(app);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      baseUrl = `http://127.0.0.1:${port}`;
+      resolve();
+    });
+  });
+
+  const stopTestServer = () => new Promise((resolve) => {
+    if (server) {
+      server.close(() => resolve());
+    } else {
+      resolve();
+    }
+  });
+
+  it('route-level validation middleware catches invalid chat query and returns 400 ValidationError JSON', async () => {
+    await startTestServer();
+    try {
+      const res = await fetch(`${baseUrl}/api/user/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: '   ' }),
+      });
+
+      assert.equal(res.status, 400);
+      assert.equal(res.headers.get('content-type')?.includes('application/json'), true);
+      const data = await res.json();
+      assert.deepEqual(data, { error: SERVER_MESSAGES.ERRORS.QUERY_REQUIRED });
+    } finally {
+      await stopTestServer();
+    }
+  });
+
+  it('route-level validation rejects invalid params and path-traversal attempts before reaching controller', async () => {
+    await startTestServer();
+    try {
+      const maliciousParam = encodeURIComponent('../academic.md');
+      const res = await fetch(`${baseUrl}/api/admin/documents/${maliciousParam}`);
+
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.deepEqual(data, { error: SERVER_MESSAGES.ERRORS.INVALID_FILENAME });
+    } finally {
+      await stopTestServer();
+    }
+  });
+
+  it('Express 5 query handling parses and defaults parameters into res.locals.validated without mutating req.query', async () => {
+    await startTestServer();
+    try {
+      // Valid numeric query string
+      const res = await fetch(`${baseUrl}/api/admin/chunks?limit=2&offset=1&q=tuition`);
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.limit, 2);
+      assert.equal(data.offset, 1);
+      assert.ok(Array.isArray(data.chunks));
+
+      // Clamped query string (negative / invalid values)
+      const resClamped = await fetch(`${baseUrl}/api/admin/chunks?limit=-10&offset=invalid`);
+      assert.equal(resClamped.status, 200);
+      const clampedData = await resClamped.json();
+      assert.equal(clampedData.limit, PAGINATION_LIMITS.DEFAULT_LIMIT);
+      assert.equal(clampedData.offset, PAGINATION_LIMITS.DEFAULT_OFFSET);
+    } finally {
+      await stopTestServer();
+    }
+  });
+
+  it('pre-stream validation rejects invalid SSE requests with HTTP 400 JSON before any stream headers are sent', async () => {
+    await startTestServer();
+    try {
+      const res = await fetch(`${baseUrl}/api/user/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: '' }),
+      });
+
+      assert.equal(res.status, 400);
+      // Stream headers must NOT be sent; response must be regular JSON
+      const contentType = res.headers.get('content-type');
+      assert.ok(contentType?.includes('application/json'), `Expected JSON content-type but got ${contentType}`);
+      assert.equal(contentType?.includes('text/event-stream'), false);
+
+      const data = await res.json();
+      assert.deepEqual(data, { error: SERVER_MESSAGES.ERRORS.QUERY_REQUIRED });
+    } finally {
+      await stopTestServer();
+    }
+  });
+
+  it('parsed and sanitized values from validateRequest middleware reach controller cleanly', async () => {
+    await startTestServer();
+    const testDocFilename = 'integration_temp_doc';
+    try {
+      // POST document without .md extension in filename
+      const res = await fetch(`${baseUrl}/api/admin/documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: testDocFilename,
+          content: '## Integration Section\nValidated content reaching controller.',
+          overwrite: true,
+        }),
+      });
+
+      assert.equal(res.status, 201);
+      const data = await res.json();
+      assert.equal(data.success, true);
+      assert.equal(data.filename, `${testDocFilename}.md`);
+    } finally {
+      // Clean up test document
+      try {
+        await adminService.removeDocument(`${testDocFilename}.md`);
+      } catch {
+        // Ignore cleanup error
+      }
+      await stopTestServer();
+    }
+  });
+
+  it('all route rejection responses maintain uniform { error: message } compatibility with HTTP 400', async () => {
+    await startTestServer();
+    try {
+      const badRoutes = [
+        { path: '/api/user/chat', method: 'POST', body: { message: null }, expected: SERVER_MESSAGES.ERRORS.QUERY_REQUIRED },
+        { path: '/api/admin/prompt', method: 'PUT', body: { prompt: 'short' }, expected: SERVER_MESSAGES.ERRORS.PROMPT_TOO_SHORT },
+        { path: '/api/admin/documents', method: 'POST', body: { filename: '', content: '## Section\nContent' }, expected: SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED },
+      ];
+
+      for (const route of badRoutes) {
+        const res = await fetch(`${baseUrl}${route.path}`, {
+          method: route.method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(route.body),
+        });
+        assert.equal(res.status, 400, `Expected 400 for ${route.path}`);
+        const data = await res.json();
+        assert.deepEqual(data, { error: route.expected });
+      }
+    } finally {
+      await stopTestServer();
+    }
   });
 });
 

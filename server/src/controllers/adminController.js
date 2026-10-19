@@ -1,5 +1,13 @@
 import * as adminService from '../services/adminService.js';
 import { HTTP_STATUS } from '../constants/index.js';
+import {
+  createDocumentSchema,
+  updateDocumentSchema,
+  documentParamsSchema,
+  updatePromptSchema,
+  paginationQuerySchema,
+  validate,
+} from '../validation/index.js';
 
 /**
  * GET /api/admin/status
@@ -26,11 +34,20 @@ export async function getDocuments(req, res, next) {
 }
 
 /**
+ * Retrieves pre-validated request data populated by validation middleware,
+ * or falls back to direct schema validation when called in standalone unit tests.
+ */
+function getValidatedData(res, property, schema, fallbackData, errorClass) {
+  return res?.locals?.validated?.[property] || validate(schema, fallbackData, { errorClass });
+}
+
+/**
  * GET /api/admin/documents/:filename
  */
 export async function getDocument(req, res, next) {
   try {
-    const result = await adminService.readDocument(req.params.filename);
+    const { filename } = getValidatedData(res, 'params', documentParamsSchema, req.params, adminService.DocumentServiceError);
+    const result = await adminService.readDocument(filename);
     res.json(result);
   } catch (error) {
     next(error);
@@ -42,7 +59,7 @@ export async function getDocument(req, res, next) {
  */
 export async function createDocument(req, res, next) {
   try {
-    const { filename, content, overwrite } = req.body;
+    const { filename, content, overwrite } = getValidatedData(res, 'body', createDocumentSchema, req.body, adminService.DocumentServiceError);
     const result = await adminService.saveDocument({ filename, content, overwrite });
     res.status(HTTP_STATUS.CREATED).json({
       success: true,
@@ -59,8 +76,9 @@ export async function createDocument(req, res, next) {
  */
 export async function updateDocument(req, res, next) {
   try {
-    const { content } = req.body;
-    const result = await adminService.updateDocument(req.params.filename, content);
+    const { filename } = getValidatedData(res, 'params', documentParamsSchema, req.params, adminService.DocumentServiceError);
+    const { content } = getValidatedData(res, 'body', updateDocumentSchema, req.body, adminService.DocumentServiceError);
+    const result = await adminService.updateDocument(filename, content);
     res.json({
       success: true,
       filename: result.filename,
@@ -76,7 +94,8 @@ export async function updateDocument(req, res, next) {
  */
 export async function deleteDocument(req, res, next) {
   try {
-    const result = await adminService.removeDocument(req.params.filename);
+    const { filename } = getValidatedData(res, 'params', documentParamsSchema, req.params, adminService.DocumentServiceError);
+    const result = await adminService.removeDocument(filename);
     res.json({
       success: true,
       filename: result.filename,
@@ -92,12 +111,8 @@ export async function deleteDocument(req, res, next) {
  */
 export async function getChunks(req, res, next) {
   try {
-    const { limit = '10', offset = '0', q, search } = req.query;
-    const result = await adminService.getPaginatedChunks({
-      limit,
-      offset,
-      search: q || search || '',
-    });
+    const params = getValidatedData(res, 'query', paginationQuerySchema, req.query);
+    const result = await adminService.getPaginatedChunks(params);
     res.json(result);
   } catch (error) {
     next(error);
@@ -137,7 +152,7 @@ export function getPrompt(req, res, next) {
  */
 export function updatePrompt(req, res, next) {
   try {
-    const { prompt } = req.body;
+    const { prompt } = getValidatedData(res, 'body', updatePromptSchema, req.body, adminService.PromptServiceError);
     const result = adminService.saveSystemPrompt(prompt);
     res.json({
       success: true,

@@ -22,3 +22,12 @@ export class AppError extends Error {
     }
   }
 }
+
+/**
+ * Operational error thrown when request validation fails.
+ */
+export class ValidationError extends AppError {
+  constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
+    super(message, statusCode);
+  }
+}

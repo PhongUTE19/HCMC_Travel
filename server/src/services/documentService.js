@@ -21,11 +21,17 @@ export function sanitizeFilename(rawName) {
     throw new DocumentServiceError(SERVER_MESSAGES.ERRORS.FILENAME_REQUIRED, HTTP_STATUS.BAD_REQUEST);
   }
   let name = rawName.trim();
+  if (name.includes('/') || name.includes('\\') || name.includes('..')) {
+    throw new DocumentServiceError(
+      SERVER_MESSAGES.ERRORS.INVALID_FILENAME,
+      HTTP_STATUS.BAD_REQUEST
+    );
+  }
   if (!name.endsWith('.md')) {
     name = `${name}.md`;
   }
   const base = path.basename(name);
-  if (!/^[a-zA-Z0-9_\-.]+\.md$/.test(base)) {
+  if (base !== name || !/^[a-zA-Z0-9_\-.]+\.md$/.test(base)) {
     throw new DocumentServiceError(
       SERVER_MESSAGES.ERRORS.INVALID_FILENAME,
       HTTP_STATUS.BAD_REQUEST

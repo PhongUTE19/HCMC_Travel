@@ -15,6 +15,13 @@ export class PromptServiceError extends AppError {
   }
 }
 
+function ensurePromptDir() {
+  const dir = path.dirname(config.promptFile);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
 /**
  * Gets the current system prompt from persistent storage.
  * If file does not exist, seeds it with default template and returns default.
@@ -29,10 +36,7 @@ export function getSystemPrompt() {
         return content.trim();
       }
     }
-    const dir = path.dirname(config.promptFile);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    ensurePromptDir();
     fs.writeFileSync(config.promptFile, DEFAULT_SYSTEM_PROMPT, 'utf-8');
     return DEFAULT_SYSTEM_PROMPT;
   } catch (err) {
@@ -60,11 +64,7 @@ export function saveSystemPrompt(rawPrompt) {
     throw new PromptServiceError(SERVER_MESSAGES.ERRORS.PROMPT_TOO_LONG, HTTP_STATUS.BAD_REQUEST);
   }
 
-  const dir = path.dirname(config.promptFile);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
+  ensurePromptDir();
   fs.writeFileSync(config.promptFile, trimmed, 'utf-8');
   return {
     prompt: trimmed,
@@ -78,10 +78,7 @@ export function saveSystemPrompt(rawPrompt) {
  * @returns {{ prompt: string, message: string }}
  */
 export function resetSystemPrompt() {
-  const dir = path.dirname(config.promptFile);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  ensurePromptDir();
   fs.writeFileSync(config.promptFile, DEFAULT_SYSTEM_PROMPT, 'utf-8');
   return {
     prompt: DEFAULT_SYSTEM_PROMPT,

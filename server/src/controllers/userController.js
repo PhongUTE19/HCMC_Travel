@@ -1,5 +1,6 @@
 import * as chatOrchestrator from '../services/chatOrchestrator.js';
 import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
+import { chatRequestSchema, validate } from '../validation/index.js';
 
 /**
  * Handles user chat POST requests:
@@ -7,13 +8,16 @@ import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
  * If streaming is requested (via body.stream or Accept: text/event-stream), delegates to chatStream.
  */
 export async function chat(req, res, next) {
-  const isStream = req.body?.stream === true || req.headers?.accept?.includes('text/event-stream');
+  const validated = res?.locals?.validated?.body;
+  const isStream = (validated?.stream ?? req.body?.stream) === true || req.headers?.accept?.includes('text/event-stream');
   if (isStream) {
     return chatStream(req, res, next);
   }
 
   try {
-    const { message } = req.body;
+    const { message } = validated || validate(chatRequestSchema, req.body, {
+      errorClass: chatOrchestrator.ChatOrchestrationError,
+    });
     const result = await chatOrchestrator.orchestrateChat(message);
     res.json(result);
   } catch (error) {
@@ -26,17 +30,17 @@ export async function chat(req, res, next) {
  * POST /api/user/chat/stream or POST /api/user/chat with stream: true
  */
 export async function chatStream(req, res, next) {
-  const { message } = req.body || {};
-
-  // Failures before stream starts are propagated to centralized error middleware
-  if (!message || typeof message !== 'string' || !message.trim()) {
-    return next(
-      new chatOrchestrator.ChatOrchestrationError(
-        SERVER_MESSAGES.ERRORS.QUERY_REQUIRED,
-        HTTP_STATUS.BAD_REQUEST
-      )
-    );
+  let validated;
+  try {
+    validated = res?.locals?.validated?.body || validate(chatRequestSchema, req.body || {}, {
+      errorClass: chatOrchestrator.ChatOrchestrationError,
+    });
+  } catch (validationError) {
+    // Failures before stream starts are propagated to centralized error middleware
+    return next(validationError);
   }
+
+  const { message } = validated;
 
   // Set SSE response headers with proxy buffering disabled
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
