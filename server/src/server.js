@@ -5,6 +5,7 @@ import { initVectorStore, getVectorStoreCount } from './rag/vectorStore.js';
 import adminRouter from './routes/adminRoute.js';
 import userRouter from './routes/userRoute.js';
 import { STATUS_KEYS, HTTP_STATUS } from './constants/index.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
@@ -32,6 +33,9 @@ app.get('/api/health', async (req, res) => {
     });
   }
 });
+
+// Centralized Express error handler
+app.use(errorHandler);
 
 // Ensure vector store is initialized on server startup
 initVectorStore()

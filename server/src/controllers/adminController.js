@@ -1,51 +1,46 @@
 import * as adminService from '../services/adminService.js';
-import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
-
-function handleError(res, error) {
-  const statusCode = error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
-  res.status(statusCode).json({ error: error.message || SERVER_MESSAGES.ERRORS.UNEXPECTED });
-}
+import { HTTP_STATUS } from '../constants/index.js';
 
 /**
  * GET /api/admin/status
  */
-export async function getStatus(req, res) {
+export async function getStatus(req, res, next) {
   try {
     const status = await adminService.getAdminStatus();
     res.json(status);
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * GET /api/admin/documents
  */
-export async function getDocuments(req, res) {
+export async function getDocuments(req, res, next) {
   try {
     const documents = await adminService.listDocuments();
     res.json({ documents });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * GET /api/admin/documents/:filename
  */
-export async function getDocument(req, res) {
+export async function getDocument(req, res, next) {
   try {
     const result = await adminService.readDocument(req.params.filename);
     res.json(result);
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * POST /api/admin/documents
  */
-export async function createDocument(req, res) {
+export async function createDocument(req, res, next) {
   try {
     const { filename, content, overwrite } = req.body;
     const result = await adminService.saveDocument({ filename, content, overwrite });
@@ -55,14 +50,14 @@ export async function createDocument(req, res) {
       message: result.message,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * PUT /api/admin/documents/:filename
  */
-export async function updateDocument(req, res) {
+export async function updateDocument(req, res, next) {
   try {
     const { content } = req.body;
     const result = await adminService.updateDocument(req.params.filename, content);
@@ -72,14 +67,14 @@ export async function updateDocument(req, res) {
       message: result.message,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * DELETE /api/admin/documents/:filename
  */
-export async function deleteDocument(req, res) {
+export async function deleteDocument(req, res, next) {
   try {
     const result = await adminService.removeDocument(req.params.filename);
     res.json({
@@ -88,14 +83,14 @@ export async function deleteDocument(req, res) {
       message: result.message,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * GET /api/admin/chunks
  */
-export async function getChunks(req, res) {
+export async function getChunks(req, res, next) {
   try {
     const { limit = '10', offset = '0', q, search } = req.query;
     const result = await adminService.getPaginatedChunks({
@@ -105,14 +100,14 @@ export async function getChunks(req, res) {
     });
     res.json(result);
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * POST /api/admin/index
  */
-export async function triggerIndexing(req, res) {
+export async function triggerIndexing(req, res, next) {
   try {
     const result = await adminService.executeIndexing();
     res.json({
@@ -121,26 +116,26 @@ export async function triggerIndexing(req, res) {
       indexedChunks: result.indexedChunks,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * GET /api/admin/prompt
  */
-export function getPrompt(req, res) {
+export function getPrompt(req, res, next) {
   try {
     const prompt = adminService.getSystemPrompt();
     res.json({ prompt });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
 /**
  * PUT /api/admin/prompt
  */
-export function updatePrompt(req, res) {
+export function updatePrompt(req, res, next) {
   try {
     const { prompt } = req.body;
     const result = adminService.saveSystemPrompt(prompt);
@@ -150,7 +145,7 @@ export function updatePrompt(req, res) {
       prompt: result.prompt,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }
 
@@ -158,7 +153,7 @@ export function updatePrompt(req, res) {
  * POST /api/admin/prompt/reset
  * Resets active prompt back to the isolated default configuration template.
  */
-export function resetPrompt(req, res) {
+export function resetPrompt(req, res, next) {
   try {
     const result = adminService.resetSystemPrompt();
     res.json({
@@ -167,6 +162,6 @@ export function resetPrompt(req, res) {
       prompt: result.prompt,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 }

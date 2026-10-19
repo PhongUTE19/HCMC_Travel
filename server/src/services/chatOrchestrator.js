@@ -1,11 +1,11 @@
 import { executeRAG } from '../rag/index.js';
 import * as llmService from './llmService.js';
 import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
+import { AppError } from '../errors/AppError.js';
 
-export class ChatOrchestrationError extends Error {
+export class ChatOrchestrationError extends AppError {
   constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
-    super(message);
-    this.statusCode = statusCode;
+    super(message, statusCode);
   }
 }
 

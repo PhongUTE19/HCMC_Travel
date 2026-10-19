@@ -1,20 +1,15 @@
 import * as chatOrchestrator from '../services/chatOrchestrator.js';
 import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
 
-function handleError(res, error) {
-  const statusCode = error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
-  res.status(statusCode).json({ error: error.message || SERVER_MESSAGES.ERRORS.CHAT_PROCESSING_FAILED });
-}
-
 /**
  * Handles user chat POST requests:
  * POST /api/user/chat
  * If streaming is requested (via body.stream or Accept: text/event-stream), delegates to chatStream.
  */
-export async function chat(req, res) {
+export async function chat(req, res, next) {
   const isStream = req.body?.stream === true || req.headers?.accept?.includes('text/event-stream');
   if (isStream) {
-    return chatStream(req, res);
+    return chatStream(req, res, next);
   }
 
   try {
@@ -22,8 +17,7 @@ export async function chat(req, res) {
     const result = await chatOrchestrator.orchestrateChat(message);
     res.json(result);
   } catch (error) {
-    console.error('[UserController] Chat error:', error.message);
-    handleError(res, error);
+    next(error);
   }
 }
 
@@ -31,14 +25,17 @@ export async function chat(req, res) {
  * Handles user chat SSE streaming POST requests:
  * POST /api/user/chat/stream or POST /api/user/chat with stream: true
  */
-export async function chatStream(req, res) {
+export async function chatStream(req, res, next) {
   const { message } = req.body || {};
 
-  // Failures before stream starts are handled as normal HTTP errors
+  // Failures before stream starts are propagated to centralized error middleware
   if (!message || typeof message !== 'string' || !message.trim()) {
-    return res.status(HTTP_STATUS.BAD_REQUEST).json({
-      error: SERVER_MESSAGES.ERRORS.QUERY_REQUIRED,
-    });
+    return next(
+      new chatOrchestrator.ChatOrchestrationError(
+        SERVER_MESSAGES.ERRORS.QUERY_REQUIRED,
+        HTTP_STATUS.BAD_REQUEST
+      )
+    );
   }
 
   // Set SSE response headers with proxy buffering disabled

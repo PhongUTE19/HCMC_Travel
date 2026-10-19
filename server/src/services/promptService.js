@@ -7,11 +7,11 @@ import {
   HTTP_STATUS,
   PROMPT_CONSTRAINTS,
 } from '../constants/index.js';
+import { AppError } from '../errors/AppError.js';
 
-export class PromptServiceError extends Error {
+export class PromptServiceError extends AppError {
   constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
-    super(message);
-    this.statusCode = statusCode;
+    super(message, statusCode);
   }
 }
 

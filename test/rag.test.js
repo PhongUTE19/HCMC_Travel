@@ -14,6 +14,10 @@ import { getSystemPrompt, saveSystemPrompt, PromptServiceError } from '../server
 import { sanitizeFilename, validateMarkdownContent, DocumentServiceError } from '../server/src/services/documentService.js';
 import { getVectorStore, getVectorStoreCount } from '../server/src/rag/vectorStore.js';
 import * as adminService from '../server/src/services/adminService.js';
+import { AppError } from '../server/src/errors/AppError.js';
+import { errorHandler } from '../server/src/middleware/errorHandler.js';
+import * as userController from '../server/src/controllers/userController.js';
+import * as adminController from '../server/src/controllers/adminController.js';
 import { splitGraphemes } from '../client/src/hooks/useTextReveal.js';
 import { CHAT_CONFIG, STREAM_REVEAL_CONFIG } from '../client/src/constants/index.js';
 
@@ -1092,6 +1096,153 @@ describe('9. Architecture Boundaries, Extracted Services, and Naming Conventions
     assert.equal(typeof getVectorStoreCount, 'function');
     assert.equal(typeof proxyGetVectorStore, 'function');
     assert.equal(typeof proxyCount, 'function');
+  });
+});
+
+describe('10. Centralized Backend Error Handling and Operational Errors', () => {
+  it('AppError base class sets operational flag, status code, and captures stack trace', () => {
+    const err = new AppError('Something bad', 400);
+    assert.equal(err.message, 'Something bad');
+    assert.equal(err.statusCode, 400);
+    assert.equal(err.isOperational, true);
+    assert.equal(err.name, 'AppError');
+    assert.ok(err.stack);
+  });
+
+  it('domain error classes all inherit from AppError and Error', () => {
+    const chatErr = new ChatOrchestrationError('Chat issue', 400);
+    assert.ok(chatErr instanceof AppError);
+    assert.ok(chatErr instanceof Error);
+    assert.equal(chatErr.isOperational, true);
+
+    const userErr = new UserServiceError('User issue', 400);
+    assert.ok(userErr instanceof AppError);
+    assert.ok(userErr instanceof ChatOrchestrationError);
+
+    const docErr = new DocumentServiceError('Doc issue', 404);
+    assert.ok(docErr instanceof AppError);
+    assert.equal(docErr.statusCode, 404);
+
+    const promptErr = new PromptServiceError('Prompt issue', 400);
+    assert.ok(promptErr instanceof AppError);
+
+    const adminErr = new adminService.AdminServiceError('Admin issue', 409);
+    assert.ok(adminErr instanceof AppError);
+    assert.equal(adminErr.statusCode, 409);
+  });
+
+  it('errorHandler sends operational error status and { error: message } JSON payload', () => {
+    let capturedStatus = null;
+    let capturedJson = null;
+
+    const mockRes = {
+      headersSent: false,
+      status(code) {
+        capturedStatus = code;
+        return this;
+      },
+      json(data) {
+        capturedJson = data;
+        return this;
+      },
+    };
+
+    const operationalError = new DocumentServiceError('Document "test.md" not found.', 404);
+    let nextCalled = false;
+    errorHandler(operationalError, { method: 'GET', originalUrl: '/api/admin/documents/test.md' }, mockRes, () => {
+      nextCalled = true;
+    });
+
+    assert.equal(capturedStatus, 404);
+    assert.deepEqual(capturedJson, { error: 'Document "test.md" not found.' });
+    assert.equal(nextCalled, false);
+  });
+
+  it('errorHandler masks unexpected internal errors (500) and preserves client confidentiality', () => {
+    let capturedStatus = null;
+    let capturedJson = null;
+
+    const mockRes = {
+      headersSent: false,
+      status(code) {
+        capturedStatus = code;
+        return this;
+      },
+      json(data) {
+        capturedJson = data;
+        return this;
+      },
+    };
+
+    const internalCrash = new Error('Database pool exhaustion at connection 10.0.0.4:5432');
+    let nextCalled = false;
+    errorHandler(internalCrash, { method: 'GET', originalUrl: '/api/admin/documents' }, mockRes, () => {
+      nextCalled = true;
+    });
+
+    assert.equal(capturedStatus, 500);
+    assert.deepEqual(capturedJson, { error: 'An unexpected error occurred.' });
+    assert.equal(nextCalled, false);
+  });
+
+  it('errorHandler respects headersSent and delegates to next without writing to response', () => {
+    let statusCalled = false;
+    let jsonCalled = false;
+    let nextError = null;
+
+    const mockRes = {
+      headersSent: true,
+      status() {
+        statusCalled = true;
+        return this;
+      },
+      json() {
+        jsonCalled = true;
+        return this;
+      },
+    };
+
+    const midStreamErr = new Error('Stream disconnect');
+    errorHandler(midStreamErr, { method: 'POST', originalUrl: '/api/user/chat/stream' }, mockRes, (err) => {
+      nextError = err;
+    });
+
+    assert.equal(statusCalled, false, 'Should not modify status when headers are already sent');
+    assert.equal(jsonCalled, false, 'Should not send JSON when headers are already sent');
+    assert.equal(nextError, midStreamErr, 'Should pass error to next()');
+  });
+
+  it('userController.chatStream propagates pre-stream validation error to next()', async () => {
+    let passedError = null;
+    const req = { body: { message: '   ' } };
+    const res = {
+      setHeader() {},
+      status() { return this; },
+      json() { return this; },
+    };
+
+    await userController.chatStream(req, res, (err) => {
+      passedError = err;
+    });
+
+    assert.ok(passedError instanceof ChatOrchestrationError);
+    assert.equal(passedError.statusCode, 400);
+    assert.equal(passedError.message, 'Query message is required.');
+  });
+
+  it('adminController handlers catch and propagate domain errors to next()', async () => {
+    let passedError = null;
+    const req = { params: { filename: 'nonexistent.md' } };
+    const res = {
+      json() {},
+    };
+
+    await adminController.getDocument(req, res, (err) => {
+      passedError = err;
+    });
+
+    assert.ok(passedError instanceof DocumentServiceError);
+    assert.equal(passedError.statusCode, 404);
   });
 });
 

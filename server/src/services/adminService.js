@@ -29,13 +29,14 @@ export {
   PromptServiceError,
 } from './promptService.js';
 
+import { AppError } from '../errors/AppError.js';
+
 let isIndexing = false;
 let lastIndexedAt = null;
 
-export class AdminServiceError extends Error {
+export class AdminServiceError extends AppError {
   constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
-    super(message);
-    this.statusCode = statusCode;
+    super(message, statusCode);
   }
 }
 

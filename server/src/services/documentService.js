@@ -2,11 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config.js';
 import { SERVER_MESSAGES, HTTP_STATUS } from '../constants/index.js';
+import { AppError } from '../errors/AppError.js';
 
-export class DocumentServiceError extends Error {
+export class DocumentServiceError extends AppError {
   constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
-    super(message);
-    this.statusCode = statusCode;
+    super(message, statusCode);
   }
 }
 
