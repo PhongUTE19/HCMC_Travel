@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSystemPrompt } from '../../hooks';
 import { useToast } from '../../context/ToastContext';
-import { UI_LABELS } from '../../constants';
+import { UI_LABELS, VALIDATION_LIMITS } from '../../constants';
+import { validateSystemPrompt } from '../../utils';
 
 export default function SystemPromptEditor() {
   const { toast } = useToast();
+  const [error, setError] = useState(null);
+
   const {
     prompt,
     setPrompt,
@@ -19,6 +22,33 @@ export default function SystemPromptEditor() {
     onSuccess: toast.success,
   });
 
+  const onSubmit = (e) => {
+    e.preventDefault();
+    const val = validateSystemPrompt(prompt);
+    if (!val.isValid) {
+      setError(val.error);
+      return;
+    }
+    setError(null);
+    handleSave(e);
+  };
+
+  const handleChange = (e) => {
+    setPrompt(e.target.value);
+    if (error) {
+      setError(null);
+    }
+  };
+
+  const handleDiscard = () => {
+    setError(null);
+    handleReset();
+  };
+
+  const charCount = prompt ? prompt.trim().length : 0;
+  const minChars = VALIDATION_LIMITS.SYSTEM_PROMPT.MIN_LENGTH;
+  const maxChars = VALIDATION_LIMITS.SYSTEM_PROMPT.MAX_LENGTH;
+
   return (
     <div>
       {loading ? (
@@ -26,21 +56,38 @@ export default function SystemPromptEditor() {
           <span className="spinner"></span> {UI_LABELS.SYSTEM_PROMPT_EDITOR.LOADING}
         </div>
       ) : (
-        <form onSubmit={handleSave}>
+        <form onSubmit={onSubmit} noValidate>
           <div className="form-group">
-            <label htmlFor="system-prompt-textarea">
-              {UI_LABELS.SYSTEM_PROMPT_EDITOR.ACTIVE_PROMPT_LABEL}
-            </label>
+            <div className="split-layout" style={{ marginBottom: 'var(--space-2)' }}>
+              <label htmlFor="system-prompt-textarea" style={{ marginBottom: 0 }}>
+                {UI_LABELS.SYSTEM_PROMPT_EDITOR.ACTIVE_PROMPT_LABEL}
+              </label>
+              <span
+                style={{
+                  fontSize: 'var(--font-size-xs)',
+                  color: charCount < minChars || charCount > maxChars ? 'var(--color-red-600)' : 'var(--color-text-muted)',
+                }}
+              >
+                {charCount} / {maxChars} characters (min {minChars})
+              </span>
+            </div>
             <textarea
               id="system-prompt-textarea"
               className="form-textarea"
               rows={10}
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={handleChange}
               placeholder={UI_LABELS.SYSTEM_PROMPT_EDITOR.TEXTAREA_PLACEHOLDER}
               disabled={saving}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? 'system-prompt-error' : undefined}
               required
             />
+            {error && (
+              <div id="system-prompt-error" className="form-error" role="alert">
+                {error}
+              </div>
+            )}
           </div>
 
           <div className="row-layout">
@@ -60,7 +107,7 @@ export default function SystemPromptEditor() {
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={handleReset}
+              onClick={handleDiscard}
               disabled={saving || !isDirty}
             >
               {UI_LABELS.SYSTEM_PROMPT_EDITOR.DISCARD_BTN}

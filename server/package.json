@@ -20,6 +20,7 @@
   "dependencies": {
     "@google/genai": "^2.27.0",
     "@qdrant/js-client-rest": "^1.19.0",
+    "@supabase/supabase-js": "^2.118.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

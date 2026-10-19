@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { fetchChunks } from '../services/adminApi';
 import { APP_MESSAGES, PAGINATION } from '../constants';
+import { validateSearchQuery } from '../utils';
 
 /**
  * Custom hook to manage chunk inspection, pagination, and text searching.
@@ -40,9 +41,11 @@ export function useChunks({ onError } = {}) {
 
   const handleSearchChange = useCallback(
     (newQuery) => {
-      setChunkSearch(newQuery);
+      const val = validateSearchQuery(newQuery);
+      const sanitized = val.value !== undefined ? val.value : (newQuery || '').slice(0, 200);
+      setChunkSearch(sanitized);
       setChunkOffset(0);
-      loadChunksData(chunkLimit, 0, newQuery);
+      loadChunksData(chunkLimit, 0, sanitized);
     },
     [chunkLimit, loadChunksData]
   );

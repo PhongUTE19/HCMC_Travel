@@ -6,7 +6,8 @@ import {
   updateDocument,
   deleteDocument,
 } from '../services/adminApi';
-import { UI_LABELS, APP_MESSAGES, FILE_EXTENSIONS } from '../constants';
+import { UI_LABELS, APP_MESSAGES } from '../constants';
+import { validateDocumentFilename, validateDocumentContent, validateFile } from '../utils';
 
 /**
  * Custom hook to manage document inventory, file uploads, and document create/edit/delete operations.
@@ -83,12 +84,18 @@ export function useDocuments({
     if (clearFeedback) clearFeedback();
 
     const { filename, content, isNew } = editingDoc;
-    if (!filename.trim()) {
-      if (onError) onError(APP_MESSAGES.ERROR.FILENAME_REQUIRED);
-      return;
+
+    if (isNew) {
+      const filenameVal = validateDocumentFilename(filename);
+      if (!filenameVal.isValid) {
+        if (onError) onError(filenameVal.error);
+        return;
+      }
     }
-    if (!content.trim()) {
-      if (onError) onError(APP_MESSAGES.ERROR.DOC_CONTENT_EMPTY);
+
+    const contentVal = validateDocumentContent(content);
+    if (!contentVal.isValid) {
+      if (onError) onError(contentVal.error);
       return;
     }
 
@@ -134,16 +141,18 @@ export function useDocuments({
 
     if (clearFeedback) clearFeedback();
 
-    if (!file.name.endsWith(FILE_EXTENSIONS.MARKDOWN)) {
-      if (onError) onError(APP_MESSAGES.ERROR.INVALID_FILE_TYPE);
+    const fileVal = validateFile(file);
+    if (!fileVal.isValid) {
+      if (onError) onError(fileVal.error);
       event.target.value = '';
       return;
     }
 
     try {
       const text = await file.text();
-      if (!text.trim()) {
-        if (onError) onError(APP_MESSAGES.ERROR.UPLOADED_FILE_EMPTY);
+      const contentVal = validateDocumentContent(text);
+      if (!contentVal.isValid) {
+        if (onError) onError(contentVal.error);
         event.target.value = '';
         return;
       }

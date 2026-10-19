@@ -2,7 +2,7 @@
  * Admin API service to communicate with Express backend admin endpoints.
  */
 
-import { API_ENDPOINTS, APP_MESSAGES, HTTP_METHODS } from '../constants';
+import { API_ENDPOINTS, APP_MESSAGES, HTTP_METHODS, PAGINATION } from '../constants';
 import { apiRequest, apiJsonRequest } from './apiClient';
 
 export function fetchAdminStatus() {
@@ -44,7 +44,11 @@ export function deleteDocument(filename) {
  * @param {number} [options.offset=0] - Offset index for pagination
  * @param {string} [options.search=''] - Keyword search term
  */
-export function fetchChunks({ limit = 10, offset = 0, search = '' } = {}) {
+export function fetchChunks({
+  limit = PAGINATION.DEFAULT_LIMIT,
+  offset = PAGINATION.DEFAULT_OFFSET,
+  search = '',
+} = {}) {
   const params = new URLSearchParams();
   if (limit) params.set('limit', limit.toString());
   if (offset !== undefined) params.set('offset', offset.toString());
@@ -74,7 +78,7 @@ export function updateSystemPrompt(prompt) {
 
 export function resetSystemPrompt() {
   return apiJsonRequest(
-    `${API_ENDPOINTS.ADMIN_PROMPT}/reset`,
+    API_ENDPOINTS.ADMIN_PROMPT_RESET,
     HTTP_METHODS.POST,
     undefined,
     APP_MESSAGES.API_ERROR.RESET_PROMPT

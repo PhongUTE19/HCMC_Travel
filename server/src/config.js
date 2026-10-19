@@ -28,5 +28,7 @@ export const config = {
   defaultSystemPrompt: DEFAULT_SYSTEM_PROMPT,
   vectorSize: VECTOR_CONFIG.DEFAULT_SIZE,
   vectorDistance: VECTOR_CONFIG.DISTANCE_COSINE,
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseServiceKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_KEY || '',
 };
 

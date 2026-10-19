@@ -5,3 +5,4 @@ export { useChunks } from './useChunks';
 export { useSystemPrompt } from './useSystemPrompt';
 export { useChat } from './useChat';
 export { useTextReveal } from './useTextReveal';
+export { useAnalytics } from './useAnalytics';

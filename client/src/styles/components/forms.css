@@ -97,3 +97,23 @@
   font-size: var(--font-size-sm);
   min-width: 260px;
 }
+
+.form-input[aria-invalid="true"],
+.form-textarea[aria-invalid="true"],
+.search-input[aria-invalid="true"] {
+  border-color: var(--color-red-600);
+}
+
+.form-input[aria-invalid="true"]:focus,
+.form-textarea[aria-invalid="true"]:focus {
+  border-color: var(--color-red-600);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.form-error {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-red-600);
+  margin-top: calc(-1 * var(--space-1));
+  margin-bottom: var(--space-2);
+}

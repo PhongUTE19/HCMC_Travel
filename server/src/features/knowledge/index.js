@@ -8,4 +8,3 @@ export * from './vectorStore.js';
 export * from './indexer.js';
 export * from './promptBuilder.js';
 export * from './ragService.js';
-export * from './generator.js';

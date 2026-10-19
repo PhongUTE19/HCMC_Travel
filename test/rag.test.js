@@ -8,7 +8,6 @@ import chatRouter from '../server/src/features/chat/chat.routes.js';
 import adminRoute from '../server/src/routes/adminRoute.js';
 
 import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/features/knowledge/chunker.js';
-import { generateGroundedAnswer } from '../server/src/features/knowledge/generator.js';
 import { buildGroundedPrompt, formatContextSections } from '../server/src/features/knowledge/promptBuilder.js';
 import { cosineSimilarity } from '../server/src/features/knowledge/retriever.js';
 import { executeRAG } from '../server/src/features/knowledge/ragService.js';
@@ -27,15 +26,17 @@ import {
   ValidationError,
   validate,
   validateRequest,
-  chatRequestSchema,
+} from '../server/src/shared/middleware/validateRequest.js';
+import { chatRequestSchema } from '../server/src/features/chat/chat.schema.js';
+import {
   filenameSchema,
   documentContentSchema,
   createDocumentSchema,
   updateDocumentSchema,
   documentParamsSchema,
-  updatePromptSchema,
-  paginationQuerySchema,
-} from '../server/src/validation/index.js';
+} from '../server/src/features/documents/documents.schemas.js';
+import { updatePromptSchema } from '../server/src/features/prompts/prompts.schemas.js';
+import { paginationQuerySchema } from '../server/src/features/knowledge/knowledge.schemas.js';
 import {
   SERVER_MESSAGES,
   HTTP_STATUS,
@@ -157,9 +158,14 @@ describe('2. Prompt Construction, Grounding, and Attribution Formatting', () => 
     assert.ok(prompt.includes('User Question:\nWhat is the tuition fee?'));
   });
 
-  it('returns safe fallback when generateGroundedAnswer receives empty chunks', async () => {
-    const result = await generateGroundedAnswer('What is linear algebra?', []);
-    assert.equal(result, 'The knowledge base does not contain enough information to answer this question.');
+  it('returns safe fallback when executeRAG receives empty chunks', async () => {
+    const result = await executeRAG('What is linear algebra?', {
+      retrieverFn: async () => [],
+    });
+    assert.equal(result.status, 'INSUFFICIENT');
+    assert.equal(result.passedThreshold, false);
+    assert.equal(result.refusalText, SERVER_MESSAGES.ERRORS.INSUFFICIENT_INFORMATION);
+    assert.deepEqual(result.sources, []);
   });
 });
 
