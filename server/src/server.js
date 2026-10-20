@@ -6,16 +6,19 @@ import adminRouter from './routes/adminRoute.js';
 import chatRouter from './features/chat/chat.routes.js';
 import { STATUS_KEYS, HTTP_STATUS } from './constants/index.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
+import expenseRouter from './features/expenses/expenses.routes.js';
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// 5 MB là giới hạn ảnh hóa đơn cho bản chạy local.
+app.use(express.json({ limit: process.env.RECEIPT_MAX_SIZE || '5mb' }));
 
 // Mounted API routes
 app.use('/api/admin', adminRouter);
 app.use('/api/user', chatRouter);
+app.use('/api', expenseRouter);
 
 // Health check endpoint (queries vector database count)
 app.get('/api/health', async (req, res) => {
