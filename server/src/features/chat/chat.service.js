@@ -1,5 +1,5 @@
 import { executeRAG } from '../knowledge/ragService.js';
-import { generateAnswer, generateAnswerStream } from '../../shared/integrations/gemini.js';
+import { generateAnswer, generateAnswerStream } from '../../shared/integrations/ai/providers/geminiProvider.js';
 import { SERVER_MESSAGES, HTTP_STATUS } from '../../constants/index.js';
 import { AppError } from '../../shared/errors/index.js';
 import { getSystemPrompt } from '../prompts/prompts.service.js';

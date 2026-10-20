@@ -1,10 +1,10 @@
 import React from 'react';
 import { UI_LABELS } from '../constants';
 
-export default function HealthBadge({ status, indexedChunks, loading, error }) {
+export default function HealthBadge({ status, indexedChunks, loading, error, onRetry }) {
   if (loading) {
     return (
-      <div className="badge">
+      <div className="badge badge-warning">
         {UI_LABELS.HEALTH.CHECKING}
       </div>
     );
@@ -12,14 +12,23 @@ export default function HealthBadge({ status, indexedChunks, loading, error }) {
 
   if (error) {
     return (
-      <div className="badge">
-        {UI_LABELS.HEALTH.OFFLINE}
+      <div className="badge badge-error">
+        <span>{UI_LABELS.HEALTH.OFFLINE}</span>
+        {onRetry && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onRetry}
+          >
+            {UI_LABELS.HEALTH.RETRY || 'Retry'}
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="badge">
+    <div className="badge badge-success">
       {UI_LABELS.HEALTH.ONLINE_PREFIX}{indexedChunks}{UI_LABELS.HEALTH.INDEXED_CHUNKS_SUFFIX}
     </div>
   );

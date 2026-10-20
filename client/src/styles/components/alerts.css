@@ -49,3 +49,9 @@
   box-shadow: 0 0 0 2px var(--color-focus-ring);
   border-radius: var(--radius-sm);
 }
+
+.alert-action-btn {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+}

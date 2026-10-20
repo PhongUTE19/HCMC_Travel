@@ -1,5 +1,5 @@
 import { config } from '../../config.js';
-import { embedText } from '../../shared/integrations/gemini.js';
+import { embedText } from '../../shared/integrations/ai/index.js';
 import { getVectorStore } from './vectorStore.js';
 import { RETRIEVAL_CONFIG } from '../../constants/index.js';
 

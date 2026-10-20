@@ -4,7 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { UI_LABELS, VALIDATION_LIMITS } from '../../constants';
 import { validateSystemPrompt } from '../../utils';
 
-export default function SystemPromptEditor() {
+export default function SystemPromptEditor({ isOffline = false }) {
   const { toast } = useToast();
   const [error, setError] = useState(null);
 
@@ -20,6 +20,7 @@ export default function SystemPromptEditor() {
   } = useSystemPrompt({
     onError: toast.error,
     onSuccess: toast.success,
+    isOffline,
   });
 
   const onSubmit = (e) => {
@@ -58,15 +59,12 @@ export default function SystemPromptEditor() {
       ) : (
         <form onSubmit={onSubmit} noValidate>
           <div className="form-group">
-            <div className="split-layout" style={{ marginBottom: 'var(--space-2)' }}>
-              <label htmlFor="system-prompt-textarea" style={{ marginBottom: 0 }}>
+            <div className="split-layout form-group-header">
+              <label htmlFor="system-prompt-textarea">
                 {UI_LABELS.SYSTEM_PROMPT_EDITOR.ACTIVE_PROMPT_LABEL}
               </label>
               <span
-                style={{
-                  fontSize: 'var(--font-size-xs)',
-                  color: charCount < minChars || charCount > maxChars ? 'var(--color-red-600)' : 'var(--color-text-muted)',
-                }}
+                className={`char-count ${charCount < minChars || charCount > maxChars ? 'char-count--invalid' : ''}`}
               >
                 {charCount} / {maxChars} characters (min {minChars})
               </span>

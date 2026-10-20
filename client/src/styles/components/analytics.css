@@ -1,79 +1,16 @@
 /* ==========================================================================
    Analytics Dashboard Styles
-   Observability, KPIs, pure SVG charts, filters, and request history table.
+   Page-specific styles for charts, filter bar layout, and attempt inspection.
+   Shared containers, cards, panels, tables, pagination, forms, badges, headers,
+   and tabs are inherited from shared component stylesheets.
    ========================================================================== */
 
-.analytics-container {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  width: 100%;
-}
-
-.analytics-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  padding-bottom: var(--space-4);
-  border-bottom: var(--border-default);
-}
-
-.analytics-title-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.analytics-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
-.analytics-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-.analytics-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.analytics-persistence-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-full);
-}
-
-.analytics-persistence-badge--durable {
-  background: var(--color-green-100);
-  color: var(--color-green-700);
-  border: 1px solid var(--color-green-200);
-}
-
-.analytics-persistence-badge--memory {
-  background: var(--color-sky-100);
-  color: var(--color-sky-700);
-  border: 1px solid var(--color-sky-200);
-}
-
 /* --------------------------------------------------------------------------
-   Filter Toolbar
+   Filter Toolbar Layout
    -------------------------------------------------------------------------- */
 .analytics-filters-bar {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
@@ -90,133 +27,18 @@
   flex: 1 1 auto;
 }
 
-.analytics-filter-label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
-}
-
-.analytics-filter-select {
-  height: 36px;
-  padding: 0 var(--space-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background: var(--color-surface);
-  border: var(--border-default);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.analytics-filter-select:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-focus-ring);
-}
-
-.analytics-refresh-btn {
-  height: 36px;
-  padding: 0 var(--space-4);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+.analytics-filter-action {
+  min-width: auto;
+  flex: 0 0 auto;
 }
 
 /* --------------------------------------------------------------------------
-   KPI Metric Cards
-   -------------------------------------------------------------------------- */
-.analytics-kpis-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--space-4);
-}
-
-.analytics-kpi-card {
-  background: var(--color-surface);
-  border: var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-card);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.analytics-kpi-label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wide);
-}
-
-.analytics-kpi-value {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  line-height: var(--line-height-tight);
-}
-
-.analytics-kpi-subtext {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  margin-top: var(--space-1);
-}
-
-.analytics-warning-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--font-size-xs);
-  color: var(--color-amber-600);
-  background: #fef3c7;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  margin-top: var(--space-1);
-}
-
-/* --------------------------------------------------------------------------
-   Charts Section & SVG Visualizations
+   Charts Section & Pure SVG Visualizations
    -------------------------------------------------------------------------- */
 .analytics-charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   gap: var(--space-4);
-}
-
-.analytics-chart-card {
-  background: var(--color-surface);
-  border: var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-card);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 260px;
-}
-
-.analytics-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.analytics-chart-title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin: 0;
-}
-
-.analytics-chart-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: stretch;
-  min-height: 180px;
 }
 
 .analytics-svg-chart {
@@ -246,208 +68,66 @@
   border-radius: 50%;
 }
 
-.analytics-bar-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-  font-size: var(--font-size-xs);
+.analytics-legend-dot--success {
+  background: var(--color-green-600, #16a34a);
 }
 
-.analytics-bar-label {
-  width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--color-text-secondary);
+.analytics-legend-dot--failure {
+  background: var(--color-red-600, #dc2626);
 }
 
-.analytics-bar-track {
-  flex: 1;
-  height: 12px;
-  background: var(--color-slate-100);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  position: relative;
+.analytics-legend-dot--refusal {
+  background: var(--color-amber-600, #d97706);
 }
 
-.analytics-bar-fill {
-  height: 100%;
-  border-radius: var(--radius-sm);
-  transition: width 0.3s ease;
-}
-
-.analytics-bar-val {
-  width: 60px;
-  text-align: right;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+.analytics-legend-dot--token {
+  background: var(--color-sky-600, #0284c7);
 }
 
 /* --------------------------------------------------------------------------
-   Request History Table
+   Request History Table Failure Details Box
    -------------------------------------------------------------------------- */
-.analytics-history-card {
+.analytics-history-detail-row {
+  background: var(--color-surface-subtle);
+}
+
+.analytics-history-detail-box {
+  padding: var(--space-3);
   background: var(--color-surface);
   border: var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-card);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.analytics-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  border: var(--border-default);
   border-radius: var(--radius-md);
-}
-
-.analytics-history-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+  margin: var(--space-2) 0;
   font-size: var(--font-size-xs);
 }
 
-.analytics-history-table th {
-  background: var(--color-surface-subtle);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: var(--border-default);
-  white-space: nowrap;
+.analytics-detail-item {
+  margin-bottom: var(--space-1);
 }
 
-.analytics-history-table td {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-slate-100);
-  color: var(--color-text-primary);
-  vertical-align: middle;
-}
-
-.analytics-history-table tr:hover {
-  background: var(--color-slate-50);
-}
-
-/* Status Badges */
-.analytics-outcome-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-weight: var(--font-weight-semibold);
-  text-transform: capitalize;
-}
-
-.analytics-outcome-badge--success {
-  background: var(--color-green-100);
-  color: var(--color-green-700);
-}
-
-.analytics-outcome-badge--failure {
-  background: var(--color-red-100);
-  color: var(--color-red-700);
-}
-
-.analytics-outcome-badge--refusal {
-  background: #fef3c7;
-  color: var(--color-amber-600);
-}
-
-/* Hash badge */
-.analytics-hash-pill {
-  font-family: var(--font-family-mono);
-  background: var(--color-slate-100);
-  color: var(--color-slate-700);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  display: inline-block;
-}
-
-/* Expandable failure alert in row */
-.analytics-error-detail {
-  margin-top: var(--space-1);
-  padding: var(--space-2);
-  background: var(--color-red-100);
-  border-radius: var(--radius-sm);
-  color: var(--color-red-700);
-  font-size: 0.75rem;
-  word-break: break-word;
-}
-
-/* Pagination toolbar */
-.analytics-pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding-top: var(--space-2);
-}
-
-.analytics-pagination-info {
-  font-size: var(--font-size-xs);
+.analytics-detail-category {
+  margin-left: var(--space-2);
   color: var(--color-text-muted);
 }
 
-.analytics-pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.analytics-attempts-list {
+  margin: var(--space-1) 0 0 var(--space-4);
+  padding: 0;
 }
 
-.analytics-tab-nav {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-  border-bottom: var(--border-default);
-  padding-bottom: var(--space-2);
-}
-
-.analytics-tab-btn {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all 0.15s ease;
-}
-
-.analytics-tab-btn:hover {
-  color: var(--color-text-primary);
-  background: var(--color-surface-hover);
-}
-
-.analytics-tab-btn--active {
-  color: var(--color-primary);
-  background: var(--color-sky-100);
-  font-weight: var(--font-weight-semibold);
-}
-
-/* Empty & Loading States */
-.analytics-state-message {
-  padding: var(--space-6);
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
+/* --------------------------------------------------------------------------
+   Responsive Behavior
+   -------------------------------------------------------------------------- */
 @media (max-width: 640px) {
   .analytics-charts-grid {
     grid-template-columns: 1fr;
   }
+
   .analytics-filters-bar {
     flex-direction: column;
     align-items: stretch;
   }
-  .analytics-refresh-btn {
+
+  .analytics-filter-action .btn {
     width: 100%;
     justify-content: center;
   }

@@ -2,14 +2,14 @@ import React from 'react';
 import { useTextReveal } from '../../hooks';
 
 /**
- * Renders the assistant's answer text and streaming cursor with progressive reveal.
+ * Renders the assistant's answer text with a subtle opacity fade-in as new text materializes.
  */
 export default function AnswerContent({
   answer,
   isStreaming = false,
   isInterrupted = false,
 }) {
-  const { displayedText, isRevealing } = useTextReveal(answer, {
+  const { displayedText, isRevealing, stableText, streamingFragments } = useTextReveal(answer, {
     isStreaming,
     isInterrupted,
   });
@@ -19,8 +19,18 @@ export default function AnswerContent({
   return (
     <div className="panel-body">
       <p className="message-text">
-        {displayedText}
-        {isRevealing && <span className="streaming-cursor" aria-hidden="true">▍</span>}
+        {!isRevealing ? (
+          displayedText
+        ) : (
+          <>
+            {stableText}
+            {streamingFragments.map((frag) => (
+              <span key={frag.id} className="streaming-text-fade">
+                {frag.text}
+              </span>
+            ))}
+          </>
+        )}
       </p>
     </div>
   );

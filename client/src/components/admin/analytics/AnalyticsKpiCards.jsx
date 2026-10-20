@@ -26,57 +26,57 @@ export default function AnalyticsKpiCards({ overview }) {
   } = overview;
 
   return (
-    <div className="analytics-kpis-grid" role="region" aria-label="KPI overview">
+    <div className="stats-grid" role="region" aria-label="KPI overview">
       {/* 1. Total Requests */}
-      <div className="analytics-kpi-card">
-        <span className="analytics-kpi-label">{UI_LABELS.ANALYTICS.KPIS.TOTAL_REQUESTS}</span>
-        <span className="analytics-kpi-value">{formatNumber(totalRequests)}</span>
-        <span className="analytics-kpi-subtext">Across selected time window</span>
+      <div className="card flex-container">
+        <span className="stat-label">{UI_LABELS.ANALYTICS.KPIS.TOTAL_REQUESTS}</span>
+        <span className="stat-value">{formatNumber(totalRequests)}</span>
+        <span className="stat-sub">Across selected time window</span>
       </div>
 
       {/* 2. Success Rate */}
-      <div className="analytics-kpi-card">
-        <span className="analytics-kpi-label">{UI_LABELS.ANALYTICS.KPIS.SUCCESS_RATE}</span>
-        <span className="analytics-kpi-value" style={{ color: 'var(--color-green-600)' }}>
+      <div className="card flex-container">
+        <span className="stat-label">{UI_LABELS.ANALYTICS.KPIS.SUCCESS_RATE}</span>
+        <span className="stat-value stat-value--success">
           {successRate}%
         </span>
-        <span className="analytics-kpi-subtext">
+        <span className="stat-sub">
           {formatNumber(successCount)} successful calls
         </span>
       </div>
 
       {/* 3. Failure & Refusal */}
-      <div className="analytics-kpi-card">
-        <span className="analytics-kpi-label">{UI_LABELS.ANALYTICS.KPIS.FAILURE_RATE}</span>
-        <span className="analytics-kpi-value" style={{ color: failureRate > 0 ? 'var(--color-red-600)' : 'var(--color-text-primary)' }}>
+      <div className="card flex-container">
+        <span className="stat-label">{UI_LABELS.ANALYTICS.KPIS.FAILURE_RATE}</span>
+        <span className={`stat-value ${failureRate > 0 ? 'stat-value--failure' : ''}`}>
           {failureRate}%
         </span>
-        <span className="analytics-kpi-subtext">
+        <span className="stat-sub">
           {formatNumber(failureCount)} errors · {formatNumber(refusalCount)} refusals ({refusalRate}%)
         </span>
       </div>
 
       {/* 4. Total Tokens & Completeness Warning */}
-      <div className="analytics-kpi-card">
-        <span className="analytics-kpi-label">{UI_LABELS.ANALYTICS.KPIS.TOTAL_TOKENS}</span>
-        <span className="analytics-kpi-value">{formatNumber(totalTokens)}</span>
-        <span className="analytics-kpi-subtext">
+      <div className="card flex-container">
+        <span className="stat-label">{UI_LABELS.ANALYTICS.KPIS.TOTAL_TOKENS}</span>
+        <span className="stat-value">{formatNumber(totalTokens)}</span>
+        <span className="stat-sub">
           In: {formatNumber(inputTokens)} · Out: {formatNumber(outputTokens)}
         </span>
         {recordsWithMissingTokens > 0 && (
-          <div className="analytics-warning-badge" title="Provider response did not include complete token metadata">
+          <div className="badge badge-warning" title="Provider response did not include complete token metadata">
             {UI_LABELS.ANALYTICS.KPIS.INCOMPLETE_TOKENS_WARNING(recordsWithMissingTokens)}
           </div>
         )}
       </div>
 
       {/* 5. Latency Metrics */}
-      <div className="analytics-kpi-card">
-        <span className="analytics-kpi-label">{UI_LABELS.ANALYTICS.KPIS.LATENCY_TITLE}</span>
-        <span className="analytics-kpi-value">
-          {avgLatencyMs} <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'normal' }}>ms</span>
+      <div className="card flex-container">
+        <span className="stat-label">{UI_LABELS.ANALYTICS.KPIS.LATENCY_TITLE}</span>
+        <span className="stat-value">
+          {avgLatencyMs} <span className="stat-unit">ms</span>
         </span>
-        <span className="analytics-kpi-subtext">
+        <span className="stat-sub">
           p95: {p95LatencyMs} ms
         </span>
       </div>

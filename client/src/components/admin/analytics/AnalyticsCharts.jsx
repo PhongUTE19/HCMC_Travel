@@ -13,7 +13,7 @@ const { DIMENSIONS, COLORS } = ANALYTICS_CHART_CONFIG;
  */
 function RequestVolumeChart({ data = [] }) {
   if (!data || data.length === 0) {
-    return <div className="analytics-state-message">{UI_LABELS.ANALYTICS.CHARTS.NO_DATA}</div>;
+    return <div className="empty-state">{UI_LABELS.ANALYTICS.CHARTS.NO_DATA}</div>;
   }
 
   const svgWidth = DIMENSIONS.WIDTH;
@@ -65,7 +65,7 @@ function RequestVolumeChart({ data = [] }) {
           return (
             <g key={d.timestamp || idx}>
               <title>{`${d.dateLabel}: ${d.totalRequests} total (${d.successCount} ok, ${d.failureCount} err, ${d.refusalCount} ref)`}</title>
-              
+
               {/* Success slice (green) */}
               {successHeight > 0 && (
                 <rect
@@ -119,13 +119,13 @@ function RequestVolumeChart({ data = [] }) {
 
       <div className="analytics-chart-legend">
         <span className="analytics-legend-item">
-          <span className="analytics-legend-dot" style={{ background: COLORS.SUCCESS }} /> Success
+          <span className="analytics-legend-dot analytics-legend-dot--success" /> Success
         </span>
         <span className="analytics-legend-item">
-          <span className="analytics-legend-dot" style={{ background: COLORS.FAILURE }} /> Failure
+          <span className="analytics-legend-dot analytics-legend-dot--failure" /> Failure
         </span>
         <span className="analytics-legend-item">
-          <span className="analytics-legend-dot" style={{ background: COLORS.REFUSAL }} /> Refusal
+          <span className="analytics-legend-dot analytics-legend-dot--refusal" /> Refusal
         </span>
       </div>
     </div>
@@ -137,7 +137,7 @@ function RequestVolumeChart({ data = [] }) {
  */
 function TokenTrendChart({ data = [] }) {
   if (!data || data.length === 0) {
-    return <div className="analytics-state-message">{UI_LABELS.ANALYTICS.CHARTS.NO_DATA}</div>;
+    return <div className="empty-state">{UI_LABELS.ANALYTICS.CHARTS.NO_DATA}</div>;
   }
 
   const svgWidth = DIMENSIONS.WIDTH;
@@ -204,7 +204,7 @@ function TokenTrendChart({ data = [] }) {
       </svg>
       <div className="analytics-chart-legend">
         <span className="analytics-legend-item">
-          <span className="analytics-legend-dot" style={{ background: COLORS.TOKEN }} /> Total Tokens (Observed)
+          <span className="analytics-legend-dot analytics-legend-dot--token" /> Total Tokens (Observed)
         </span>
       </div>
     </div>
@@ -216,28 +216,32 @@ function TokenTrendChart({ data = [] }) {
  */
 function BreakdownList({ items = [], emptyText = 'No data recorded' }) {
   if (!items || items.length === 0) {
-    return <div className="analytics-state-message">{emptyText}</div>;
+    return <div className="empty-state">{emptyText}</div>;
   }
 
   const colors = COLORS.PALETTE;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px' }}>
+    <div className="bar-list">
       {items.map((item, idx) => (
-        <div key={item.name} className="analytics-bar-row">
-          <span className="analytics-bar-label" title={item.name}>
+        <div key={item.name} className="bar-row">
+          <span className="bar-label" title={item.name}>
             {item.name}
           </span>
-          <div className="analytics-bar-track">
-            <div
-              className="analytics-bar-fill"
-              style={{
-                width: `${Math.max(item.percentage, 2)}%`,
-                background: colors[idx % colors.length],
-              }}
-            />
+          <div className="bar-track">
+            <svg className="bar-track-svg" width="100%" height="100%" aria-hidden="true">
+              <rect
+                className="bar-fill"
+                x="0"
+                y="0"
+                width={`${Math.max(item.percentage, 2)}%`}
+                height="100%"
+                rx="2"
+                fill={colors[idx % colors.length]}
+              />
+            </svg>
           </div>
-          <span className="analytics-bar-val">
+          <span className="bar-val">
             {item.percentage}% ({formatNumber(item.count)})
           </span>
         </div>
@@ -250,43 +254,35 @@ export default function AnalyticsCharts({ timeseries = [], breakdown = {} }) {
   return (
     <div className="analytics-charts-grid" role="region" aria-label="Analytics charts">
       {/* 1. Request Volume Trend */}
-      <div className="analytics-chart-card">
-        <div className="analytics-chart-header">
-          <h4 className="analytics-chart-title">{UI_LABELS.ANALYTICS.CHARTS.VOLUME_TREND}</h4>
+      <div className="panel">
+        <div className="panel-header split-layout">
+          <h4 className="panel-title">{UI_LABELS.ANALYTICS.CHARTS.VOLUME_TREND}</h4>
         </div>
-        <div className="analytics-chart-body">
-          <RequestVolumeChart data={timeseries} />
-        </div>
+        <RequestVolumeChart data={timeseries} />
       </div>
 
       {/* 2. Token Usage Trend */}
-      <div className="analytics-chart-card">
-        <div className="analytics-chart-header">
-          <h4 className="analytics-chart-title">{UI_LABELS.ANALYTICS.CHARTS.TOKEN_TREND}</h4>
+      <div className="panel">
+        <div className="panel-header split-layout">
+          <h4 className="panel-title">{UI_LABELS.ANALYTICS.CHARTS.TOKEN_TREND}</h4>
         </div>
-        <div className="analytics-chart-body">
-          <TokenTrendChart data={timeseries} />
-        </div>
+        <TokenTrendChart data={timeseries} />
       </div>
 
       {/* 3. Feature Breakdown */}
-      <div className="analytics-chart-card">
-        <div className="analytics-chart-header">
-          <h4 className="analytics-chart-title">{UI_LABELS.ANALYTICS.CHARTS.FEATURE_BREAKDOWN}</h4>
+      <div className="panel">
+        <div className="panel-header split-layout">
+          <h4 className="panel-title">{UI_LABELS.ANALYTICS.CHARTS.FEATURE_BREAKDOWN}</h4>
         </div>
-        <div className="analytics-chart-body">
-          <BreakdownList items={breakdown?.byFeature} />
-        </div>
+        <BreakdownList items={breakdown?.byFeature} />
       </div>
 
       {/* 4. Model Breakdown */}
-      <div className="analytics-chart-card">
-        <div className="analytics-chart-header">
-          <h4 className="analytics-chart-title">{UI_LABELS.ANALYTICS.CHARTS.MODEL_BREAKDOWN}</h4>
+      <div className="panel">
+        <div className="panel-header split-layout">
+          <h4 className="panel-title">{UI_LABELS.ANALYTICS.CHARTS.MODEL_BREAKDOWN}</h4>
         </div>
-        <div className="analytics-chart-body">
-          <BreakdownList items={breakdown?.byModel} />
-        </div>
+        <BreakdownList items={breakdown?.byModel} />
       </div>
     </div>
   );

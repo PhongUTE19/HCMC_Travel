@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Stats Metric Grid
+   Stats Metric Grid & Distribution Bars
    ========================================================================== */
 
 .stats-grid {
@@ -28,4 +28,69 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   margin-top: var(--space-1);
+}
+
+.stat-value--success {
+  color: var(--color-green-600);
+}
+
+.stat-value--failure {
+  color: var(--color-red-600);
+}
+
+.stat-unit {
+  font-size: var(--font-size-sm);
+  font-weight: normal;
+}
+
+/* Distribution bar list */
+.bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.bar-label {
+  width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+.bar-track {
+  flex: 1;
+  height: 12px;
+  background: var(--color-slate-100);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-track-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.3s ease;
+}
+
+.bar-val {
+  width: 60px;
+  text-align: right;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }

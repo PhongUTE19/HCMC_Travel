@@ -15,21 +15,22 @@
   color: var(--color-text-muted);
 }
 
-.streaming-cursor {
-  display: inline-block;
-  margin-left: var(--space-1);
-  color: var(--color-primary);
-  animation: cursor-blink 1s step-start infinite;
+.streaming-text-fade {
+  display: inline;
+  animation: stream-fade-in 250ms ease-out forwards;
 }
 
-@keyframes cursor-blink {
-  50% {
-    opacity: 0;
+@keyframes stream-fade-in {
+  from {
+    opacity: 0.15;
+  }
+  to {
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .streaming-cursor {
+  .streaming-text-fade {
     animation: none;
     opacity: 1;
   }
@@ -116,4 +117,8 @@
   margin-top: var(--space-4);
   padding-top: var(--space-3);
   border-top: var(--border-default);
+}
+
+.scroll-anchor {
+  height: 1px;
 }

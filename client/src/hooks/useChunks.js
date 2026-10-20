@@ -1,28 +1,42 @@
 import { useState, useCallback } from 'react';
 import { fetchChunks } from '../services/adminApi';
 import { APP_MESSAGES, PAGINATION } from '../constants';
-import { validateSearchQuery } from '../utils';
+import { usePagination } from './usePagination';
+import { useSearch } from './useSearch';
 
 /**
  * Custom hook to manage chunk inspection, pagination, and text searching.
  *
- * @param {Object} options
+ * Configures reusable pagination and search primitives for server-side chunk queries.
+ *
+ * @param {Object} [options={}]
  * @param {Function} [options.onError] - Callback to report error feedback
  */
 export function useChunks({ onError } = {}) {
   const [chunks, setChunks] = useState([]);
   const [totalChunks, setTotalChunks] = useState(0);
-  const [chunkLimit, setChunkLimit] = useState(PAGINATION.DEFAULT_LIMIT);
-  const [chunkOffset, setChunkOffset] = useState(PAGINATION.DEFAULT_OFFSET);
   const [hasMore, setHasMore] = useState(false);
-  const [chunkSearch, setChunkSearch] = useState('');
   const [chunksLoading, setChunksLoading] = useState(false);
 
+  const pagination = usePagination({
+    initialPage: 1,
+    initialLimit: PAGINATION.DEFAULT_LIMIT,
+    total: totalChunks,
+  });
+
+  const search = useSearch({
+    initialQuery: '',
+  });
+
   const loadChunksData = useCallback(
-    async (limit = chunkLimit, offset = chunkOffset, search = chunkSearch) => {
+    async (
+      limit = pagination.limit,
+      offset = pagination.offset,
+      query = search.searchQuery
+    ) => {
       setChunksLoading(true);
       try {
-        const chunksData = await fetchChunks({ limit, offset, search });
+        const chunksData = await fetchChunks({ limit, offset, search: query });
         setChunks(chunksData.chunks || []);
         setTotalChunks(chunksData.totalChunks || 0);
         setHasMore(Boolean(chunksData.hasMore));
@@ -36,56 +50,65 @@ export function useChunks({ onError } = {}) {
         setChunksLoading(false);
       }
     },
-    [chunkLimit, chunkOffset, chunkSearch, onError]
+    [pagination.limit, pagination.offset, search.searchQuery, onError]
   );
 
   const handleSearchChange = useCallback(
     (newQuery) => {
-      const val = validateSearchQuery(newQuery);
-      const sanitized = val.value !== undefined ? val.value : (newQuery || '').slice(0, 200);
-      setChunkSearch(sanitized);
-      setChunkOffset(0);
-      loadChunksData(chunkLimit, 0, sanitized);
+      search.handleSearchChange(newQuery);
+      pagination.setPage(1);
+      loadChunksData(pagination.limit, 0, newQuery);
     },
-    [chunkLimit, loadChunksData]
+    [search, pagination, loadChunksData]
   );
 
   const handleLimitChange = useCallback(
     (newLimit) => {
-      setChunkLimit(newLimit);
-      setChunkOffset(0);
-      loadChunksData(newLimit, 0, chunkSearch);
+      pagination.setLimit(newLimit);
+      loadChunksData(newLimit, 0, search.searchQuery);
     },
-    [chunkSearch, loadChunksData]
+    [pagination, search.searchQuery, loadChunksData]
+  );
+
+  const handlePageChange = useCallback(
+    (targetPage) => {
+      pagination.setPage(targetPage);
+      const targetOffset = (targetPage - 1) * pagination.limit;
+      loadChunksData(pagination.limit, targetOffset, search.searchQuery);
+    },
+    [pagination, search.searchQuery, loadChunksData]
   );
 
   const handlePrevPage = useCallback(() => {
-    const nextOffset = Math.max(0, chunkOffset - chunkLimit);
-    setChunkOffset(nextOffset);
-    loadChunksData(chunkLimit, nextOffset, chunkSearch);
-  }, [chunkLimit, chunkOffset, chunkSearch, loadChunksData]);
+    if (pagination.hasPrev) {
+      handlePageChange(pagination.page - 1);
+    }
+  }, [pagination.hasPrev, pagination.page, handlePageChange]);
 
   const handleNextPage = useCallback(() => {
-    const nextOffset = chunkOffset + chunkLimit;
-    setChunkOffset(nextOffset);
-    loadChunksData(chunkLimit, nextOffset, chunkSearch);
-  }, [chunkLimit, chunkOffset, chunkSearch, loadChunksData]);
+    if (pagination.hasNext || hasMore) {
+      handlePageChange(pagination.page + 1);
+    }
+  }, [pagination.hasNext, hasMore, pagination.page, handlePageChange]);
 
   const refreshChunks = useCallback(() => {
-    return loadChunksData(chunkLimit, chunkOffset, chunkSearch);
-  }, [loadChunksData, chunkLimit, chunkOffset, chunkSearch]);
+    return loadChunksData(pagination.limit, pagination.offset, search.searchQuery);
+  }, [loadChunksData, pagination.limit, pagination.offset, search.searchQuery]);
 
   return {
     chunks,
     totalChunks,
-    chunkLimit,
-    chunkOffset,
+    chunkLimit: pagination.limit,
+    chunkOffset: pagination.offset,
+    page: pagination.page,
+    totalPages: pagination.totalPages,
     hasMore,
-    chunkSearch,
+    chunkSearch: search.searchQuery,
     chunksLoading,
     loadChunksData,
     handleSearchChange,
     handleLimitChange,
+    handlePageChange,
     handlePrevPage,
     handleNextPage,
     refreshChunks,

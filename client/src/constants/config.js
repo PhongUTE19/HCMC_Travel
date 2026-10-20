@@ -73,7 +73,7 @@ export const ANALYTICS_CONFIG = Object.freeze({
     { value: 'refusal', label: 'Refusal' },
   ],
   PAGE_SIZE_OPTIONS: [10, 20, 50],
-  DEFAULT_PAGE_SIZE: 20,
+  DEFAULT_PAGE_SIZE: 10,
   DEFAULT_TIME_RANGE: '7d',
 });
 

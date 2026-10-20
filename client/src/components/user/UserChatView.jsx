@@ -12,7 +12,15 @@ export default function UserChatView({
   onRefreshHealth,
   showDebug = CHAT_CONFIG.DEFAULT_SHOW_DEBUG,
 }) {
-  const { messages, loading, sendMessage, stopGeneration, clearChat } = useChat({
+  const {
+    messages,
+    loading,
+    sendMessage,
+    stopGeneration,
+    conversationRef,
+    bottomRef,
+    handleScroll,
+  } = useChat({
     health,
     onRefreshHealth,
   });
@@ -32,19 +40,15 @@ export default function UserChatView({
             {q}
           </button>
         ))}
-        {messages.length > 0 && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={loading}
-            onClick={clearChat}
-          >
-            {UI_LABELS.USER_CHAT.CLEAR_CHAT}
-          </button>
-        )}
       </div>
 
-      <ConversationList messages={messages} showDebug={showDebug} />
+      <ConversationList
+        messages={messages}
+        showDebug={showDebug}
+        conversationRef={conversationRef}
+        bottomRef={bottomRef}
+        handleScroll={handleScroll}
+      />
 
       <ChatForm
         onSubmit={sendMessage}

@@ -1,5 +1,6 @@
 import React from 'react';
 import ChunkCard from './ChunkCard';
+import { Pagination, SearchInput } from '../common';
 import { UI_LABELS, PAGINATION } from '../../constants';
 
 export default function ChunkReview({
@@ -12,66 +13,51 @@ export default function ChunkReview({
   loading,
   onSearchChange,
   onLimitChange,
+  onPageChange,
   onPrevPage,
   onNextPage,
 }) {
-  const startIdx = totalChunks === 0 ? 0 : offset + 1;
-  const endIdx = totalChunks === 0 ? 0 : Math.min(offset + chunks.length, totalChunks);
+  const currentPage = Math.floor((offset || 0) / (limit || 10)) + 1;
+  const totalPages = totalChunks === 0 ? 1 : Math.ceil(totalChunks / limit);
+
+  const handlePageChange = (newPage) => {
+    if (onPageChange) {
+      onPageChange(newPage);
+    } else if (newPage < currentPage && onPrevPage) {
+      onPrevPage();
+    } else if (newPage > currentPage && onNextPage) {
+      onNextPage();
+    }
+  };
+
+  const showingLabel = (from, to, total) => (
+    <span>
+      {UI_LABELS.CHUNK_REVIEW.SHOWING} <strong>{from}–{to}</strong> {UI_LABELS.CHUNK_REVIEW.OF} <strong>{total}</strong> {UI_LABELS.CHUNK_REVIEW.CHUNKS}
+    </span>
+  );
 
   return (
     <div>
-      <input
-        type="text"
-        className="search-input"
-        placeholder={UI_LABELS.CHUNK_REVIEW.SEARCH_PLACEHOLDER}
+      <SearchInput
         value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
+        onChange={onSearchChange}
+        placeholder={UI_LABELS.CHUNK_REVIEW.SEARCH_PLACEHOLDER}
+        ariaLabel={UI_LABELS.CHUNK_REVIEW.SEARCH_PLACEHOLDER}
       />
 
-      {/* Pagination Controls Bar */}
-      <div className="pagination-bar split-layout">
-        <div className="pagination-info row-layout">
-          <span>
-            {UI_LABELS.CHUNK_REVIEW.SHOWING} <strong>{startIdx}–{endIdx}</strong> {UI_LABELS.CHUNK_REVIEW.OF} <strong>{totalChunks}</strong> {UI_LABELS.CHUNK_REVIEW.CHUNKS}
-          </span>
-          <div className="row-layout">
-            <label htmlFor="limit-select">{UI_LABELS.CHUNK_REVIEW.PER_PAGE}</label>
-            <select
-              id="limit-select"
-              className="page-size-select"
-              value={limit}
-              onChange={(e) => onLimitChange(Number(e.target.value))}
-            >
-              {PAGINATION.OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="row-layout">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={offset === 0 || loading}
-            onClick={onPrevPage}
-            title={UI_LABELS.CHUNK_REVIEW.PREVIOUS_TITLE}
-          >
-            {UI_LABELS.CHUNK_REVIEW.PREVIOUS}
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={!hasMore || loading}
-            onClick={onNextPage}
-            title={UI_LABELS.CHUNK_REVIEW.NEXT_TITLE}
-          >
-            {UI_LABELS.CHUNK_REVIEW.NEXT}
-          </button>
-        </div>
-      </div>
+      {/* Reusable Pagination Controls Bar */}
+      <Pagination
+        page={currentPage}
+        limit={limit}
+        total={totalChunks}
+        totalPages={totalPages}
+        pageSizeOptions={PAGINATION.OPTIONS}
+        onPageChange={handlePageChange}
+        onLimitChange={onLimitChange}
+        loading={loading}
+        showingLabel={showingLabel}
+        ariaLabel="Chunks pagination"
+      />
 
       {loading ? (
         <div className="empty-state">

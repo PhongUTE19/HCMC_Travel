@@ -6,3 +6,8 @@ export { useSystemPrompt } from './useSystemPrompt';
 export { useChat } from './useChat';
 export { useTextReveal } from './useTextReveal';
 export { useAnalytics } from './useAnalytics';
+export { usePagination } from './usePagination';
+export { useSort } from './useSort';
+export { useSearch } from './useSearch';
+export { useAdminDashboard } from './useAdminDashboard';
+export { useHealth } from './useHealth';

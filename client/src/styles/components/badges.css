@@ -17,3 +17,38 @@
   color: var(--color-text-secondary);
   border: var(--border-default);
 }
+
+.badge-pill {
+  border-radius: var(--radius-full);
+}
+
+.badge-success {
+  background-color: var(--color-green-100);
+  color: var(--color-green-700);
+  border-color: var(--color-green-200);
+}
+
+.badge-error {
+  background-color: var(--color-red-100);
+  color: var(--color-red-700);
+  border-color: var(--color-red-200);
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: var(--color-amber-600);
+  border-color: #fde68a;
+}
+
+.badge-info {
+  background-color: var(--color-sky-100);
+  color: var(--color-sky-700);
+  border-color: var(--color-sky-200);
+}
+
+.badge .btn {
+  padding: 1px var(--space-2);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  margin-left: var(--space-2);
+}

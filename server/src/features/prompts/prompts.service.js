@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { config } from '../../config.js';
-import { DEFAULT_SYSTEM_PROMPT } from '../../config/promptConfig.js';
 import {
   SERVER_MESSAGES,
   HTTP_STATUS,
@@ -37,11 +36,11 @@ export function getSystemPrompt() {
       }
     }
     ensurePromptDir();
-    fs.writeFileSync(config.promptFile, DEFAULT_SYSTEM_PROMPT, 'utf-8');
-    return DEFAULT_SYSTEM_PROMPT;
+    fs.writeFileSync(config.promptFile, config.promptFileDefault, 'utf-8');
+    return config.promptFileDefault;
   } catch (err) {
     console.warn('[PromptService] Failed to read prompt file, fallback to default:', err.message);
-    return DEFAULT_SYSTEM_PROMPT;
+    return config.promptFileDefault;
   }
 }
 
@@ -79,9 +78,9 @@ export function saveSystemPrompt(rawPrompt) {
  */
 export function resetSystemPrompt() {
   ensurePromptDir();
-  fs.writeFileSync(config.promptFile, DEFAULT_SYSTEM_PROMPT, 'utf-8');
+  fs.writeFileSync(config.promptFile, config.promptFileDefault, 'utf-8');
   return {
-    prompt: DEFAULT_SYSTEM_PROMPT,
+    prompt: config.promptFileDefault,
     message: SERVER_MESSAGES.SUCCESS.PROMPT_RESET,
   };
 }

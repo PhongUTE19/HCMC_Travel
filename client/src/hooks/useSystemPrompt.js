@@ -9,13 +9,19 @@ import { UI_LABELS, APP_MESSAGES } from '../constants';
  * @param {Function} [options.onError] - Callback to report error feedback
  * @param {Function} [options.onSuccess] - Callback to report success feedback
  */
-export function useSystemPrompt({ onError, onSuccess } = {}) {
+export function useSystemPrompt({ onError, onSuccess, isOffline = false } = {}) {
   const [prompt, setPrompt] = useState('');
   const [initialPrompt, setInitialPrompt] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const loadPrompt = useCallback(async () => {
+    // Prevent repeated System Prompt API requests while offline
+    if (isOffline || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await fetchSystemPrompt();
@@ -28,11 +34,14 @@ export function useSystemPrompt({ onError, onSuccess } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [isOffline, onError]);
 
+  // Fetch when online, and automatically restore normal fetching when connectivity returns
   useEffect(() => {
-    loadPrompt();
-  }, [loadPrompt]);
+    if (!isOffline) {
+      loadPrompt();
+    }
+  }, [isOffline, loadPrompt]);
 
   const handleSave = useCallback(
     async (e) => {

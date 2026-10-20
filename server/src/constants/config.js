@@ -54,6 +54,7 @@ export const SERVER_CONFIG_DEFAULTS = Object.freeze({
   DEFAULT_TOP_K_STR: '4',
   GEMINI_MODEL: 'gemini-3.5-flash-lite',
   EMBEDDING_MODEL: 'gemini-embedding-001',
+  AI_PROVIDER: 'gemini',
   QDRANT_COLLECTION: 'Student_Handbook',
   PLACEHOLDER_KEY: 'your_gemini_api_key_here',
 });

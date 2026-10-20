@@ -18,12 +18,12 @@ export default function AnalyticsFilters({
   return (
     <div className="analytics-filters-bar" role="search" aria-label="Analytics filters">
       <div className="analytics-filter-item">
-        <label htmlFor="analytics-filter-timerange" className="analytics-filter-label">
+        <label htmlFor="analytics-filter-timerange" className="form-label">
           {UI_LABELS.ANALYTICS.FILTER_TIME_RANGE}
         </label>
         <select
           id="analytics-filter-timerange"
-          className="analytics-filter-select"
+          className="form-select"
           value={filters.timeRange || '7d'}
           onChange={(e) => handleFilterChange('timeRange', e.target.value)}
         >
@@ -36,12 +36,12 @@ export default function AnalyticsFilters({
       </div>
 
       <div className="analytics-filter-item">
-        <label htmlFor="analytics-filter-feature" className="analytics-filter-label">
+        <label htmlFor="analytics-filter-feature" className="form-label">
           {UI_LABELS.ANALYTICS.FILTER_FEATURE}
         </label>
         <select
           id="analytics-filter-feature"
-          className="analytics-filter-select"
+          className="form-select"
           value={filters.feature || 'all'}
           onChange={(e) => handleFilterChange('feature', e.target.value)}
         >
@@ -54,12 +54,12 @@ export default function AnalyticsFilters({
       </div>
 
       <div className="analytics-filter-item">
-        <label htmlFor="analytics-filter-outcome" className="analytics-filter-label">
+        <label htmlFor="analytics-filter-outcome" className="form-label">
           {UI_LABELS.ANALYTICS.FILTER_OUTCOME}
         </label>
         <select
           id="analytics-filter-outcome"
-          className="analytics-filter-select"
+          className="form-select"
           value={filters.outcome || 'all'}
           onChange={(e) => handleFilterChange('outcome', e.target.value)}
         >
@@ -71,10 +71,10 @@ export default function AnalyticsFilters({
         </select>
       </div>
 
-      <div className="analytics-filter-item" style={{ minWidth: 'auto', flex: '0 0 auto' }}>
+      <div className="analytics-filter-item analytics-filter-action">
         <button
           type="button"
-          className="btn btn-secondary analytics-refresh-btn"
+          className="btn btn-secondary"
           onClick={onRefresh}
           disabled={refreshing}
           aria-label={UI_LABELS.ANALYTICS.REFRESH_BTN}

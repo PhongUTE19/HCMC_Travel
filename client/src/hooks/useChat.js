@@ -22,6 +22,45 @@ export function useChat({ health, onRefreshHealth } = {}) {
     health?.error || (health?.status && health.status === STATUS_KEYS.ERROR)
   );
 
+  const conversationRef = useRef(null);
+  const bottomRef = useRef(null);
+  const userScrolledUpRef = useRef(false);
+
+  // Monitor user scroll position: pause auto-scrolling if user manually scrolled up
+  const handleScroll = useCallback(() => {
+    const el = conversationRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    userScrolledUpRef.current = distanceFromBottom > 60;
+  }, []);
+
+  // Follow stream output smoothly if user has not scrolled up
+  useEffect(() => {
+    if (!userScrolledUpRef.current && conversationRef.current) {
+      conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Follow progressive text reveal updates without scroll jumping
+  useEffect(() => {
+    const el = conversationRef.current;
+    if (!el || typeof MutationObserver === 'undefined') return;
+
+    const observer = new MutationObserver(() => {
+      if (!userScrolledUpRef.current && conversationRef.current) {
+        conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+      }
+    });
+
+    observer.observe(el, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Clean up any ongoing request if component unmounts
   useEffect(() => {
     return () => {
@@ -38,11 +77,6 @@ export function useChat({ health, onRefreshHealth } = {}) {
       abortControllerRef.current = null;
     }
   }, []);
-
-  const clearChat = useCallback(() => {
-    if (loading) return;
-    setMessages([]);
-  }, [loading]);
 
   const sendMessage = useCallback(
     async (message) => {
@@ -185,6 +219,8 @@ export function useChat({ health, onRefreshHealth } = {}) {
     loading,
     sendMessage,
     stopGeneration,
-    clearChat,
+    conversationRef,
+    bottomRef,
+    handleScroll,
   };
 }

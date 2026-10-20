@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ANALYTICS_CONFIG, ANALYTICS_CHART_CONFIG, UI_LABELS } from '../../../constants';
 import { validatePagination } from '../../../utils';
+import { useSort } from '../../../hooks';
+import { Pagination, SortableHeader } from '../../common';
 
 function formatTimestamp(isoString) {
   if (!isoString) return '—';
@@ -11,6 +13,14 @@ function formatTimestamp(isoString) {
     return isoString;
   }
 }
+
+const historyComparators = {
+  tokens: (a, b, dir) => {
+    const valA = a?.tokenUsage?.totalTokens ?? -1;
+    const valB = b?.tokenUsage?.totalTokens ?? -1;
+    return dir === 'desc' ? valB - valA : valA - valB;
+  },
+};
 
 export default function AnalyticsHistoryTable({
   historyData,
@@ -28,8 +38,11 @@ export default function AnalyticsHistoryTable({
     totalPages = 1,
   } = historyData || {};
 
-  const fromIndex = total > 0 ? (page - 1) * limit + 1 : 0;
-  const toIndex = Math.min(page * limit, total);
+  const { sortKey, sortDirection, toggleSort, applySort } = useSort({
+    comparators: historyComparators,
+  });
+
+  const sortedRecords = applySort(records);
 
   const toggleExpand = (id) => {
     setExpandedRowId((prev) => (prev === id ? null : id));
@@ -55,159 +68,209 @@ export default function AnalyticsHistoryTable({
   };
 
   return (
-    <div className="analytics-history-card" role="region" aria-label="Request history">
-      <div className="analytics-chart-header">
-        <div>
-          <h4 className="analytics-chart-title">{UI_LABELS.ANALYTICS.HISTORY.TITLE}</h4>
-          <p className="analytics-subtitle" style={{ fontSize: 'var(--font-size-xs)', marginTop: '2px' }}>
-            {UI_LABELS.ANALYTICS.HISTORY.SUBTITLE}
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-            {UI_LABELS.ANALYTICS.HISTORY.PAGE_SIZE}
-          </span>
-          <select
-            className="analytics-filter-select"
-            style={{ height: '30px', fontSize: 'var(--font-size-xs)', padding: '0 6px' }}
-            value={limit}
-            onChange={(e) => handleLimitChange(e.target.value)}
-          >
-            {ANALYTICS_CONFIG.PAGE_SIZE_OPTIONS.map((sz) => (
-              <option key={sz} value={sz}>
-                {sz}
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="panel flex-container" role="region" aria-label="Request history">
+      <div className="panel-header">
+        <h4 className="panel-title">{UI_LABELS.ANALYTICS.HISTORY.TITLE}</h4>
+        <span className="panel-subtitle">
+          {UI_LABELS.ANALYTICS.HISTORY.SUBTITLE}
+        </span>
       </div>
 
-      <div className="analytics-table-wrapper">
-        <table className="analytics-history-table">
+      {/* Reusable Pagination Component */}
+      <Pagination
+        page={page}
+        limit={limit}
+        total={total}
+        totalPages={totalPages}
+        pageSizeOptions={ANALYTICS_CONFIG.PAGE_SIZE_OPTIONS}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+        loading={loading}
+        showingLabel={(from, to, tot) => (
+          <span>
+            {UI_LABELS.COMMON.SHOWING} <strong>{from}–{to}</strong> {UI_LABELS.COMMON.OF} <strong>{tot}</strong> records
+          </span>
+        )}
+        ariaLabel="Request history pagination"
+      />
+      <div className="table-responsive table-responsive--bordered">
+        <table className="data-table data-table--compact">
           <thead>
             <tr>
-              <th>{UI_LABELS.ANALYTICS.HISTORY.TH_TIMESTAMP}</th>
-              <th>{UI_LABELS.ANALYTICS.HISTORY.TH_FEATURE}</th>
-              <th>{UI_LABELS.ANALYTICS.HISTORY.TH_MODEL}</th>
-              <th>{UI_LABELS.ANALYTICS.HISTORY.TH_OUTCOME}</th>
-              <th>{UI_LABELS.ANALYTICS.HISTORY.TH_LATENCY}</th>
-              <th>{UI_LABELS.ANALYTICS.HISTORY.TH_TOKENS}</th>
+              <SortableHeader
+                columnKey="timestamp"
+                currentSortKey={sortKey}
+                currentDirection={sortDirection}
+                onSort={toggleSort}
+              >
+                {UI_LABELS.ANALYTICS.HISTORY.TH_TIMESTAMP}
+              </SortableHeader>
+              <SortableHeader
+                columnKey="feature"
+                currentSortKey={sortKey}
+                currentDirection={sortDirection}
+                onSort={toggleSort}
+              >
+                {UI_LABELS.ANALYTICS.HISTORY.TH_FEATURE}
+              </SortableHeader>
+              <SortableHeader
+                columnKey="model"
+                currentSortKey={sortKey}
+                currentDirection={sortDirection}
+                onSort={toggleSort}
+              >
+                {UI_LABELS.ANALYTICS.HISTORY.TH_MODEL}
+              </SortableHeader>
+              <SortableHeader
+                columnKey="outcome"
+                currentSortKey={sortKey}
+                currentDirection={sortDirection}
+                onSort={toggleSort}
+              >
+                {UI_LABELS.ANALYTICS.HISTORY.TH_OUTCOME}
+              </SortableHeader>
+              <SortableHeader
+                columnKey="durationMs"
+                currentSortKey={sortKey}
+                currentDirection={sortDirection}
+                onSort={toggleSort}
+              >
+                {UI_LABELS.ANALYTICS.HISTORY.TH_LATENCY}
+              </SortableHeader>
+              <SortableHeader
+                columnKey="tokens"
+                currentSortKey={sortKey}
+                currentDirection={sortDirection}
+                onSort={toggleSort}
+              >
+                {UI_LABELS.ANALYTICS.HISTORY.TH_TOKENS}
+              </SortableHeader>
               <th>{UI_LABELS.ANALYTICS.HISTORY.TH_PROMPT_VERSION}</th>
-              <th>{UI_LABELS.ANALYTICS.HISTORY.TH_ATTEMPTS}</th>
+              <SortableHeader
+                columnKey="totalAttempts"
+                currentSortKey={sortKey}
+                currentDirection={sortDirection}
+                onSort={toggleSort}
+              >
+                {UI_LABELS.ANALYTICS.HISTORY.TH_ATTEMPTS}
+              </SortableHeader>
               <th>{UI_LABELS.ANALYTICS.HISTORY.TH_DETAILS}</th>
             </tr>
           </thead>
           <tbody>
             {loading && records.length === 0 ? (
               <tr>
-                <td colSpan="9" className="analytics-state-message">
+                <td colSpan="9" className="empty-state">
                   {UI_LABELS.ANALYTICS.HISTORY.LOADING}
                 </td>
               </tr>
             ) : records.length === 0 ? (
               <tr>
-                <td colSpan="9" className="analytics-state-message">
+                <td colSpan="9" className="empty-state">
                   {UI_LABELS.ANALYTICS.HISTORY.EMPTY_STATE}
                 </td>
               </tr>
             ) : (
-              records.map((rec) => {
+              sortedRecords.map((rec) => {
                 const isExpanded = expandedRowId === rec.id;
-                const hasErrorOrRefusal = Boolean(rec.error || rec.refusalReason || rec.outcome !== 'success');
-                const hasTokens = rec.tokenUsage?.tokenCountsAvailable;
+                const promptHashShort = rec.promptVersion
+                  ? rec.promptVersion.slice(0, ANALYTICS_CHART_CONFIG.PROMPT_HASH_DISPLAY_LENGTH)
+                  : '—';
 
                 return (
                   <React.Fragment key={rec.id}>
                     <tr>
-                      <td style={{ whiteSpace: 'nowrap', fontFamily: 'var(--font-family-mono)' }}>
+                      <td className="text-nowrap">
                         {formatTimestamp(rec.timestamp)}
                       </td>
                       <td>
-                        <span style={{ fontWeight: 'var(--font-weight-medium)' }}>{rec.feature}</span>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                          {rec.operation}
-                        </div>
+                        <span className="badge">{rec.feature}</span>
+                        {rec.operation && rec.operation !== rec.feature && (
+                          <small className="table-subtext">
+                            {rec.operation}
+                          </small>
+                        )}
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>{rec.model || '—'}</td>
+                      <td className="text-truncate" title={rec.model}>
+                        {rec.model || '—'}
+                      </td>
                       <td>
-                        <span className={`analytics-outcome-badge analytics-outcome-badge--${rec.outcome}`}>
+                        <span className={`badge badge-pill ${rec.outcome === 'success'
+                          ? 'badge-success'
+                          : rec.outcome === 'failure'
+                            ? 'badge-error'
+                            : 'badge-warning'
+                          }`}>
                           {rec.outcome}
                         </span>
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <div>{rec.durationMs !== null ? `${rec.durationMs} ms` : '—'}</div>
-                        {rec.timeToFirstTokenMs !== null && rec.timeToFirstTokenMs !== undefined && (
-                          <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                            TTFT: {rec.timeToFirstTokenMs} ms
-                          </div>
-                        )}
+                      <td className="text-nowrap">
+                        {rec.durationMs != null ? `${rec.durationMs} ms` : '—'}
                       </td>
-                      <td>
-                        {hasTokens ? (
-                          <span title={`Input: ${rec.tokenUsage.inputTokens}, Output: ${rec.tokenUsage.outputTokens}, Total: ${rec.tokenUsage.totalTokens}`}>
-                            {rec.tokenUsage.totalTokens?.toLocaleString()}
-                            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', display: 'block' }}>
-                              ({rec.tokenUsage.inputTokens} / {rec.tokenUsage.outputTokens})
-                            </span>
+                      <td className="text-nowrap">
+                        {rec.tokenUsage?.tokenCountsAvailable ? (
+                          <span>
+                            {rec.tokenUsage.inputTokens ?? 0} / {rec.tokenUsage.outputTokens ?? 0}
+                            <strong> ({rec.tokenUsage.totalTokens ?? 0})</strong>
                           </span>
                         ) : (
-                          <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                            Unavailable
-                          </span>
+                          <span className="text-muted">—</span>
                         )}
                       </td>
-                      <td>
-                        {rec.promptVersion ? (
-                          <span
-                            className="analytics-hash-pill"
-                            title={`Full prompt SHA-256: ${rec.promptVersion}`}
-                          >
-                            {rec.promptVersion.slice(0, ANALYTICS_CHART_CONFIG.PROMPT_HASH_DISPLAY_LENGTH)}…
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-                        )}
+                      <td className="font-mono" title={rec.promptVersion}>
+                        {promptHashShort}
                       </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {rec.attemptCount || (rec.attempts ? rec.attempts.length : 1)}
+                      <td className="text-center">
+                        {rec.totalAttempts || 1}
                       </td>
                       <td>
-                        {hasErrorOrRefusal ? (
+                        {rec.outcome === 'failure' || rec.outcome === 'refusal' || rec.error ? (
                           <button
                             type="button"
-                            className="btn btn-secondary"
-                            style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                            className="btn btn-chip"
                             onClick={() => toggleExpand(rec.id)}
                             aria-expanded={isExpanded}
+                            aria-label={`Toggle failure details for request ${rec.id}`}
                           >
-                            {isExpanded ? 'Hide' : 'View'}
+                            {isExpanded ? UI_LABELS.COMMON.COLLAPSE : UI_LABELS.COMMON.EXPAND}
                           </button>
                         ) : (
-                          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+                          <span className="text-muted">
+                            —
+                          </span>
                         )}
                       </td>
                     </tr>
 
-                    {/* Expandable Failure / Error Detail Row */}
-                    {isExpanded && hasErrorOrRefusal && (
-                      <tr>
-                        <td colSpan="9" style={{ background: 'var(--color-slate-50)', padding: 'var(--space-3)' }}>
-                          <div className="analytics-error-detail">
-                            {rec.refusal && (
-                              <div style={{ marginBottom: '4px' }}>
-                                <strong>Refusal Reason:</strong> {rec.refusalReason || 'Model refused to process request'}
+                    {isExpanded && (
+                      <tr className="analytics-history-detail-row">
+                        <td colSpan="9">
+                          <div className="analytics-history-detail-box">
+                            {rec.isRefusal && (
+                              <div className="analytics-detail-item">
+                                <strong>Refusal Reason:</strong>{' '}
+                                <span>{rec.refusalReason || 'Provider refused prompt'}</span>
                               </div>
                             )}
+
                             {rec.error && (
-                              <div>
-                                <strong>Error [{rec.error.category || rec.error.code || 'UNKNOWN'}]:</strong>{' '}
-                                {rec.error.message || 'Operation failed'}
+                              <div className="analytics-detail-item">
+                                <strong>Error Message:</strong>{' '}
+                                <span className="text-error">
+                                  {rec.error.message || String(rec.error)}
+                                </span>
+                                {rec.error.category && (
+                                  <span className="analytics-detail-category">
+                                    (Category: {rec.error.category})
+                                  </span>
+                                )}
                               </div>
                             )}
-                            {rec.attempts && rec.attempts.length > 1 && (
-                              <div style={{ marginTop: '6px', fontSize: '0.75rem' }}>
-                                <strong>Attempts history:</strong>
-                                <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+
+                            {rec.attempts && rec.attempts.length > 0 && (
+                              <div>
+                                <strong>Attempt History ({rec.attempts.length}):</strong>
+                                <ul className="analytics-attempts-list">
                                   {rec.attempts.map((att, i) => (
                                     <li key={i}>
                                       Attempt #{att.attemptNumber}: {att.status} ({att.durationMs} ms){' '}
@@ -227,36 +290,6 @@ export default function AnalyticsHistoryTable({
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* Pagination Bar */}
-      <div className="analytics-pagination">
-        <span className="analytics-pagination-info">
-          {UI_LABELS.ANALYTICS.HISTORY.PAGINATION_SHOWING(fromIndex, toIndex, total)}
-        </span>
-        <div className="analytics-pagination-controls">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
-            disabled={page <= 1 || loading}
-            onClick={() => handlePageChange(page - 1)}
-          >
-            {UI_LABELS.ANALYTICS.HISTORY.PREVIOUS}
-          </button>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-            {page} / {totalPages}
-          </span>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ padding: '4px 10px', fontSize: 'var(--font-size-xs)' }}
-            disabled={page >= totalPages || loading}
-            onClick={() => handlePageChange(page + 1)}
-          >
-            {UI_LABELS.ANALYTICS.HISTORY.NEXT}
-          </button>
-        </div>
       </div>
     </div>
   );

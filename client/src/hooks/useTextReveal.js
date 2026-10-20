@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { STREAM_REVEAL_CONFIG } from '../constants/index.js';
 
+const FADE_DURATION_MS = 250;
+
 /**
  * Splits text into user-perceived grapheme clusters, preventing corruption of
  * multi-byte Unicode surrogate pairs (emojis) and Vietnamese diacritics.
@@ -42,12 +44,21 @@ function checkPrefersReducedMotion() {
  * at the configured reveal speed rather than abruptly dumping it, ensuring short
  * responses also display a visible typewriter effect.
  *
+ * Each newly revealed batch is tracked as an active streaming fragment so it can
+ * render with a subtle opacity fade-in animation before consolidating into stable text.
+ *
  * @param {string} targetText - Authoritative accumulated text for this message
  * @param {object} [options]
  * @param {boolean} [options.isStreaming=false] - Whether network source stream is active
  * @param {boolean} [options.isInterrupted=false] - Whether request was cancelled or aborted
  * @param {object} [options.config=STREAM_REVEAL_CONFIG] - Speed and threshold tuning constants
- * @returns {{ displayedText: string, isRevealing: boolean, isComplete: boolean }}
+ * @returns {{
+ *   displayedText: string,
+ *   stableText: string,
+ *   streamingFragments: Array<{ id: number, text: string }>,
+ *   isRevealing: boolean,
+ *   isComplete: boolean
+ * }}
  */
 export function useTextReveal(
   targetText = '',
@@ -61,10 +72,16 @@ export function useTextReveal(
     // If not actively streaming on initial render, display full text immediately
     return !isStreaming ? targetText : '';
   });
+  const [stableText, setStableText] = useState(() => {
+    return !isStreaming ? targetText : '';
+  });
+  const [streamingFragments, setStreamingFragments] = useState([]);
   const [isRevealing, setIsRevealing] = useState(() => isStreaming);
   const [isComplete, setIsComplete] = useState(() => !isStreaming && Boolean(targetText));
 
   const pendingQueueRef = useRef([]);
+  const fragmentsRef = useRef([]);
+  const fragmentIdRef = useRef(1);
   const processedLengthRef = useRef(0);
   const timerRef = useRef(null);
   const isMountedRef = useRef(true);
@@ -137,6 +154,29 @@ export function useTextReveal(
         }
 
         const revealedGraphemes = queue.splice(0, batchSize).join('');
+        const now = Date.now();
+        const newFrag = { id: fragmentIdRef.current++, text: revealedGraphemes, time: now };
+
+        // Consolidate fragments that have finished their fade-in
+        const cutoff = now - FADE_DURATION_MS;
+        const currentFragments = fragmentsRef.current;
+        const matured = [];
+        const active = [];
+
+        for (const f of currentFragments) {
+          if (f.time <= cutoff) {
+            matured.push(f.text);
+          } else {
+            active.push(f);
+          }
+        }
+        active.push(newFrag);
+        fragmentsRef.current = active;
+
+        if (matured.length > 0) {
+          setStableText((prev) => prev + matured.join(''));
+        }
+        setStreamingFragments(active);
         setDisplayedText((prev) => prev + revealedGraphemes);
       }
 
@@ -146,10 +186,30 @@ export function useTextReveal(
       } else {
         // Queue is now empty
         if (!isStreamingRef.current) {
-          // Source stream is also done -> reveal is completely finished
-          setDisplayedText(targetTextRef.current);
-          setIsRevealing(false);
-          setIsComplete(true);
+          // Source stream is done. Wait remaining fade duration for active fragments to reach 100% opacity
+          const remainingTime = fragmentsRef.current.length > 0
+            ? Math.max(0, FADE_DURATION_MS - (Date.now() - fragmentsRef.current[fragmentsRef.current.length - 1].time))
+            : 0;
+
+          if (remainingTime > 0) {
+            timerRef.current = setTimeout(() => {
+              timerRef.current = null;
+              if (!isMountedRef.current) return;
+              fragmentsRef.current = [];
+              setStableText(targetTextRef.current);
+              setStreamingFragments([]);
+              setDisplayedText(targetTextRef.current);
+              setIsRevealing(false);
+              setIsComplete(true);
+            }, remainingTime);
+          } else {
+            fragmentsRef.current = [];
+            setStableText(targetTextRef.current);
+            setStreamingFragments([]);
+            setDisplayedText(targetTextRef.current);
+            setIsRevealing(false);
+            setIsComplete(true);
+          }
         }
       }
     }, config.TICK_INTERVAL_MS);
@@ -161,9 +221,12 @@ export function useTextReveal(
     if (isInterrupted) {
       clearScheduledTimer();
       pendingQueueRef.current = [];
+      fragmentsRef.current = [];
       processedLengthRef.current = targetText.length;
       hasRevealedInitialRef.current = true;
       setDisplayedText(targetText);
+      setStableText(targetText);
+      setStreamingFragments([]);
       setIsRevealing(false);
       setIsComplete(true);
       return;
@@ -173,9 +236,12 @@ export function useTextReveal(
     if (reducedMotion) {
       clearScheduledTimer();
       pendingQueueRef.current = [];
+      fragmentsRef.current = [];
       processedLengthRef.current = targetText.length;
       hasRevealedInitialRef.current = true;
       setDisplayedText(targetText);
+      setStableText(targetText);
+      setStreamingFragments([]);
       setIsRevealing(false);
       setIsComplete(true);
       return;
@@ -188,9 +254,13 @@ export function useTextReveal(
     if (currentLen < prevProcessed || !targetText.startsWith(targetText.slice(0, prevProcessed))) {
       clearScheduledTimer();
       pendingQueueRef.current = [];
+      fragmentsRef.current = [];
+      fragmentIdRef.current = 1;
       processedLengthRef.current = 0;
       hasRevealedInitialRef.current = false;
       setDisplayedText('');
+      setStableText('');
+      setStreamingFragments([]);
       setIsRevealing(isStreaming);
       setIsComplete(!isStreaming && currentLen === 0);
     }
@@ -206,6 +276,10 @@ export function useTextReveal(
       if (!hasRevealedInitialRef.current && newGraphemes.length > 0) {
         hasRevealedInitialRef.current = true;
         const initialBatch = newGraphemes.splice(0, config.BASE_CHARS_PER_TICK).join('');
+        const initialFrag = { id: fragmentIdRef.current++, text: initialBatch, time: Date.now() };
+        fragmentsRef.current = [initialFrag];
+        setStableText('');
+        setStreamingFragments([initialFrag]);
         setDisplayedText(initialBatch);
       }
 
@@ -220,11 +294,18 @@ export function useTextReveal(
     // Case 5: Source stream ended (isStreaming is false)
     if (!isStreaming) {
       if (pendingQueueRef.current.length === 0) {
-        // Queue is already empty -> complete immediately
-        clearScheduledTimer();
-        setDisplayedText(targetText);
-        setIsRevealing(false);
-        setIsComplete(true);
+        // Queue is already empty
+        if (fragmentsRef.current.length === 0) {
+          clearScheduledTimer();
+          setStableText(targetText);
+          setStreamingFragments([]);
+          setDisplayedText(targetText);
+          setIsRevealing(false);
+          setIsComplete(true);
+        } else {
+          // Allow in-flight fragments to complete fade-in
+          scheduleNextTick();
+        }
       } else {
         // Queue still has pending text -> gracefully continue draining at reveal speed
         setIsRevealing(true);
@@ -236,6 +317,8 @@ export function useTextReveal(
 
   return {
     displayedText,
+    stableText,
+    streamingFragments,
     isRevealing,
     isComplete,
     toString() {

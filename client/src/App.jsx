@@ -3,42 +3,24 @@ import HealthBadge from './components/HealthBadge';
 import UserChatView from './components/user/UserChatView';
 import AdminDashboard from './components/admin/AdminDashboard';
 import { ToastProvider } from './context/ToastContext';
-import { fetchHealth } from './services/userApi';
-import { USER_ROLES, STATUS_KEYS, UI_LABELS } from './constants';
+import { useHealth } from './hooks';
+import { USER_ROLES, UI_LABELS } from './constants';
 
 export default function App() {
   const [role, setRole] = useState(USER_ROLES.USER);
-  const [health, setHealth] = useState({
-    status: '',
-    indexedChunks: 0,
-    loading: true,
-    error: null,
-  });
+  const { health, checkHealth } = useHealth(role);
 
-  // Check backend health on initial load or role switch
-  const checkHealth = () => {
-    fetchHealth()
-      .then((data) => {
-        setHealth({
-          status: data.status,
-          indexedChunks: data.indexedChunks,
-          loading: false,
-          error: null,
-        });
-      })
-      .catch((err) => {
-        setHealth({
-          status: STATUS_KEYS.ERROR,
-          indexedChunks: 0,
-          loading: false,
-          error: err.message,
-        });
-      });
-  };
-
+  // Restore normal health check and fetching automatically when browser connectivity returns
   useEffect(() => {
-    checkHealth();
-  }, [role]);
+    const handleOnline = () => {
+      checkHealth();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [checkHealth]);
 
   return (
     <ToastProvider>
@@ -73,13 +55,14 @@ export default function App() {
             indexedChunks={health.indexedChunks}
             loading={health.loading}
             error={health.error}
+            onRetry={checkHealth}
           />
         </header>
 
         {role === USER_ROLES.USER ? (
           <UserChatView health={health} onRefreshHealth={checkHealth} />
         ) : (
-          <AdminDashboard />
+          <AdminDashboard health={health} onRefreshHealth={checkHealth} />
         )}
       </div>
     </ToastProvider>

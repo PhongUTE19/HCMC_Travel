@@ -2,7 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../../config.js';
 import { loadAndChunkMarkdown } from './chunker.js';
-import { embedText } from '../../shared/integrations/gemini.js';
+import { embedText } from '../../shared/integrations/ai/index.js';
 import { initVectorStore } from './vectorStore.js';
 
 /**

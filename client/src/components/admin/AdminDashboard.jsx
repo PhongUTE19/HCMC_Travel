@@ -1,75 +1,34 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React from 'react';
 import AdminStats from './AdminStats';
 import DocumentEditor from './DocumentEditor';
 import DocumentTable from './DocumentTable';
 import ChunkReview from './ChunkReview';
 import SystemPromptEditor from './SystemPromptEditor';
 import AdminAnalyticsDashboard from './analytics/AdminAnalyticsDashboard';
-import { useDrawer, useKnowledgeBase, useDocuments, useChunks } from '../../hooks';
-import { useToast } from '../../context/ToastContext';
+import { useAdminDashboard } from '../../hooks';
 import { UI_LABELS, ADMIN_PANELS, ADMIN_TABS } from '../../constants';
 
-export default function AdminDashboard() {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(ADMIN_TABS.KNOWLEDGE);
-
-  const drawer = useDrawer(ADMIN_PANELS.DOCUMENTS);
-  const chunksState = useChunks({ onError: toast.error });
-
-  // Use a coordinator ref to prevent circular hook dependency while refreshing all panels
-  const refreshCoordinatorRef = useRef(null);
-  const handleRefresh = useCallback(async () => {
-    if (refreshCoordinatorRef.current) {
-      await refreshCoordinatorRef.current();
-    }
-  }, []);
-
-  const kb = useKnowledgeBase({
-    onRefresh: handleRefresh,
-    onError: toast.error,
-    onSuccess: toast.success,
-  });
-
-  const docs = useDocuments({
-    onRefresh: handleRefresh,
-    onError: toast.error,
-    onSuccess: toast.success,
-    onOpenDocumentPanel: () => drawer.openDrawer(ADMIN_PANELS.DOCUMENTS),
-  });
-
-  refreshCoordinatorRef.current = async () => {
-    await Promise.all([
-      kb.loadStatus(),
-      docs.loadDocuments(),
-      chunksState.refreshChunks(),
-    ]);
-  };
-
-  // Initial load on mount
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      try {
-        await refreshCoordinatorRef.current();
-      } catch {
-        // Individual loaders already communicate user-facing errors via toast
-      } finally {
-        setLoading(false);
-      }
-    };
-    init();
-  }, []);
+export default function AdminDashboard({ health, onRefreshHealth }) {
+  const isOffline = Boolean(health?.error);
+  const {
+    loading,
+    activeTab,
+    setActiveTab,
+    drawer,
+    chunksState,
+    kb,
+    docs,
+  } = useAdminDashboard({ isOffline });
 
   return (
     <div className="dashboard-container">
       {/* Top Admin Section Tabs */}
-      <div className="analytics-tab-nav" role="tablist" aria-label="Admin Navigation Tabs">
+      <div className="tab-nav" role="tablist" aria-label="Admin Navigation Tabs">
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === ADMIN_TABS.KNOWLEDGE}
-          className={`analytics-tab-btn ${activeTab === ADMIN_TABS.KNOWLEDGE ? 'analytics-tab-btn--active' : ''}`}
+          className={`tab-btn ${activeTab === ADMIN_TABS.KNOWLEDGE ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab(ADMIN_TABS.KNOWLEDGE)}
         >
           {UI_LABELS.ANALYTICS.TAB_KNOWLEDGE}
@@ -78,7 +37,7 @@ export default function AdminDashboard() {
           type="button"
           role="tab"
           aria-selected={activeTab === ADMIN_TABS.ANALYTICS}
-          className={`analytics-tab-btn ${activeTab === ADMIN_TABS.ANALYTICS ? 'analytics-tab-btn--active' : ''}`}
+          className={`tab-btn ${activeTab === ADMIN_TABS.ANALYTICS ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab(ADMIN_TABS.ANALYTICS)}
         >
           {UI_LABELS.ANALYTICS.TAB_ANALYTICS}
@@ -195,7 +154,7 @@ export default function AdminDashboard() {
 
               {/* System Prompt Configuration */}
               {drawer.activePanel === ADMIN_PANELS.PROMPT && (
-                <SystemPromptEditor />
+                <SystemPromptEditor isOffline={isOffline} />
               )}
             </div>
           </aside>
