@@ -1,7 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { config } from '../../../../config.js';
-import { SERVER_MESSAGES, RETRY_CONFIG, SERVER_CONFIG_DEFAULTS } from '../../../../constants/index.js';
+import { SERVER_MESSAGES, RETRY_CONFIG, SERVER_CONFIG_DEFAULTS, GUARDRAIL_CONFIG } from '../../../../constants/index.js';
 import { recordUsage, hashPrompt } from '../../../../features/analytics/index.js';
+import { validateChatResponse, withTimeout, validateStructuredOutput } from '../../../guardrails/index.js';
 
 let aiInstance = null;
 
@@ -31,7 +32,8 @@ function getAIClient() {
 async function executeWithRetry(
   operation,
   maxRetries = RETRY_CONFIG.MAX_RETRIES,
-  initialDelayMs = RETRY_CONFIG.INITIAL_DELAY_MS
+  initialDelayMs = RETRY_CONFIG.INITIAL_DELAY_MS,
+  timeoutMs = GUARDRAIL_CONFIG.DEFAULT_TIMEOUT_MS
 ) {
   const attempts = [];
   const startOverall = Date.now();
@@ -41,7 +43,8 @@ async function executeWithRetry(
     attemptNumber++;
     const startAttempt = Date.now();
     try {
-      const result = await operation();
+      const opPromise = operation();
+      const result = timeoutMs ? await withTimeout(opPromise, timeoutMs) : await opPromise;
       const attemptDuration = Date.now() - startAttempt;
       attempts.push({
         attemptNumber,
@@ -217,7 +220,9 @@ export async function generateAnswer(prompt, options = {}) {
       },
     });
 
-    return response.text || '';
+    const rawAnswer = response.text || '';
+    const validated = validateChatResponse(rawAnswer);
+    return validated.answer;
   } catch (error) {
     const executionMeta = error.executionMetadata || {
       attempts: [{ attemptNumber: 1, durationMs: 0, status: 'failure', error: error.message }],
@@ -420,4 +425,7 @@ export const geminiProvider = {
   embedText,
   generateAnswer,
   generateAnswerStream,
+  validateStructuredOutput,
 };
+
+export { validateStructuredOutput };

@@ -20,7 +20,7 @@ export default function HealthBadge({ status, indexedChunks, loading, error, onR
             className="btn btn-secondary"
             onClick={onRetry}
           >
-            {UI_LABELS.HEALTH.RETRY || 'Retry'}
+            {UI_LABELS.COMMON.RETRY}
           </button>
         )}
       </div>
@@ -29,7 +29,7 @@ export default function HealthBadge({ status, indexedChunks, loading, error, onR
 
   return (
     <div className="badge badge-success">
-      {UI_LABELS.HEALTH.ONLINE_PREFIX}{indexedChunks}{UI_LABELS.HEALTH.INDEXED_CHUNKS_SUFFIX}
+      {UI_LABELS.HEALTH.ONLINE_PREFIX}
     </div>
   );
 }

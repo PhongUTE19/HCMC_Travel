@@ -2,14 +2,14 @@
 
 ## 1. Goal & Context
 * **Project**: A containerized Student Handbook Assistant using Retrieval-Augmented Generation (RAG).
-* **Stack**: React (Vite / Nginx) + Node.js (Express) + Qdrant Cloud + Google Gemini API.
-* **Core Philosophy**: Clean separation of concerns, containerized via Docker Compose, reproducible environment with managed cloud vector storage.
+* **Stack**: React (Vite / Nginx) + Node.js (Express) + Qdrant Cloud + Google Gemini API + Supabase Analytics.
+* **Core Philosophy**: Feature-first modularization, provider-independent AI abstraction, robust validation, containerization via Docker Compose, and zero-loss telemetry persistence.
 
 ---
 
-## 2. Containerized Multi-Service Architecture (with Qdrant Cloud)
+## 2. Multi-Service Cloud Architecture
 
-The system consists of two containerized application services managed by Docker Compose, communicating externally with **Qdrant Cloud** and **Google Gemini API**:
+The system consists of two containerized application services managed by Docker Compose, communicating externally with **Qdrant Cloud**, **Google Gemini API**, and **Supabase**:
 
 ```
 +-----------------------------------------------------------------------------------------+
@@ -20,56 +20,93 @@ The system consists of two containerized application services managed by Docker 
 +--------------┼───────────────────────────────────────┼──────────────────────────────────+
 |              ▼                                       ▼                                  |
 |  +─────────────────────────+          +─────────────────────────+                       |
-|  |     student-handbook-client         |          |       student-handbook-server       |                       |
-|  |   (Nginx :80)           |          |   (Express :3000)       |                       |
+|  | student-handbook-client |          | student-handbook-server |                       |
+|  |   (Nginx / Vite)        |          |   (Express :3000)       |                       |
 |  |                         |          |                         |                       |
-|  | - Serves React bundle   |  proxy   | - Health Check Endpoint |                       |
-|  | - Reverse-proxies /api/ ├─────────►| - RAG Pipeline Router   |                       |
-|  |   to http://server:3000 |          | - Similarity Gate (0.60)|                       |
-|  |                         |          | - Grounded Gen (Gemini) |                       |
-|  +─────────────────────────+          +────────────┬────────────+                       |
-+----------------------------------------------------┼────────────────────────────────----+
-                                                     │
-                                                     │  HTTPS (REST API)
-                                                     ▼
-                                        +─────────────────────────+
-                                        |      Qdrant Cloud       |
-                                        | (Managed Cluster :6333) |
-                                        |                         |
-                                        | - 3072-dim Cosine Index |
-                                        | - Secure API Key Auth   |
-                                        | - Managed Persistence   |
-                                        | - High-Performance HNSW|
-                                        +─────────────────────────+
+|  | - Student Chat View     |  proxy   | - Feature Routes        |                       |
+|  | - Admin Knowledge Mgt   |─────────►| - RAG Orchestration     |                       |
+|  | - AI Analytics Dashboard|          | - AI Provider Registry  |                       |
+|  | - Streaming Text Reveal |          | - Usage Tracking / Queue|                       |
+|  +─────────────────────────+          +───┬─────────┬─────────┬─+                       |
++-------------------------------------------┼─────────┼─────────┼─────────────────────────+
+                                            │         │         │
+                         HTTPS (REST)       │         │         │ HTTPS (REST)
+                        ┌───────────────────┘         │         └───────────────────┐
+                        ▼                             ▼                             ▼
+           +─────────────────────────+   +─────────────────────────+   +─────────────────────────+
+           |      Qdrant Cloud       |   |    Google Gemini API    |   |     Supabase Cloud      |
+           | (Managed Cluster :6333) |   | (Official @google/genai)|   | (PostgreSQL Analytics)  |
+           |                         |   |                         |   |                         |
+           | - 3072-dim Cosine Index |   | - gemini-3.5-flash-lite |   | - ai_usage_analytics    |
+           | - Student_Handbook Coll |   | - gemini-embedding-001  |   | - Token & Cost Metrics  |
+           | - High-Performance HNSW |   | - Streaming SSE deltas  |   | - Latency Percentiles   |
+           +─────────────────────────+   +─────────────────────────+   +─────────────────────────+
 ```
 
 ---
 
-## 3. Core User Workflow
+## 3. Core Feature Workflows
 
-1. **User queries the Assistant** in the React web interface (e.g., *"What is the tuition fee for the Standard Program?"*).
-2. **Frontend issues request** to `/api/user/chat` via Nginx reverse proxy, which forwards to `http://server:3000/api/user/chat`.
-3. **Retrieval step (`server/src/rag/retriever.js`)**:
-   - Query text is vectorized into a 3072-dimensional embedding using `embedText()` (Gemini `gemini-embedding-001`).
-   - Query embedding is sent via `@qdrant/js-client-rest` over HTTPS with `QDRANT_API_KEY` to Qdrant Cloud collection `Student_Handbook` using cosine similarity.
-   - Top-K ($K=3$) most relevant chunks with payload metadata are returned.
-4. **Relevance / Guardrail Check**:
-   - If `bestScore < 0.60` (`SIMILARITY_THRESHOLD`):
-     - The query is deemed out-of-scope or ungrounded.
-     - Backend immediately returns a safe refusal with `sources: []`, skipping the LLM call entirely.
-5. **Grounded Generation step (`server/src/rag/generator.js`)**:
-   - If accepted (`bestScore >= 0.60`), the generator dynamically reads the active system prompt (from persistent storage `data/system_prompt.txt`) and retrieved chunk contents into a strictly grounded prompt.
-   - Gemini (`gemini-3.5-flash-lite`) generates an answer strictly citing sources in brackets `[Source Title]`.
-6. **Response Delivery**:
-   - Backend returns `{ "answer": "...", "sources": [...] }`.
-   - React UI displays the answer and formatted source cards.
+### 3.1. User Chat & Streaming Workflow
+1. **User Submits Query**: Student asks a handbook question in `UserChatView.jsx`.
+2. **HTTP Dispatch**: `client/src/services/userApi.js` sends `POST /api/user/chat` (synchronous) or `POST /api/user/chat/stream` (SSE).
+3. **Request Validation**: Express route invokes `validateRequest({ body: chatRequestSchema })`. Invalid payloads immediately return `400 Bad Request` JSON before SSE headers are sent.
+4. **Chat Orchestration (`server/src/features/chat/chat.service.js`)**:
+   - Delegates retrieval to `server/src/features/knowledge/ragService.js`.
+   - Embeds query using active AI provider (`embedText()`).
+   - Retrieves top-$K$ candidates ($K=4$) from Qdrant Cloud via `retriever.js`.
+   - Checks relevance threshold ($0.60$) and Section 11 Amendment boost ($0.55$).
+5. **Guardrail Decision**:
+   - **Below Cutoff (< 0.60)**: Returns early refusal text without calling generative LLM, passing empty sources and retrieval diagnostics.
+   - **Accepted (>= 0.60)**: Injects active system prompt (`prompts.service.js`) and retrieved chunks into `promptBuilder.js`.
+6. **Generation & Telemetry**:
+   - Passes grounded prompt to `generateAnswer()` or `generateAnswerStream()` in `geminiProvider.js`.
+   - Automatically tracks usage metrics (prompt tokens, completion tokens, latency, cost) via `usageTracker.js`.
+   - Streaming deltas emit SSE events: `metadata` $\rightarrow$ `delta`* $\rightarrow$ `done` (or `error`).
+7. **Client Rendering**: `AnswerContent.jsx` renders incremental chunks with an opacity fade-in animation (`streaming-text-fade`), transitioning to clean text upon completion.
+
+### 3.2. Document Management CRUD Workflow
+* **Storage**: Authoritative markdown files residing in `data/knowledge/` (default: `KB-A_Lumen-Institute-Student-Handbook.md`).
+* **Route**: Mounted under `/api/admin/documents` in `server/src/routes/adminRoute.js` $\rightarrow$ `server/src/features/documents/documents.routes.js`.
+* **Validation**: File names validated against path traversal (`sanitizeFilename`), contents validated for non-empty Level-2 Markdown headers.
+* **Service**: `documents.service.js` reads, writes, updates, or deletes files on disk and recalculates section counts.
+
+### 3.3. Knowledge Status, Chunk Review & Cloud Indexing Workflow
+* **Status**: `GET /api/admin/status` verifies active filesystem documents vs indexed vector points in Qdrant Cloud.
+* **Chunk Review**: `GET /api/admin/chunks` parses markdown sections in memory using `chunker.js`, supports server-side search (`q`), limit (1–50), and offset pagination.
+* **Idempotent Cloud Indexing**: `POST /api/admin/index` runs `indexer.js`:
+  1. Reads all `.md` files in `data/knowledge/`.
+  2. Generates section chunks (splitting by Level-2 `## ` headers while preserving full tables).
+  3. Reinitializes Qdrant Cloud collection `Student_Handbook` (`initVectorStore({ reset: true })`).
+  4. Generates 3072-dim embeddings with exponential backoff retry.
+  5. Upserts points into Qdrant Cloud with full metadata payload.
+
+### 3.4. System Prompt Management Workflow
+* **Storage**: Persistent storage in `data/prompts/system_prompt.txt`, with factory default in `data/prompts/system_prompt_default.txt`.
+* **Endpoints**:
+  - `GET /api/admin/prompt`: Reads active prompt from file. If file is missing, seeds it from default.
+  - `PUT /api/admin/prompt`: Validates length (20–10,000 characters) and updates active prompt.
+  - `POST /api/admin/prompt/reset`: Restores active prompt back to the default configuration template.
+
+### 3.5. AI Usage Analytics & Telemetry Pipeline
+1. **Instrumented Call**: Every AI operation (chat, streaming, embedding) in `geminiProvider.js` triggers `trackAiUsage()`.
+2. **Writer Queue**: `analytics.writer.js` enqueues usage records (model, feature, tokens, latency, timestamp, outcome).
+3. **Batch Flushing**: Flushes records every 1,000ms or when batch size reaches 10 items.
+4. **Persistence Layer (`analytics.repository.js`)**:
+   - **Supabase**: If `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are configured, writes rows to `ai_usage_analytics`.
+   - **In-Memory Circular Buffer**: If Supabase is unconfigured or temporarily unreachable, records are buffered in memory (capacity: 1,000 items) so admin dashboards still render live metrics without interrupting chat services.
+5. **Analytics Endpoints**:
+   - `GET /api/admin/analytics/overview`: Aggregated KPI cards (total requests, total tokens, avg latency, estimated cost).
+   - `GET /api/admin/analytics/timeseries`: Grouped time-series buckets (1h, 24h, 7d, 30d).
+   - `GET /api/admin/analytics/breakdown`: Grouped distributions by feature or model.
+   - `GET /api/admin/analytics/history`: Paginated table of individual query transactions.
 
 ---
 
-## 4. Minimal API Contract
+## 4. Minimal API Contracts
 
 ### 4.1. Health Check
-* **Method & Path**: `GET /api/health`
+* **Endpoint**: `GET /api/health`
 * **Response (`200 OK`)**:
 ```json
 {
@@ -78,8 +115,9 @@ The system consists of two containerized application services managed by Docker 
 }
 ```
 
-### 4.2. User Chat Query
-* **Method & Path**: `POST /api/user/chat`
+### 4.2. User Chat Endpoints
+* **Synchronous**: `POST /api/user/chat`
+* **Streaming**: `POST /api/user/chat/stream`
 * **Request Body**:
 ```json
 {
@@ -92,230 +130,252 @@ The system consists of two containerized application services managed by Docker 
   "answer": "The tuition fee for the Standard Program is 42,000,000 VND per semester [2. Programs at a Glance].",
   "sources": [
     {
+      "id": "KB-A_Lumen-Institute-Student-Handbook_sec2",
       "title": "2. Programs at a Glance",
       "source": "KB-A_Lumen-Institute-Student-Handbook.md",
-      "score": 0.81
+      "score": 0.8124
     }
-  ]
-}
-```
-* **Out-of-Scope Response (`200 OK`)**:
-```json
-{
-  "answer": "I do not have verified information about this topic in the student handbook knowledge base. Please ask about Lumen Institute programs, tuition, scholarships, courses, exams, or student rules.",
-  "sources": []
-}
-```
-
-### 4.3. Admin Management Endpoints
-* **`GET /api/admin/status`**:
-  - Response: `{ documentCount, totalFileChunks, indexedChunks, isIndexing, lastIndexedAt, isSynced }`
-* **`GET /api/admin/documents`**:
-  - Response: `{ documents: [{ filename, size, modifiedAt, sectionCount }] }`
-* **`GET /api/admin/documents/:filename`**:
-  - Response: `{ filename, content }`
-* **`POST /api/admin/documents`**:
-  - Request Body: `{ filename, content, overwrite? }`
-  - Response (`201 Created`): `{ success: true, filename, message }`
-* **`PUT /api/admin/documents/:filename`**:
-  - Request Body: `{ content }`
-  - Response (`200 OK`): `{ success: true, filename, message }`
-* **`DELETE /api/admin/documents/:filename`**:
-  - Response (`200 OK`): `{ success: true, filename, message }`
-* **`GET /api/admin/chunks`** (Paginated with Server-side Search):
-  - **Query Parameters**:
-    - `limit`: Number of chunks returned per batch. Supported options: `10`, `30`, `50`. Default: `10`. Maximum: `50`.
-    - `offset`: Zero-based start index. Default: `0`.
-    - `q` / `search`: Optional search query string. Filters chunks matching `id`, `title`, `source`, or `content` before slicing.
-  - **Response (`200 OK`)**:
-    ```json
-    {
-      "totalChunks": 12,
-      "chunks": [
-        {
-          "id": "KB-A_Lumen-Institute-Student-Handbook_1",
-          "title": "2. Programs at a Glance",
-          "source": "KB-A_Lumen-Institute-Student-Handbook.md",
-          "content": "..."
-        }
-      ],
-      "limit": 10,
-      "offset": 0,
-      "hasMore": true
-    }
-    ```
-  - **Pagination Behavior**:
-    - `totalChunks`: Total count of chunks matching the query.
-    - `hasMore`: Boolean flag (`offset + chunks.length < totalChunks`).
-    - The client only fetches and renders the current page of chunks.
-    - Previous and Next controls increment/decrement `offset` by `limit`. Changing page size or search query resets `offset` to `0`.
-* **`POST /api/admin/index`**:
-  - Response: `{ success: true, message, indexedChunks }`
-* **`GET /api/admin/prompt`**:
-  - Response: `{ prompt: string }`
-* **`PUT /api/admin/prompt`**:
-  - Request Body: `{ prompt: string }`
-  - Response (`200 OK`): `{ success: true, message: string, prompt: string }`
-
----
-
-## 5. Qdrant Cloud Collection Configuration & Data Models
-
-### 5.1. Qdrant Cloud Collection Spec
-* **Collection Name**: `Student_Handbook` (configurable via `QDRANT_COLLECTION_NAME`)
-* **Vector Dimension**: `3072` (matching Google Gemini `gemini-embedding-001`)
-* **Distance Metric**: `Cosine`
-* **Cluster Connection**: Managed Qdrant Cloud endpoint (`https://<cluster-id>.<region>.cloud.qdrant.io:6333`)
-* **Authentication**: Secret API Key passed in `api-key` header
-* **Point Schema**:
-```javascript
-{
-  id: 1, // Positive integer ID (1..N)
-  vector: [0.012, -0.045, ...], // 3072-dim float array
-  payload: {
-    id: "KB-A_Lumen-Institute-Student-Handbook_1",
-    title: "2. Programs at a Glance",
-    content: "| Item | Standard Program | Honors Program |...",
-    source: "KB-A_Lumen-Institute-Student-Handbook.md"
+  ],
+  "retrieval": {
+    "poolSize": 4,
+    "topScore": 0.8124,
+    "threshold": 0.6,
+    "passed": true
   }
 }
 ```
 
-### 5.2. Scored Chunk (Retriever Output)
-```javascript
-{
-  id: string,
-  title: string,
-  content: string,
-  source: string,
-  score: number // Cosine similarity: 0.0 to 1.0
-}
-```
+### 4.3. Admin Knowledge & Document Endpoints
+* **`GET /api/admin/status`**: Returns `{ documentCount, totalFileChunks, indexedChunks, isIndexing, lastIndexedAt, isSynced }`.
+* **`GET /api/admin/chunks`**: Query parameters `limit` (default 10), `offset` (default 0), `q` (optional search query). Returns paginated chunks list with `hasMore`.
+* **`POST /api/admin/index`**: Triggers full cloud re-indexing. Returns `{ success: true, message, indexedChunks }`.
+* **`GET /api/admin/documents`**: Returns list of markdown documents with metadata.
+* **`GET /api/admin/documents/:filename`**: Returns `{ filename, content }`.
+* **`POST /api/admin/documents`**: Body `{ filename, content, overwrite? }`. Returns `201 Created`.
+* **`PUT /api/admin/documents/:filename`**: Body `{ content }`. Returns `200 OK`.
+* **`DELETE /api/admin/documents/:filename`**: Returns `200 OK`.
+
+### 4.4. Admin Prompt Endpoints
+* **`GET /api/admin/prompt`**: Returns `{ prompt: string }`.
+* **`PUT /api/admin/prompt`**: Body `{ prompt: string }`. Returns `{ success: true, message: string, prompt: string }`.
+* **`POST /api/admin/prompt/reset`**: Resets prompt to factory default. Returns `{ prompt: string, message: string }`.
+
+### 4.5. Admin Analytics Endpoints
+* **`GET /api/admin/analytics/overview`**: Query parameters `range` (`1h`, `24h`, `7d`, `30d`), `model`, `feature`.
+* **`GET /api/admin/analytics/timeseries`**: Returns chronological token and request trends.
+* **`GET /api/admin/analytics/breakdown`**: Query parameter `groupBy` (`model` or `feature`).
+* **`GET /api/admin/analytics/history`**: Query parameters `page`, `limit`, `model`, `feature`, `outcome`.
 
 ---
 
-## 6. End-to-End RAG Pipeline & Cloud Vector Database Choice
+## 5. AI Provider Abstraction Layer
+
+The application isolates LLM-specific dependencies behind a lightweight, provider-independent interface:
 
 ```
-[Markdown Files (data/knowledge/*.md)]
-                  │
-                  ▼ (1) Header Chunking (split by '## ')
-   [Plain Chunks: { id, title, content, source }]
-                  │
-                  ▼ (2) Indexing Execution (indexer.js -> Gemini Embeddings)
-   [Qdrant Cloud: Student_Handbook (cosine: 3072-dim)]
-                  │
-             User Query
-                  │
-                  ▼ (3) Embed Query Vector (gemini.js)
-                  │
-                  ▼ (4) Vector Similarity Query (retriever.js -> Qdrant Cloud HTTPS)
-             [Top-K (K=3)]
-                  │
-                  ├─────────────────────────────┐
-        bestScore < 0.60               bestScore >= 0.60
-                  │                             │
-                  ▼                             ▼
-       Safe Out-of-Scope Refusal       Prompt Augmentation
-       (Gemini call blocked)           (generator.js)
-                  │                             │
-                  │                             ▼
-                  │                    Gemini Generation
-                  │                    (gemini-3.5-flash-lite)
-                  │                             │
-                  └──────────────┬──────────────┘
+                  ┌──────────────────────────────┐
+                  │    Core Business Logic       │
+                  │ (ragService, chatService)    │
+                  └──────────────┬───────────────┘
+                                 │
                                  ▼
-                     Formatted API Response
+                  ┌──────────────────────────────┐
+                  │  AI Provider Interface       │
+                  │ (server/src/shared/          │
+                  │   integrations/ai/index.js)  │
+                  ├──────────────────────────────┤
+                  │ + getAIProvider(name)        │
+                  │ + registerAIProvider(name, p)│
+                  │ + embedText(text, opts)      │
+                  │ + generateAnswer(p, opts)    │
+                  │ + generateAnswerStream(p, o) │
+                  └──────────────┬───────────────┘
+                                 │
+                                 ▼
+                  ┌──────────────────────────────┐
+                  │   AI Provider Registry       │
+                  │   Map(['gemini', provider])  │
+                  └──────────────┬───────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+         +─────────────────────+   +─────────────────────+
+         |   geminiProvider    |   | Custom AI Provider  |
+         | (Google Gemini SDK) |   | (OpenAI / Anthropic |
+         | - gemini-3.5-flash  |   |  or Local Ollama)   |
+         | - gemini-embedding  |   +─────────────────────+
+         +─────────────────────+
 ```
 
-### Cloud Vector Database Choice: Qdrant Cloud
-We migrated from local self-hosted Qdrant to **Qdrant Cloud**:
-1. **Zero Host Overhead**: No need to manage or allocate RAM/CPU for a local database container on developer machines.
-2. **Managed Cloud Persistence**: Vector backups, clustering, high availability, and storage lifecycle are fully managed.
-3. **Consistent Deployment**: Both local developers and containerized CI/CD environments connect to the same reliable cloud vector database.
-4. **Clean Decoupling**: Docker Compose only contains application workloads (`client` and `server`), avoiding stateful volume management on local Docker hosts.
+### Provider Contract
+Each registered provider object must implement:
+1. `name`: String identifier (e.g., `'gemini'`).
+2. `embedText(text, options)`: Returns `Promise<number[]>`.
+3. `generateAnswer(prompt, options)`: Returns `Promise<string>`.
+4. `generateAnswerStream(prompt, options)`: Returns `Promise<AsyncIterable<{ text: string }>>`.
 
 ---
 
-## 7. Folder Structure
+## 6. Actual Folder Structure
 
 ```
 Student_Handbook/
-├── client/                   # React + Vite frontend
+├── client/                               # React + Vite frontend
 │   ├── src/
-│   │   ├── components/       # Component tree
-│   │   │   ├── admin/        # Admin UI modules (AdminStats, DocumentEditor, DocumentTable, ChunkReview, ChunkCard, SystemPromptEditor)
-│   │   │   ├── user/         # User UI modules (UserChatView, ChatForm, AnswerSection)
-│   │   │   ├── AdminDashboard.jsx # Admin container coordinator
-│   │   │   ├── HealthBadge.jsx    # Shared health indicator
-│   │   │   ├── ErrorMessage.jsx   # Shared error alert
-│   │   │   └── SuccessMessage.jsx # Shared dismissible success alert
-│   │   ├── services/         # Modular API fetch services
-│   │   │   ├── userApi.js    # User chat & health fetch methods
-│   │   │   └── adminApi.js   # Admin status, document CRUD, prompt, paginated chunks, and indexing
-│   │   ├── App.jsx           # Role switcher coordinator (User <-> Admin)
-│   │   ├── index.css         # Styling system
+│   │   ├── components/
+│   │   │   ├── admin/                    # Admin management modules
+│   │   │   │   ├── analytics/            # Analytics dashboard components
+│   │   │   │   │   ├── AdminAnalyticsDashboard.jsx
+│   │   │   │   │   ├── AnalyticsCharts.jsx
+│   │   │   │   │   ├── AnalyticsFilters.jsx
+│   │   │   │   │   ├── AnalyticsHistoryTable.jsx
+│   │   │   │   │   └── AnalyticsKpiCards.jsx
+│   │   │   │   ├── AdminDashboard.jsx    # Admin tabs and coordination
+│   │   │   │   ├── AdminStats.jsx        # Admin status cards
+│   │   │   │   ├── ChunkCard.jsx         # Chunk display card
+│   │   │   │   ├── ChunkReview.jsx       # Paginated chunk list
+│   │   │   │   ├── DocumentEditor.jsx    # Markdown document editor
+│   │   │   │   ├── DocumentTable.jsx     # Document table with sorting & search
+│   │   │   │   └── SystemPromptEditor.jsx# Prompt editor & reset control
+│   │   │   ├── common/                   # Shared UI components
+│   │   │   │   ├── Pagination.jsx        # Standardized pagination bar
+│   │   │   │   ├── SearchInput.jsx       # Debounced search bar
+│   │   │   │   ├── SortableHeader.jsx    # Bi-directional sort table header
+│   │   │   │   └── index.js
+│   │   │   ├── toast/                    # Toast notification components
+│   │   │   ├── user/                     # Student chat UI modules
+│   │   │   │   ├── AnswerContent.jsx     # Streaming text reveal & fade-in
+│   │   │   │   ├── AssistantMessage.jsx  # Assistant message card
+│   │   │   │   ├── ChatForm.jsx          # Input form with submit / abort
+│   │   │   │   ├── ConversationList.jsx  # Message history list
+│   │   │   │   ├── UserChatView.jsx      # Chat container
+│   │   │   │   ├── UserMessage.jsx       # Student query bubble
+│   │   │   │   └── debug/                # Diagnostics & inspection cards
+│   │   │   └── HealthBadge.jsx           # Global system health indicator
+│   │   ├── constants/                    # UI messages, labels, and config
+│   │   ├── context/                      # ToastContext for alert toasts
+│   │   ├── hooks/                        # Custom hooks for state & logic
+│   │   │   ├── useAdminDashboard.js
+│   │   │   ├── useAnalytics.js
+│   │   │   ├── useChat.js
+│   │   │   ├── useChunks.js
+│   │   │   ├── useDocuments.js
+│   │   │   ├── useDrawer.js
+│   │   │   ├── useHealth.js
+│   │   │   ├── useKnowledgeBase.js
+│   │   │   ├── usePagination.js
+│   │   │   ├── useSearch.js
+│   │   │   ├── useSort.js
+│   │   │   ├── useSystemPrompt.js
+│   │   │   └── useTextReveal.js          # Streaming token reveal & fragment animation
+│   │   ├── services/                     # API fetch abstractions
+│   │   │   ├── adminApi.js
+│   │   │   ├── analyticsApi.js
+│   │   │   ├── apiClient.js
+│   │   │   └── userApi.js
+│   │   ├── styles/                       # Modular CSS design system
+│   │   │   ├── components/               # alerts, analytics, badges, buttons, chat, forms, stats, tables
+│   │   │   ├── layout.css
+│   │   │   └── index.css
+│   │   ├── utils/                        # Pure client utilities
+│   │   │   ├── collectionUtils.js        # Pagination, filtering, sorting math
+│   │   │   ├── formatters.js             # Date, token, and currency formatters
+│   │   │   ├── tableUtils.js
+│   │   │   └── validation.js             # Form input validation rules
+│   │   ├── App.jsx                       # Top navigation & view switcher
 │   │   └── main.jsx
-│   ├── Dockerfile            # Node 22 build -> Nginx reverse proxy
-│   ├── nginx.conf            # Nginx config
+│   ├── Dockerfile                        # Multi-stage Nginx build
+│   ├── nginx.conf
 │   ├── package.json
-│   └── vite.config.js        # Vite dev server proxy
-├── server/                   # Node.js + Express backend
+│   └── vite.config.js
+├── server/                               # Node.js Express backend
 │   ├── src/
-│   │   ├── config.js         # Configuration (Qdrant Cloud URL, models, threshold, topK, promptFile)
-│   │   ├── controllers/
-│   │   │   ├── adminController.js # Admin HTTP parsing, response formatting & error handling
-│   │   │   └── userController.js  # User HTTP parsing & error handling
-│   │   ├── services/
-│   │   │   ├── adminService.js    # Knowledge-base business logic, file I/O, prompt persistence, indexing
-│   │   │   └── userService.js     # Chat workflow orchestration, threshold guardrail, generation
+│   │   ├── config.js                     # Centralized configuration & environment loader
+│   │   ├── constants/                    # HTTP status, messages, chunking limits, defaults
+│   │   ├── features/                     # Feature-first domain modules
+│   │   │   ├── analytics/                # Telemetry, aggregation, Supabase repo, writer queue
+│   │   │   │   ├── analytics.constants.js
+│   │   │   │   ├── analytics.controller.js
+│   │   │   │   ├── analytics.repository.js
+│   │   │   │   ├── analytics.routes.js
+│   │   │   │   ├── analytics.schemas.js
+│   │   │   │   ├── analytics.service.js
+│   │   │   │   ├── analytics.utils.js
+│   │   │   │   ├── analytics.writer.js
+│   │   │   │   └── usageTracker.js
+│   │   │   ├── chat/                     # User chat orchestration & routes
+│   │   │   │   ├── chat.controller.js
+│   │   │   │   ├── chat.routes.js
+│   │   │   │   ├── chat.schema.js
+│   │   │   │   └── chat.service.js
+│   │   │   ├── documents/                # Markdown document CRUD
+│   │   │   │   ├── documents.controller.js
+│   │   │   │   ├── documents.routes.js
+│   │   │   │   ├── documents.schemas.js
+│   │   │   │   └── documents.service.js
+│   │   │   ├── knowledge/                # Chunking, indexing, retriever, Qdrant store
+│   │   │   │   ├── chunker.js
+│   │   │   │   ├── indexer.js
+│   │   │   │   ├── knowledge.controller.js
+│   │   │   │   ├── knowledge.routes.js
+│   │   │   │   ├── knowledge.schemas.js
+│   │   │   │   ├── knowledge.service.js
+│   │   │   │   ├── promptBuilder.js
+│   │   │   │   ├── ragService.js
+│   │   │   │   ├── retriever.js
+│   │   │   │   └── vectorStore.js
+│   │   │   └── prompts/                  # System prompt persistence & reset
+│   │   │       ├── prompts.controller.js
+│   │   │       ├── prompts.routes.js
+│   │   │       ├── prompts.schemas.js
+│   │   │       └── prompts.service.js
 │   │   ├── routes/
-│   │   │   ├── adminRoute.js      # Admin route definitions and controller references
-│   │   │   └── userRoute.js       # User route definitions (/api/user/chat)
-│   │   ├── rag/
-│   │   │   ├── chunker.js    # Markdown header chunking
-│   │   │   ├── gemini.js     # Gemini SDK client (embedText, generateAnswer)
-│   │   │   ├── vector_store.js # Qdrant client singleton & collection manager
-│   │   │   ├── indexer.js    # Indexes knowledge into Qdrant Cloud
-│   │   │   ├── retriever.js  # Top-K retrieval via Qdrant Cloud
-│   │   │   └── generator.js  # Grounded prompt generation using dynamic system prompt
-│   │   └── server.js         # Express server mounting /api/admin and /api/user
-│   ├── Dockerfile            # Node 22-alpine container image
-│   ├── package.json          # Dependencies (@google/genai, @qdrant/js-client-rest, express)
-│   └── .env                  # Local backend configuration (ignored by Git)
+│   │   │   └── adminRoute.js             # Root admin route orchestrator
+│   │   ├── shared/                       # Cross-cutting shared infrastructure
+│   │   │   ├── errors/                   # AppError and domain error subclasses
+│   │   │   ├── integrations/             # AI provider abstraction & Supabase client
+│   │   │   │   ├── ai/
+│   │   │   │   │   ├── providers/
+│   │   │   │   │   │   └── geminiProvider.js
+│   │   │   │   │   └── index.js
+│   │   │   │   ├── gemini.js             # Backward-compatibility facade
+│   │   │   │   └── supabase.js           # Supabase singleton client
+│   │   │   └── middleware/               # validateRequest.js, errorHandler.js
+│   │   └── server.js                     # Express app setup, mounting, and startup
+│   ├── Dockerfile
+│   └── package.json
 ├── data/
-│   ├── knowledge/            # Markdown knowledge files
+│   ├── knowledge/                        # Markdown knowledge base files
 │   │   └── KB-A_Lumen-Institute-Student-Handbook.md
-│   └── system_prompt.txt     # Persistent storage for active system prompt
+│   └── prompts/                          # System prompt files
+│       ├── system_prompt.txt             # Active persisted prompt
+│       └── system_prompt_default.txt     # Factory default prompt template
 ├── docs/
-│   ├── architecture.md       # Architecture & specifications
-│   ├── agent-log.md          # Progress & validation log
-│   └── learning-guide.md     # Comprehensive explanation guide
-├── docker-compose.yml        # Docker Compose configuration (Server, Client)
-├── .env.example              # Unified environment template
-├── package.json              # Root orchestration scripts
-└── README.md
+│   ├── architecture.md                   # Detailed architecture documentation
+│   └── READING_GUIDE.md                  # Quick-reference feature navigation guide
+├── test/                                 # Automated test suites
+│   ├── aiProvider.test.js
+│   ├── analytics.test.js
+│   ├── collectionUtils.test.js
+│   ├── rag.test.js
+│   ├── tableUtils.test.js
+│   └── validation.test.js
+├── docker-compose.yml                    # Container orchestrator
+├── .env.example                          # Environment template
+├── package.json                          # Root orchestration scripts
+└── README.md                             # Project overview & run guide
 ```
 
 ---
 
-## 8. Out-of-Scope List
-
-* Heavy relational / NoSQL database servers (PostgreSQL, MongoDB).
-* User authentication, sessions, or login.
-* Multi-turn conversational chat history.
-* Real-time web scraping / Google Search live grounding.
-* Admin document upload UI.
-* Agent / Tool Calling workflows.
-
----
-
-## 9. Key Decisions & Rationale
+## 7. Key Architectural Decisions & Rationale
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| **Vector Database** | Qdrant Cloud | Managed vector database in the cloud, removing local container and volume maintenance. |
-| **Authentication** | API Key (`api-key` header) | Secure authentication with Qdrant Cloud cluster; key stored strictly in environment variables. |
-| **Containerization** | Docker Compose (`server` + `client`) | Light application containers; stateless and easily deployable anywhere. |
-| **Unified Environment Configuration** | Root `.env` & `.env.example` | Eliminates duplicated `.env` files across root and server; both Docker and local Node load root `.env`. |
-| **Similarity Guardrail** | Pre-generation cutoff ($0.60$) | Filters out-of-scope non-handbook queries before calling Gemini, saving latency and cost. |
+| **Backend Organization** | Feature-first (`features/` + `shared/`) | Co-locates controllers, routes, schemas, and services by domain feature instead of grouping by technical type. Prevents sprawling generic directories. |
+| **Vector Storage** | Qdrant Cloud | Eliminates local vector database containers and persistent volume overhead on developer machines. High availability and consistent deployment across dev and CI/CD. |
+| **AI Provider Abstraction** | Pluggable interface (`shared/integrations/ai`) | Decouples generative AI and embedding operations from Gemini-specific code, making it simple to test or switch providers without changing domain logic. |
+| **Similarity Guardrail** | 0.60 Cosine cutoff gate | Filters out irrelevant queries before invoking generative models, avoiding hallucination and minimizing LLM latency and cost. |
+| **Telemetry Persistence** | Dual-mode Supabase + in-memory fallback | Provides production-ready PostgreSQL persistence for AI analytics while allowing the application to operate smoothly in offline or development environments without Supabase credentials. |
+| **Chunking Strategy** | Section-based Header Chunking (`## `) | Keeps complex tables (Tuition, Programs) and regulatory provisions (Amendments) unified in single chunks, avoiding fragmented retrieval. |
+| **Streaming Text Reveal** | Token-level opacity fade-in | Replaced the harsh blinking cursor with a subtle materialization animation without re-rendering or flickering existing text. |

@@ -21,9 +21,7 @@ export const UI_LABELS = Object.freeze({
   HEALTH: {
     CHECKING: 'Checking server status...',
     OFFLINE: 'Server: Offline / Disconnected',
-    ONLINE_PREFIX: 'Server: Online | Memory: ',
-    INDEXED_CHUNKS_SUFFIX: ' indexed chunks',
-    RETRY: 'Retry',
+    ONLINE_PREFIX: 'Server: Online',
   },
   COMMON: {
     RETRY: 'Retry',

@@ -11,7 +11,7 @@ import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src
 import { buildGroundedPrompt, formatContextSections } from '../server/src/features/knowledge/promptBuilder.js';
 import { cosineSimilarity } from '../server/src/features/knowledge/retriever.js';
 import { executeRAG } from '../server/src/features/knowledge/ragService.js';
-import { orchestrateChat, orchestrateChatStream, ChatOrchestrationError } from '../server/src/features/chat/chatService.js';
+import { orchestrateChat, orchestrateChatStream, ChatOrchestrationError } from '../server/src/features/chat/chat.service.js';
 import { config } from '../server/src/config.js';
 import { getSystemPrompt, saveSystemPrompt, PromptServiceError } from '../server/src/features/prompts/prompts.service.js';
 import { sanitizeFilename, validateMarkdownContent, DocumentServiceError, removeDocument } from '../server/src/features/documents/documents.service.js';

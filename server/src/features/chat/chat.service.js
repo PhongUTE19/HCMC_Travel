@@ -3,6 +3,11 @@ import { generateAnswer, generateAnswerStream } from '../../shared/integrations/
 import { SERVER_MESSAGES, HTTP_STATUS } from '../../constants/index.js';
 import { AppError } from '../../shared/errors/index.js';
 import { getSystemPrompt } from '../prompts/prompts.service.js';
+import {
+  validateChatResponse,
+  sanitizeGeneratedOutput,
+  formatSafeErrorMessage,
+} from '../../shared/guardrails/index.js';
 
 export class ChatOrchestrationError extends AppError {
   constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
@@ -11,15 +16,16 @@ export class ChatOrchestrationError extends AppError {
 }
 
 /**
- * Minimal Orchestration Layer coordinating RAG retrieval and LLM generation.
+ * Minimal Orchestration Layer coordinating RAG retrieval, guardrails, and LLM generation.
  * 
  * Responsibilities:
  * 1. Accepts application-level query requests
- * 2. Invokes the RAG module to retrieve and validate context
+ * 2. Invokes RAG module (with prompt injection & scope guardrails)
  * 3. Evaluates evidence sufficiency and manages early refusals
- * 4. Invokes LLM generation / streaming with grounded prompt
- * 5. Relays text deltas and outcomes through clean event abstraction
- * 6. Preserves cancellation and error semantics
+ * 4. Invokes LLM generation / streaming with grounded, demarcated prompt
+ * 5. Validates responses and sanitizes against prompt leaks / empty answers
+ * 6. Relays text deltas and outcomes through clean event abstraction
+ * 7. Preserves cancellation and safe error semantics without exposing internal secrets
  */
 
 /**
@@ -41,7 +47,7 @@ export async function orchestrateChat(rawMessage, options = {}) {
   const systemPrompt = options.systemPrompt || getSystemPrompt();
   const ragResult = await ragExecutor(query, { ...options, systemPrompt });
 
-  // If evidence is insufficient or retrieval failed, return early refusal
+  // If evidence is insufficient, request is out-of-scope, or prompt injection refused
   if (!ragResult.passedThreshold) {
     return {
       answer: ragResult.refusalText,
@@ -51,10 +57,13 @@ export async function orchestrateChat(rawMessage, options = {}) {
   }
 
   try {
-    const answer = await llmGenerator(ragResult.prompt, options);
+    const rawAnswer = await llmGenerator(ragResult.prompt, options);
+
+    // Guardrail: Validate AI response non-emptiness and prevent prompt leakage
+    const validated = validateChatResponse(rawAnswer);
 
     return {
-      answer,
+      answer: validated.answer,
       sources: ragResult.sources,
       retrieval: ragResult.retrieval,
     };
@@ -63,8 +72,9 @@ export async function orchestrateChat(rawMessage, options = {}) {
       throw error;
     }
     console.error('[ChatOrchestrator] Error during LLM generation:', error.message);
+    const safeMessage = formatSafeErrorMessage(error);
     throw new ChatOrchestrationError(
-      `${SERVER_MESSAGES.ERRORS.SERVICE_UNAVAILABLE_PREFIX}${error.message}`,
+      safeMessage,
       HTTP_STATUS.INTERNAL_SERVER_ERROR
     );
   }
@@ -99,7 +109,7 @@ export async function orchestrateChatStream(rawMessage, emit, options = {}) {
 
   if (signal?.aborted) return;
 
-  // Case 1: Refusal (retrieval failure or insufficient similarity)
+  // Case 1: Refusal (prompt injection, out-of-scope, retrieval failure, or insufficient similarity)
   if (!ragResult.passedThreshold) {
     emit('metadata', { sources: [], retrieval: ragResult.retrieval });
     emit('delta', { text: ragResult.refusalText });
@@ -110,6 +120,9 @@ export async function orchestrateChatStream(rawMessage, emit, options = {}) {
   // Case 2: Grounded stream generation
   emit('metadata', { sources: ragResult.sources, retrieval: ragResult.retrieval });
 
+  let streamedAnyText = false;
+  let emittedTerminal = false;
+
   try {
     const stream = await llmStreamGenerator(ragResult.prompt, { signal });
 
@@ -118,13 +131,23 @@ export async function orchestrateChatStream(rawMessage, emit, options = {}) {
         console.log('[ChatOrchestrator] Generation aborted by signal.');
         break;
       }
-      const text = chunk.text;
+      const text = chunk?.text;
       if (text) {
-        emit('delta', { text });
+        // Sanitize chunk for tag leaks or prompt leakage
+        const { isLeaking, sanitizedText } = sanitizeGeneratedOutput(text);
+        if (!isLeaking && sanitizedText) {
+          streamedAnyText = true;
+          emit('delta', { text: sanitizedText });
+        }
       }
     }
 
     if (!signal?.aborted) {
+      // If no text was streamed, provide safe fallback delta
+      if (!streamedAnyText) {
+        emit('delta', { text: SERVER_MESSAGES.ERRORS.AI_RESPONSE_EMPTY });
+      }
+      emittedTerminal = true;
       emit('done', { sources: ragResult.sources, retrieval: ragResult.retrieval });
     }
   } catch (error) {
@@ -133,8 +156,10 @@ export async function orchestrateChatStream(rawMessage, emit, options = {}) {
       return;
     }
     console.error('[ChatOrchestrator] Error during LLM streaming:', error.message);
-    emit('error', {
-      error: `${SERVER_MESSAGES.ERRORS.SERVICE_UNAVAILABLE_PREFIX}${error.message}`,
-    });
+    if (!emittedTerminal) {
+      emittedTerminal = true;
+      const safeError = formatSafeErrorMessage(error);
+      emit('error', { error: safeError });
+    }
   }
 }

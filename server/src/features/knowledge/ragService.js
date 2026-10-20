@@ -2,16 +2,19 @@ import { config } from '../../config.js';
 import { retrieveRelevantChunks } from './retriever.js';
 import { buildGroundedPrompt, formatContextSections } from './promptBuilder.js';
 import { SERVER_MESSAGES } from '../../constants/index.js';
+import { detectPromptInjection, classifyScope } from '../../shared/guardrails/index.js';
 
 /**
  * Core RAG execution service.
  * 
  * Encapsulates:
- * 1. Vector candidate retrieval
- * 2. Relevance score ranking & diagnostic mapping
- * 3. Similarity threshold guardrail evaluation
- * 4. Context assembly and grounded prompt generation
- * 5. Evidence sufficiency determination
+ * 1. Prompt injection guardrail check
+ * 2. Out-of-scope query classification
+ * 3. Vector candidate retrieval
+ * 4. Relevance score ranking & diagnostic mapping
+ * 5. Similarity threshold guardrail evaluation
+ * 6. Context assembly and grounded prompt generation
+ * 7. Evidence sufficiency determination
  * 
  * @param {string} query - Cleaned user question
  * @param {object} [options]
@@ -26,6 +29,52 @@ export async function executeRAG(query, options = {}) {
   const similarityThreshold = options.similarityThreshold ?? config.similarityThreshold;
   const systemPrompt = options.systemPrompt;
   const retrieverFn = options.retrieverFn || retrieveRelevantChunks;
+
+  // Guardrail 1: Adversarial Prompt Injection detection
+  const injection = detectPromptInjection(query);
+  if (injection.isInjection) {
+    console.warn(`[RAGService] Prompt injection blocked: ${injection.reason}`);
+    return {
+      status: 'INJECTION_REFUSED',
+      passedThreshold: false,
+      refusalText: SERVER_MESSAGES.ERRORS.PROMPT_INJECTION_REFUSAL,
+      sources: [],
+      context: '',
+      prompt: '',
+      retrievedChunks: [],
+      usedChunks: [],
+      retrieval: {
+        similarityThreshold,
+        bestScore: 0,
+        retrievedChunks: [],
+        usedChunks: [],
+        guardrail: 'prompt_injection',
+      },
+    };
+  }
+
+  // Guardrail 2: Out-of-Scope request classification
+  const scope = classifyScope(query);
+  if (scope.isOutOfScope) {
+    console.log(`[RAGService] Out-of-scope request declined: category=${scope.category}`);
+    return {
+      status: 'OUT_OF_SCOPE',
+      passedThreshold: false,
+      refusalText: scope.refusalText || SERVER_MESSAGES.ERRORS.OUT_OF_SCOPE,
+      sources: [],
+      context: '',
+      prompt: '',
+      retrievedChunks: [],
+      usedChunks: [],
+      retrieval: {
+        similarityThreshold,
+        bestScore: 0,
+        retrievedChunks: [],
+        usedChunks: [],
+        guardrail: 'out_of_scope',
+      },
+    };
+  }
 
   let retrievedChunks = [];
   let retrievalError = null;

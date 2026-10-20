@@ -101,3 +101,4 @@ export async function generateAnswerStream(prompt, options = {}) {
 }
 
 export { geminiProvider };
+export { validateStructuredOutput } from '../../guardrails/index.js';

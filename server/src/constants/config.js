@@ -30,6 +30,12 @@ export const PROMPT_CONSTRAINTS = Object.freeze({
   MAX_LENGTH: 10000,
 });
 
+export const GUARDRAIL_CONFIG = Object.freeze({
+  DEFAULT_TIMEOUT_MS: 30000,
+  STREAM_TIMEOUT_MS: 45000,
+  MIN_ANSWER_LENGTH: 2,
+});
+
 export const CHUNKING_CONFIG = Object.freeze({
   DEFAULT_CHUNK_SIZE: 1200,
   DEFAULT_CHUNK_OVERLAP: 200,

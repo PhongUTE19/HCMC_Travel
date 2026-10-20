@@ -1,6 +1,6 @@
 # Lumen Institute Student Handbook 2026–2027 RAG Assistant
 
-An authoritative question-answering assistant for the **Lumen Institute of Technology — Student Handbook 2026–2027** built using Retrieval-Augmented Generation (RAG) with Google Gemini, Qdrant Cloud vector database, an Express.js backend, and a React frontend.
+An authoritative question-answering assistant for the **Lumen Institute of Technology — Student Handbook 2026–2027** built using Retrieval-Augmented Generation (RAG) with Google Gemini, Qdrant Cloud vector database, Supabase analytics, an Express.js backend, and a React frontend.
 
 ---
 
@@ -8,26 +8,32 @@ An authoritative question-answering assistant for the **Lumen Institute of Techn
 
 The Student Handbook Assistant helps undergraduate students at Lumen Institute of Technology query official university policies, tuition structures, credit overload rules, scholarships, dormitory curfews, exam rules, graduation requirements, and recent amendments.
 
-### RAG Architecture
+### Key Capabilities
 
-1. **Knowledge Ingestion**: The authoritative Markdown document (`data/knowledge/KB-A_Lumen-Institute-Student-Handbook.md`) is ingested and partitioned into section-aware chunks demarcated by Level-2 headers (`## `).
-2. **Dense Vector Embeddings**: Each section is converted into a 3072-dimensional vector embedding using Google Gemini's embedding model and indexed into a managed Qdrant Cloud vector database.
-3. **Retrieval**: When a student enters a question, the query is converted into an embedding and matched against indexed sections using cosine similarity. A candidate pool is inspected to ensure relevant amendment provisions (Section 11) are retrieved alongside base policies.
-4. **Guardrail Gate**: If the top similarity score is below `SIMILARITY_THRESHOLD` (0.60), the query is safely rejected without invoking the generative LLM, returning a clear response that the handbook lacks information.
-5. **Grounded Generation**: For queries passing the threshold, the retrieved sections are injected into a strict prompt. The LLM generates a concise, factually grounded response citing exact section names and chunk identifiers.
-6. **Diagnostics & Inspection**: Every response includes retrieval diagnostic metadata allowing inspection of candidate chunks, ranks, scores, and filtering decisions before and after generation.
+1. **Grounded Question Answering**: Retrieves authoritative section chunks and generates factually grounded responses citing specific handbook sections.
+2. **Relevance Guardrail Gate**: Applies a cosine similarity cutoff (`SIMILARITY_THRESHOLD = 0.60`). Queries failing the threshold receive a safe refusal without calling generative LLMs, saving latency and API cost.
+3. **Real-time SSE Streaming**: Emits Server-Sent Events (`metadata`, `delta`, `done`, `error`) with smooth client-side token reveal and fade-in animations.
+4. **Interactive Retrieval Diagnostics**: In-UI transparency allowing inspection of candidate pools, similarity scores, ranks, and threshold pass/filter decisions.
+5. **Admin Knowledge Management**:
+   - Section-aware Markdown parsing and chunk inspection with search, sorting, and pagination.
+   - Document CRUD operations stored in `data/knowledge/`.
+   - One-click cloud re-indexing into Qdrant Cloud (`Student_Handbook` collection).
+   - System prompt customization with instant restore to default template (`data/prompts/`).
+6. **AI Provider Abstraction Layer**: Lightweight, provider-independent interface (`embedText`, `generateAnswer`, `generateAnswerStream`) supporting pluggable AI backends with Google Gemini as the reference implementation.
+7. **AI Usage Analytics & Telemetry**: Automatically tracks request counts, token usage (prompt, completion, total), latencies (P50, P95), and estimated costs with dual-mode persistence (Supabase PostgreSQL with in-memory buffer fallback).
 
 ---
 
 ## Technology Stack
 
-The project uses the following verified technologies and model IDs:
-
-* **Frontend Framework**: React 18, Vite 6, Vanilla CSS design system.
-* **Backend Framework**: Node.js (v20+ / v22), Express.js 4.
-* **LLM Provider & Model ID**: Google Gemini via official `@google/genai` SDK, model ID **`gemini-3.5-flash-lite`**.
-* **Embedding Provider & Model ID**: Google Gemini via `@google/genai` SDK, model ID **`gemini-embedding-001`** (vector dimension: **3072**).
-* **Vector Database & Collection**: **Qdrant Cloud** (managed cloud cluster over HTTPS), Collection name: **`student_handbook`** (distance metric: `Cosine`).
+* **Frontend**: React 18, Vite 6, Vanilla CSS modular design system.
+* **Backend**: Node.js (v20+ / v22), Express.js 4/5 (Feature-first modular architecture).
+* **AI Provider Abstraction**: Provider-independent registry in `server/src/shared/integrations/ai/`.
+* **Default LLM Provider & Model**: Google Gemini via official `@google/genai` SDK, model **`gemini-3.5-flash-lite`**.
+* **Embedding Model & Vector Dimension**: Google Gemini **`gemini-embedding-001`** (**3072** dimensions, `Cosine` metric).
+* **Vector Database**: **Qdrant Cloud** (managed cluster over HTTPS, collection: `Student_Handbook`).
+* **Database & Telemetry**: **Supabase** (`@supabase/supabase-js`) for analytics persistence + in-memory circular fallback.
+* **Validation & Error Handling**: Zod runtime schema validation (`validateRequest.js`), centralized operational error pipeline (`AppError.js`, `errorHandler.js`).
 
 ---
 
@@ -35,11 +41,12 @@ The project uses the following verified technologies and model IDs:
 
 ### Source Document & Format
 * **Location**: `data/knowledge/KB-A_Lumen-Institute-Student-Handbook.md`
-* **Supported Format**: Markdown (`.md`) with Level-2 headings (`## `) and Markdown tables.
+* **Supported Format**: Markdown (`.md`) formatted with Level-2 headings (`## `) and Markdown tables.
 
 ### Chunking Strategy
+* **Implementation**: `server/src/features/knowledge/chunker.js`.
 * **Strategy**: Section-based chunking on Markdown Level-2 headings (`## `).
-* **Chunk Size & Overlap**: Chunking is strictly section-based rather than based on fixed character counts or token counts. There is **no numeric chunk size limit** and **no sliding window overlap** configured. This design guarantees that complete structured content—specifically the Section 2 Programs table (headers, separator, and all rows) and Section 11 Amendments—remains unified in single, coherent chunks without mid-table or mid-rule splits.
+* **Guarantees**: Chunking preserves entire logical sections without mid-table or mid-rule splits. Complex structured sections—such as the Section 2 Programs table and Section 11 Amendment overrides—remain intact within single coherent chunks.
 * **Extracted Chunk Metadata**:
   - `id`: Unique identifier formatted as `${baseId}_sec${sectionNumber}` (e.g., `KB-A_Lumen-Institute-Student-Handbook_sec2`).
   - `sectionNumber`: Integer extracted from the header (1 to 12).
@@ -48,24 +55,21 @@ The project uses the following verified technologies and model IDs:
   - `source`: Source filename (`KB-A_Lumen-Institute-Student-Handbook.md`).
   - `content`: Complete Markdown section body text.
 
-### Embedding Generation
-* Implemented in `server/src/rag/gemini.js` (`embedText()`).
-* Embeds `${chunk.title}\n${chunk.content}` using model `gemini-embedding-001`.
-* Wrapped with an automated `withRetry()` helper that handles transient API spikes (HTTP 503 UNAVAILABLE or 429 RATE_LIMIT) with exponential backoff.
-
-### Indexing & Idempotency
-* Implemented in `server/src/rag/indexer.js` (`npm run index`).
-* **Repeatable Re-Indexing**: To prevent stale or duplicate chunks from prior runs or legacy datasets, `initVectorStore({ reset: true })` checks for the collection in Qdrant Cloud. If present, it deletes the collection and recreates it before points are upserted. This guarantees that re-indexing is fully idempotent and the collection contains exactly the 12 active sections.
+### Embedding Generation & Indexing
+* **Embeddings**: Generated via `embedText()` in `server/src/shared/integrations/ai/` using `gemini-embedding-001`.
+* **Resilience**: Embedded with exponential backoff retry logic handling transient HTTP 503 or 429 errors.
+* **Idempotent Cloud Indexing**: Executed via `server/src/features/knowledge/indexer.js` (`npm run index`). Recreates and populates the Qdrant Cloud collection to prevent stale points.
 
 ---
 
-## Setup and Execution
+## Setup and Environment Configuration
 
 ### Prerequisites
 * [Node.js](https://nodejs.org/) v20.x or v22.x
 * [npm](https://www.npmjs.com/) v9+
-* A Google Gemini API key
-* A managed Qdrant Cloud cluster with an API key
+* Google Gemini API key
+* Managed Qdrant Cloud cluster and API key
+* Supabase project URL and service role key (optional, for persistent AI analytics)
 
 ### Environment Variables
 Configure environment variables in a single `.env` file at the project root (see `.env.example`):
@@ -73,100 +77,119 @@ Configure environment variables in a single `.env` file at the project root (see
 | Variable Name | Description | Default / Example Value |
 |---|---|---|
 | `PORT` | Express backend port | `3000` |
-| `GEMINI_API_KEY` | Google Gemini API key (Required) | `your_gemini_api_key` |
-| `GEMINI_MODEL` | Google Gemini LLM model ID | `gemini-3.5-flash-lite` |
-| `EMBEDDING_MODEL` | Google Gemini embedding model ID | `gemini-embedding-001` |
+| `AI_PROVIDER` | AI provider implementation key | `gemini` |
+| `GEMINI_API_KEY` | Google Gemini API key (Required for Gemini) | `your_gemini_api_key_here` |
+| `GEMINI_MODEL` | Generative LLM model ID | `gemini-3.5-flash-lite` |
+| `EMBEDDING_MODEL` | Text embedding model ID | `gemini-embedding-001` |
 | `TOP_K` | Number of chunks to retrieve | `4` |
-| `SIMILARITY_THRESHOLD` | Minimum cosine similarity score | `0.60` |
-| `QDRANT_URL` | Qdrant Cloud cluster endpoint | `https://<cluster-id>.<region>.cloud.qdrant.io` |
-| `QDRANT_API_KEY` | Qdrant Cloud API key | `your_qdrant_api_key` |
-| `QDRANT_COLLECTION_NAME` | Vector collection name | `student_handbook` |
-| `PROMPT_FILE` | Persistent system prompt file path | `data/system_prompt.txt` |
-| `KNOWLEDGE_DIR` | Directory containing knowledge files | `data/knowledge` |
+| `SIMILARITY_THRESHOLD` | Cosine similarity cutoff for RAG generation | `0.60` |
+| `QDRANT_URL` | Qdrant Cloud cluster endpoint | `https://<cluster-id>.<region>.cloud.qdrant.io:6333` |
+| `QDRANT_API_KEY` | Qdrant Cloud secret API key | `your_qdrant_cloud_api_key_here` |
+| `QDRANT_COLLECTION_NAME` | Vector collection name | `Student_Handbook` |
+| `PROMPT_FILE` | Persistent system prompt file path | `data/prompts/system_prompt.txt` |
+| `PROMPT_FILE_DEFAULT` | Default system prompt template path | `data/prompts/system_prompt_default.txt` |
+| `KNOWLEDGE_DIR` | Knowledge base directory path | `data/knowledge` |
+| `SUPABASE_URL` | Supabase project URL (Analytics) | `https://your-project.supabase.co` |
+| `SUPABASE_SECRET_KEY` | Supabase service role key (or `SUPABASE_KEY`) | `your_supabase_service_role_key` |
 
 > [!NOTE]
-> All credentials remain strictly on the backend. No API keys or internal endpoints are exposed to the frontend.
-
-### Installation & Execution Steps
-
-1. **Install Dependencies**:
-   ```bash
-   npm run install:all
-   ```
-
-2. **Index the Student Handbook**:
-   ```bash
-   npm run index
-   ```
-   *(Indexes all 12 handbook sections into Qdrant Cloud).*
-
-3. **Start the Application**:
-   ```bash
-   npm start
-   ```
-   *(Starts backend on port 3000 with `--watch` and Vite frontend on port 5173).*
-
-4. **Access the Application**:
-   * **Frontend UI**: [http://localhost:5173](http://localhost:5173)
-   * **Backend API**: [http://localhost:3000](http://localhost:3000)
-   * **Health Check**: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+> All credentials remain strictly on the backend. No API keys or internal database URLs are exposed to the client.
 
 ---
 
-## Running Tests
+## Run Instructions
 
-The test suite separates automated offline verification from live external integration tests:
+### 1. Install Dependencies
+```bash
+npm run install:all
+```
+*(Installs dependencies for root, `server/`, and `client/`).*
 
-### 1. Automated Unit & Mock Tests (Default, No Live API Calls)
-Runs offline tests using Node's native test runner with mocks for external services. Requires no API keys and incurs no costs:
+### 2. Index the Knowledge Base
+```bash
+npm run index
+```
+*(Embeds all handbook sections and upserts them into Qdrant Cloud).*
+
+### 3. Start the Development Servers
+```bash
+npm start
+# or
+npm run dev
+```
+*(Concurrently launches the Express server on port 3000 and the Vite frontend on port 5173).*
+
+### 4. Application Access URLs
+* **User Chat & Assistant UI**: [http://localhost:5173](http://localhost:5173)
+* **Backend API Base**: [http://localhost:3000](http://localhost:3000)
+* **Health Check**: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+
+### 5. Docker Deployment (Optional)
+```bash
+# Build and run containers
+npm run docker:up
+
+# Run indexing inside container
+npm run docker:index
+
+# Tear down containers
+npm run docker:down
+```
+
+---
+
+## Testing & Quality Assurance
+
+The project includes unit, schema, regression, and live integration tests:
+
+### 1. Default Unit & Component Tests (Offline, No API Costs)
 ```bash
 npm test
 ```
-**Tests Covered**:
-* Document loading and section-aware chunking for all 12 sections.
-* Section 2 table column-to-row integrity.
-* Section 11 override provisions integrity.
-* Vector similarity math and cosine distance calculation.
-* Mocked idempotent indexing and Qdrant collection reset.
-* Out-of-scope query guardrail rejection without invoking LLM.
-* Structured error handling for vector database failures and LLM errors.
-* Complete chat response and retrieval diagnostics contract.
+Runs the core RAG test suite (`test/rag.test.js`) verifying chunking, table preservation, cosine math, guardrails, SSE streaming, and error handling.
 
-### 2. Live End-to-End Integration Tests (Requires Credentials)
-Runs live queries against the Qdrant Cloud collection and Gemini generation API:
+### 2. Dedicated Feature Test Suites
+```bash
+# AI provider abstraction test suite
+node --test test/aiProvider.test.js
+
+# Analytics repository, writer, and telemetry test suite
+node --test test/analytics.test.js
+
+# Client collection utilities (pagination, search, sorting)
+node --test test/collectionUtils.test.js
+
+# Backend and client validation test suites
+node --test test/validation.test.js
+node --test test/tableUtils.test.js
+```
+
+### 3. Live Integration Tests (Requires Active Cloud Credentials)
 ```bash
 npm run test:integration
 ```
-Verifies live queries for Honors tuition, Section 11 installment plan overrides, updated make-up exam fees, library fine amendments, and cryptocurrency refusal.
+Runs live end-to-end queries against Qdrant Cloud and Gemini, testing tuition questions, Section 11 installment overrides, make-up exam fees, and out-of-scope refusals.
 
-### 3. Run All Tests
+### 4. Run All Test Suites
 ```bash
 npm run test:all
 ```
 
 ---
 
-## Retrieval Debugging & Chunk Inspection
+## Retrieval Diagnostics & Inspection
 
-Every answer returned by the chatbot includes interactive retrieval diagnostics:
-
-1. **Visible Control**: Click the **`Show retrieved chunks`** button located directly beneath any assistant answer.
-2. **Diagnostics Summary Bar**: Displays candidate pool count, active similarity threshold (0.60), top similarity score, and generation status.
-3. **Chunk Card Badges**:
-   * **Rank (`#1`, `#2`, ...)**: The retrieval order returned by the vector database.
-   * **Similarity Score (`Score: 0.7313`)**: The cosine similarity between the query embedding and the section vector (scale 0.0 to 1.0).
-   * **Status Badge**:
-     - `Passed to LLM`: Green badge indicating the chunk met the threshold and was provided to Gemini as context.
-     - `Filtered out (< 0.6)`: Red badge indicating the chunk fell below the relevance threshold and was withheld from generation.
-   * **Source & Chunk ID**: Filename (`KB-A_Lumen-Institute-Student-Handbook.md`) and section ID (`..._secN`).
-   * **Section Title**: Heading of the section.
-   * **Content View**: Click **`Expand content`** to inspect the exact retrieved text, ensuring full transparency of vector search results.
+Every answer returned by the assistant includes real-time diagnostics:
+* **Candidate Pool**: Inspect candidate chunk count and top similarity score.
+* **Threshold Status**: Green badge (`Passed to LLM`) for chunks meeting $\ge 0.60$; Red badge (`Filtered out (< 0.6)`) for withheld chunks.
+* **Chunk Cards**: Display rank, cosine score, source file, section title, and expandable body text for complete transparency.
 
 ---
 
 ## Common Troubleshooting
 
-* **Server Port 3000 in Use**: If port 3000 is occupied, set `PORT=3001` in `.env` and restart.
-* **Transient Gemini 503 / 429 Errors**: The backend automatically retries up to 3 times with exponential backoff.
-* **Qdrant Connection Error**: Verify `QDRANT_URL` and `QDRANT_API_KEY` in `.env`. Ensure your cloud cluster status is active.
-* **Unsynced Chunks**: If chunks are modified, execute `npm run index` to re-index the collection.
+* **Server Port in Use**: If port 3000 is occupied, set `PORT=3001` in `.env` and restart.
+* **Transient LLM 503 / 429 Errors**: The backend automatically retries up to 3 times with exponential backoff.
+* **Qdrant Connection Issues**: Verify `QDRANT_URL` and `QDRANT_API_KEY` in `.env`. Ensure your cloud cluster status is active.
+* **Missing Analytics Data**: If `SUPABASE_URL` or `SUPABASE_SECRET_KEY` is not provided, the application automatically switches to in-memory buffering without crashing or interrupting chat requests.
+* **Unsynced Chunks**: If markdown files in `data/knowledge/` are modified, run `npm run index` to synchronize Qdrant Cloud.
