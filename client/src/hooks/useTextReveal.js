@@ -1,27 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { STREAM_REVEAL_CONFIG } from '../constants/index.js';
+import { splitGraphemes } from '../utils/formatters.js';
+
 
 const FADE_DURATION_MS = 250;
 
-/**
- * Splits text into user-perceived grapheme clusters, preventing corruption of
- * multi-byte Unicode surrogate pairs (emojis) and Vietnamese diacritics.
- *
- * @param {string} str - Input text
- * @returns {string[]} Array of graphemes
- */
-export function splitGraphemes(str) {
-  if (!str) return [];
-  if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
-    try {
-      const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-      return Array.from(segmenter.segment(str), (s) => s.segment);
-    } catch {
-      // Fallback if segmenter instantiation fails
-    }
-  }
-  return Array.from(str);
-}
 
 /**
  * Checks if the user prefers reduced motion for accessibility.

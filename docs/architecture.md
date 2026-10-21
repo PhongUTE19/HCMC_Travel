@@ -82,7 +82,7 @@ The system consists of two containerized application services managed by Docker 
   5. Upserts points into Qdrant Cloud with full metadata payload.
 
 ### 3.4. System Prompt Management Workflow
-* **Storage**: Persistent storage in `data/prompts/system_prompt.txt`, with factory default in `data/prompts/system_prompt_default.txt`.
+* **Storage**: Persistent storage in `data/systemPrompt/system_prompt.txt`, with factory default in `data/systemPrompt/system_prompt_default.txt`.
 * **Endpoints**:
   - `GET /api/admin/prompt`: Reads active prompt from file. If file is missing, seeds it from default.
   - `PUT /api/admin/prompt`: Validates length (20–10,000 characters) and updates active prompt.
@@ -324,7 +324,7 @@ Student_Handbook/
 │   │   │   │   ├── ragService.js
 │   │   │   │   ├── retriever.js
 │   │   │   │   └── vectorStore.js
-│   │   │   └── prompts/                  # System prompt persistence & reset
+│   │   │   └── systemPrompt/                  # System prompt persistence & reset
 │   │   │       ├── prompts.controller.js
 │   │   │       ├── prompts.routes.js
 │   │   │       ├── prompts.schemas.js
@@ -338,7 +338,6 @@ Student_Handbook/
 │   │   │   │   │   ├── providers/
 │   │   │   │   │   │   └── geminiProvider.js
 │   │   │   │   │   └── index.js
-│   │   │   │   ├── gemini.js             # Backward-compatibility facade
 │   │   │   │   └── supabase.js           # Supabase singleton client
 │   │   │   └── middleware/               # validateRequest.js, errorHandler.js
 │   │   └── server.js                     # Express app setup, mounting, and startup
@@ -347,7 +346,7 @@ Student_Handbook/
 ├── data/
 │   ├── knowledge/                        # Markdown knowledge base files
 │   │   └── KB-A_Lumen-Institute-Student-Handbook.md
-│   └── prompts/                          # System prompt files
+│   └── systemPrompt/                          # System prompt files
 │       ├── system_prompt.txt             # Active persisted prompt
 │       └── system_prompt_default.txt     # Factory default prompt template
 ├── docs/

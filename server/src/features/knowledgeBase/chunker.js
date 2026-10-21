@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { config } from '../../config.js';
 import { SERVER_MESSAGES, CHUNKING_CONFIG } from '../../constants/index.js';
 
 /**
@@ -17,8 +16,8 @@ import { SERVER_MESSAGES, CHUNKING_CONFIG } from '../../constants/index.js';
 export function recursiveCharacterTextSplit(
   text,
   {
-    chunkSize = config.chunkSize || CHUNKING_CONFIG.DEFAULT_CHUNK_SIZE,
-    chunkOverlap = config.chunkOverlap || CHUNKING_CONFIG.DEFAULT_CHUNK_OVERLAP,
+    chunkSize = CHUNKING_CONFIG.DEFAULT_CHUNK_SIZE,
+    chunkOverlap = CHUNKING_CONFIG.DEFAULT_CHUNK_OVERLAP,
     separators = CHUNKING_CONFIG.SEPARATORS,
   } = {}
 ) {
@@ -195,10 +194,8 @@ export function loadAndChunkMarkdown(knowledgeDir, options = {}) {
     throw new Error(SERVER_MESSAGES.ERRORS.KNOWLEDGE_DIR_NOT_FOUND(knowledgeDir));
   }
 
-  const chunkSize = options.chunkSize || config.chunkSize || CHUNKING_CONFIG.DEFAULT_CHUNK_SIZE;
-  const chunkOverlap = options.chunkOverlap !== undefined
-    ? options.chunkOverlap
-    : (config.chunkOverlap !== undefined ? config.chunkOverlap : CHUNKING_CONFIG.DEFAULT_CHUNK_OVERLAP);
+  const chunkSize = options.chunkSize || CHUNKING_CONFIG.DEFAULT_CHUNK_SIZE;
+  const chunkOverlap = options.chunkOverlap || CHUNKING_CONFIG.DEFAULT_CHUNK_OVERLAP;
 
   const files = fs.readdirSync(knowledgeDir).filter((f) => f.endsWith('.md'));
   const chunks = [];

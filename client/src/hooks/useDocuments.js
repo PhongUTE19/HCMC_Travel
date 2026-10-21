@@ -5,7 +5,7 @@ import {
   saveDocument,
   updateDocument,
   deleteDocument,
-} from '../services/adminApi';
+} from '../services/documentsApi';
 import { UI_LABELS, APP_MESSAGES } from '../constants';
 import { validateDocumentFilename, validateDocumentContent, validateFile } from '../utils';
 

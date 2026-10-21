@@ -1,6 +1,7 @@
 import React from 'react';
 import ChunkCard from './ChunkCard';
-import { Pagination, SearchInput } from '../common';
+import Pagination from '../common/Pagination';
+import SearchInput from '../common/SearchInput';
 import { UI_LABELS, PAGINATION } from '../../constants';
 
 export default function ChunkReview({
@@ -9,6 +10,8 @@ export default function ChunkReview({
   limit,
   offset,
   hasMore,
+  page,
+  totalPages: propTotalPages,
   searchQuery,
   loading,
   onSearchChange,
@@ -17,8 +20,9 @@ export default function ChunkReview({
   onPrevPage,
   onNextPage,
 }) {
-  const currentPage = Math.floor((offset || 0) / (limit || 10)) + 1;
-  const totalPages = totalChunks === 0 ? 1 : Math.ceil(totalChunks / limit);
+  const currentPage = page ?? (Math.floor((offset || 0) / (limit || 10)) + 1);
+  const totalPages = propTotalPages ?? (totalChunks === 0 ? 1 : Math.ceil(totalChunks / limit));
+
 
   const handlePageChange = (newPage) => {
     if (onPageChange) {

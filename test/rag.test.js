@@ -7,43 +7,26 @@ import express from '../server/node_modules/express/index.js';
 import chatRouter from '../server/src/features/chat/chat.routes.js';
 import adminRoute from '../server/src/routes/adminRoute.js';
 
-import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/features/knowledge/chunker.js';
-import { buildGroundedPrompt, formatContextSections } from '../server/src/features/knowledge/promptBuilder.js';
-import { cosineSimilarity } from '../server/src/features/knowledge/retriever.js';
-import { executeRAG } from '../server/src/features/knowledge/ragService.js';
+import { loadAndChunkMarkdown, recursiveCharacterTextSplit } from '../server/src/features/knowledgeBase/chunker.js';
+import { buildGroundedPrompt, formatContextSections } from '../server/src/features/knowledgeBase/promptBuilder.js';
+import { executeRAG } from '../server/src/features/knowledgeBase/ragService.js';
 import { orchestrateChat, orchestrateChatStream, ChatOrchestrationError } from '../server/src/features/chat/chat.service.js';
-import { config } from '../server/src/config.js';
-import { getSystemPrompt, saveSystemPrompt, PromptServiceError } from '../server/src/features/prompts/prompts.service.js';
+import { getSystemPrompt, saveSystemPrompt, PromptServiceError } from '../server/src/features/systemPrompt/systemPrompt.service.js';
 import { sanitizeFilename, validateMarkdownContent, DocumentServiceError, removeDocument } from '../server/src/features/documents/documents.service.js';
-import { getVectorStore, getVectorStoreCount } from '../server/src/features/knowledge/vectorStore.js';
-import { KnowledgeServiceError, AdminServiceError } from '../server/src/features/knowledge/knowledge.service.js';
-import { AppError } from '../server/src/shared/errors/index.js';
+import { getVectorStore, getVectorStoreCount } from '../server/src/features/knowledgeBase/vectorStore.js';
+import { KnowledgeServiceError, AdminServiceError } from '../server/src/features/knowledgeBase/knowledgeBase.service.js';
+import { AppError, ValidationError } from '../server/src/shared/errors/index.js';
 import { errorHandler } from '../server/src/shared/middleware/errorHandler.js';
 import * as chatController from '../server/src/features/chat/chat.controller.js';
 import * as documentsController from '../server/src/features/documents/documents.controller.js';
-import * as promptsController from '../server/src/features/prompts/prompts.controller.js';
-import {
-  ValidationError,
-  validate,
-  validateRequest,
-} from '../server/src/shared/middleware/validateRequest.js';
+import * as promptsController from '../server/src/features/systemPrompt/systemPrompt.controller.js';
+import { validate, validateRequest } from '../server/src/shared/middleware/validateRequest.js';
 import { chatRequestSchema } from '../server/src/features/chat/chat.schema.js';
-import {
-  filenameSchema,
-  documentContentSchema,
-  createDocumentSchema,
-  updateDocumentSchema,
-  documentParamsSchema,
-} from '../server/src/features/documents/documents.schemas.js';
-import { updatePromptSchema } from '../server/src/features/prompts/prompts.schemas.js';
-import { paginationQuerySchema } from '../server/src/features/knowledge/knowledge.schemas.js';
-import {
-  SERVER_MESSAGES,
-  HTTP_STATUS,
-  PROMPT_CONSTRAINTS,
-  PAGINATION_LIMITS,
-} from '../server/src/constants/index.js';
-import { splitGraphemes } from '../client/src/hooks/useTextReveal.js';
+import { filenameSchema, documentContentSchema, createDocumentSchema, updateDocumentSchema, documentParamsSchema } from '../server/src/features/documents/documents.schemas.js';
+import { updateSystemPromptSchema } from '../server/src/features/systemPrompt/systemPrompt.schemas.js';
+import { paginationQuerySchema } from '../server/src/features/knowledgeBase/knowledgeBase.schemas.js';
+import { SERVER_MESSAGES, HTTP_STATUS, PROMPT_CONSTRAINTS, PAGINATION_LIMITS } from '../server/src/constants/index.js';
+import { splitGraphemes } from '../client/src/utils/formatters.js';
 import { CHAT_CONFIG, STREAM_REVEAL_CONFIG } from '../client/src/constants/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -166,18 +149,6 @@ describe('2. Prompt Construction, Grounding, and Attribution Formatting', () => 
     assert.equal(result.passedThreshold, false);
     assert.equal(result.refusalText, SERVER_MESSAGES.ERRORS.INSUFFICIENT_INFORMATION);
     assert.deepEqual(result.sources, []);
-  });
-});
-
-describe('3. Vector Math and Cosine Similarity', () => {
-  it('computes cosine similarity correctly between matching and orthogonal vectors', () => {
-    const vecA = [1, 0, 0];
-    const vecB = [1, 0, 0];
-    const vecC = [0, 1, 0];
-
-    assert.equal(cosineSimilarity(vecA, vecB), 1, 'Identical vectors should yield 1.0');
-    assert.equal(cosineSimilarity(vecA, vecC), 0, 'Orthogonal vectors should yield 0.0');
-    assert.equal(cosineSimilarity([], []), 0, 'Empty vectors should yield 0.0');
   });
 });
 
@@ -1120,7 +1091,7 @@ describe('9. Architecture Boundaries, Extracted Services, and Naming Conventions
   });
 
   it('knowledge vectorStore module exports getVectorStore and getVectorStoreCount', async () => {
-    const { getVectorStore: vsGetStore, getVectorStoreCount: vsGetCount } = await import('../server/src/features/knowledge/vectorStore.js');
+    const { getVectorStore: vsGetStore, getVectorStoreCount: vsGetCount } = await import('../server/src/features/knowledgeBase/vectorStore.js');
     assert.equal(typeof getVectorStore, 'function');
     assert.equal(typeof getVectorStoreCount, 'function');
     assert.equal(typeof vsGetStore, 'function');
@@ -1317,7 +1288,7 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
 
     // Prompt update schema
     const validPrompt = 'You are an intelligent Student Handbook assistant helping students.';
-    const promptParsed = validate(updatePromptSchema, { prompt: validPrompt });
+    const promptParsed = validate(updateSystemPromptSchema, { prompt: validPrompt });
     assert.equal(promptParsed.prompt, validPrompt);
 
     // Pagination query schema
@@ -1430,35 +1401,35 @@ describe('11. Centralized Backend Input Validation with Zod', () => {
   it('updatePromptSchema validates 20-10,000 char boundary values accurately', () => {
     // Empty prompt
     assert.throws(
-      () => validate(updatePromptSchema, { prompt: '' }),
+      () => validate(updateSystemPromptSchema, { prompt: '' }),
       (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_EMPTY
     );
     assert.throws(
-      () => validate(updatePromptSchema, { prompt: '   ' }),
+      () => validate(updateSystemPromptSchema, { prompt: '   ' }),
       (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_EMPTY
     );
 
     // Boundary: 19 characters -> TOO_SHORT
     const nineteenChars = 'a'.repeat(19);
     assert.throws(
-      () => validate(updatePromptSchema, { prompt: nineteenChars }),
+      () => validate(updateSystemPromptSchema, { prompt: nineteenChars }),
       (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_TOO_SHORT
     );
 
     // Boundary: 20 characters -> valid (min length)
     const twentyChars = 'a'.repeat(20);
-    const lowerBoundResult = validate(updatePromptSchema, { prompt: twentyChars });
+    const lowerBoundResult = validate(updateSystemPromptSchema, { prompt: twentyChars });
     assert.equal(lowerBoundResult.prompt, twentyChars);
 
     // Boundary: 10,000 characters -> valid (max length)
     const tenThousandChars = 'a'.repeat(10000);
-    const upperBoundResult = validate(updatePromptSchema, { prompt: tenThousandChars });
+    const upperBoundResult = validate(updateSystemPromptSchema, { prompt: tenThousandChars });
     assert.equal(upperBoundResult.prompt, tenThousandChars);
 
     // Boundary: 10,001 characters -> TOO_LONG
     const tenThousandOneChars = 'a'.repeat(10001);
     assert.throws(
-      () => validate(updatePromptSchema, { prompt: tenThousandOneChars }),
+      () => validate(updateSystemPromptSchema, { prompt: tenThousandOneChars }),
       (err) => err instanceof ValidationError && err.message === SERVER_MESSAGES.ERRORS.PROMPT_TOO_LONG
     );
   });

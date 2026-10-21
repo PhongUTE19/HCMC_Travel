@@ -1,16 +1,14 @@
 import express from 'express';
 import * as chatController from './chat.controller.js';
-import { validateRequest } from '../../shared/middleware/validateRequest.js';
+import { validateRequest, chatRateLimiter } from '../../shared/middleware/index.js';
 import { chatRequestSchema } from './chat.schema.js';
 
 const router = express.Router();
 
-const chatValidation = validateRequest({ body: chatRequestSchema });
-
 // POST /api/user/chat
-router.post('/chat', chatValidation, chatController.chat);
+router.post('/chat', chatRateLimiter, validateRequest({ body: chatRequestSchema }), chatController.chat);
 
 // POST /api/user/chat/stream
-router.post('/chat/stream', chatValidation, chatController.chatStream);
+router.post('/chat/stream', chatRateLimiter, validateRequest({ body: chatRequestSchema }), chatController.chatStream);
 
 export default router;

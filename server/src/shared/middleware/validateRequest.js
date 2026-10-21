@@ -1,7 +1,6 @@
 import { ValidationError } from '../errors/index.js';
 import { HTTP_STATUS } from '../../constants/index.js';
 
-export { ValidationError };
 
 /**
  * Validates untrusted input data synchronously against a Zod schema.
@@ -87,4 +86,26 @@ export function validateRequest(schemas = {}, options = {}) {
       next(err);
     }
   };
+}
+
+/**
+ * Standardized accessor to retrieve pre-validated request data populated canonically
+ * on `res.locals.validated`, falling back to direct schema validation in standalone unit tests.
+ *
+ * @template T
+ * @param {import('express').Response} res - Express response containing res.locals.validated
+ * @param {'body'|'params'|'query'} property - Target property on res.locals.validated
+ * @param {import('zod').ZodType<T>} [schema] - Fallback Zod validation schema
+ * @param {unknown} [fallbackData] - Fallback data (req.body, req.params, req.query)
+ * @param {new (msg: string, status?: number) => Error} [errorClass] - Custom Error class
+ * @returns {T} Validated data
+ */
+export function getValidatedData(res, property, schema, fallbackData, errorClass) {
+  if (res?.locals?.validated?.[property] !== undefined) {
+    return res.locals.validated[property];
+  }
+  if (schema) {
+    return validate(schema, fallbackData, { errorClass });
+  }
+  return fallbackData || {};
 }

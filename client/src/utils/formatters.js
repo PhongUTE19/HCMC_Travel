@@ -1,4 +1,4 @@
-import { UI_LABELS } from '../constants';
+import { UI_LABELS } from '../constants/index.js';
 
 /**
  * Formats section display title based on chunk or source metadata.
@@ -37,4 +37,51 @@ export function formatScore(score, precision = 4) {
 export function formatFileSize(bytes, precision = 1) {
   if (typeof bytes !== 'number' || isNaN(bytes)) return '0.0';
   return (bytes / 1024).toFixed(precision);
+}
+
+/**
+ * Splits text into user-perceived grapheme clusters, preventing corruption of
+ * multi-byte Unicode surrogate pairs (emojis) and Vietnamese diacritics.
+ *
+ * @param {string} str - Input text
+ * @returns {string[]} Array of graphemes
+ */
+export function splitGraphemes(str) {
+  if (!str) return [];
+  if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+    try {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+      return Array.from(segmenter.segment(str), (s) => s.segment);
+    } catch {
+      // Fallback if segmenter instantiation fails
+    }
+  }
+  return Array.from(str);
+}
+
+/**
+ * Formats a number with locale thousands separators.
+ *
+ * @param {number|string|null|undefined} num - Number to format
+ * @returns {string} Formatted number string
+ */
+export function formatNumber(num) {
+  if (num === null || num === undefined) return '0';
+  return Number(num).toLocaleString();
+}
+
+/**
+ * Formats an ISO date-time string to readable YYYY-MM-DD HH:mm:ss.
+ *
+ * @param {string|null|undefined} isoString - ISO timestamp
+ * @returns {string} Formatted timestamp or dash
+ */
+export function formatTimestamp(isoString) {
+  if (!isoString) return '—';
+  try {
+    const d = new Date(isoString);
+    return d.toISOString().replace('T', ' ').slice(0, 19);
+  } catch {
+    return isoString;
+  }
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchChunks } from '../services/adminApi';
+import { fetchChunks } from '../services/knowledgeBaseApi';
 import { APP_MESSAGES, PAGINATION } from '../constants';
 import { usePagination } from './usePagination';
 import { useSearch } from './useSearch';

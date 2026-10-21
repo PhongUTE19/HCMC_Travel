@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { fetchHealth } from '../services/userApi';
+import { fetchHealth } from '../services/healthApi';
 import { STATUS_KEYS } from '../constants';
 
 /**
@@ -40,6 +40,21 @@ export function useHealth(dependencyKey) {
   useEffect(() => {
     checkHealth();
   }, [dependencyKey, checkHealth]);
+
+  // Restore normal health check automatically when browser connectivity returns
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      checkHealth();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [checkHealth]);
+
 
   return { health, checkHealth };
 }

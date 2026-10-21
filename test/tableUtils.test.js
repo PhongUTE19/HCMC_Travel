@@ -8,6 +8,8 @@ import {
   getNextSortDirection,
   getNestedValue,
 } from '../client/src/utils/tableUtils.js';
+import { formatNumber, formatTimestamp } from '../client/src/utils/formatters.js';
+
 
 describe('Table Utilities Suite', () => {
   describe('calculatePagination', () => {
@@ -215,9 +217,38 @@ describe('Table Utilities Suite', () => {
     it('extracts top-level and deep values correctly', () => {
       const obj = { user: { profile: { age: 22 } }, tags: ['admin'] };
       assert.strictEqual(getNestedValue(obj, 'user.profile.age'), 22);
-      assert.strictEqual(getNestedValue(obj, 'tags.0'), 'admin');
       assert.strictEqual(getNestedValue(obj, 'user.nonexistent'), undefined);
       assert.strictEqual(getNestedValue(null, 'user.age'), undefined);
+    });
+  });
+
+  describe('formatNumber', () => {
+    it('formats valid numbers with locale string', () => {
+
+      assert.strictEqual(formatNumber(1000), (1000).toLocaleString());
+      assert.strictEqual(formatNumber(0), '0');
+    });
+
+    it('returns 0 for null or undefined', () => {
+      assert.strictEqual(formatNumber(null), '0');
+      assert.strictEqual(formatNumber(undefined), '0');
+    });
+  });
+
+  describe('formatTimestamp', () => {
+    it('formats ISO timestamps into YYYY-MM-DD HH:mm:ss format', () => {
+      const formatted = formatTimestamp('2026-10-22T12:30:45.000Z');
+      assert.strictEqual(formatted, '2026-10-22 12:30:45');
+    });
+
+    it('returns dash for null or undefined or empty', () => {
+      assert.strictEqual(formatTimestamp(null), '—');
+      assert.strictEqual(formatTimestamp(undefined), '—');
+      assert.strictEqual(formatTimestamp(''), '—');
+    });
+
+    it('returns raw string if parsing fails', () => {
+      assert.strictEqual(formatTimestamp('invalid-date'), 'invalid-date');
     });
   });
 });

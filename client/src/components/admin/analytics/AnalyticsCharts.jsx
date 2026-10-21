@@ -1,10 +1,7 @@
 import React from 'react';
 import { UI_LABELS, ANALYTICS_CHART_CONFIG } from '../../../constants';
+import { formatNumber } from '../../../utils/formatters';
 
-function formatNumber(num) {
-  if (num === null || num === undefined) return '0';
-  return Number(num).toLocaleString();
-}
 
 const { DIMENSIONS, COLORS } = ANALYTICS_CHART_CONFIG;
 

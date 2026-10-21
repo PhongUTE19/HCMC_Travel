@@ -1,15 +1,15 @@
-import { executeRAG } from '../knowledge/ragService.js';
+import { executeRAG } from '../knowledgeBase/ragService.js';
 import { generateAnswer, generateAnswerStream } from '../../shared/integrations/ai/providers/geminiProvider.js';
 import { SERVER_MESSAGES, HTTP_STATUS } from '../../constants/index.js';
 import { AppError } from '../../shared/errors/index.js';
-import { getSystemPrompt } from '../prompts/prompts.service.js';
+import { getSystemPrompt } from '../systemPrompt/systemPrompt.service.js';
 import {
   validateChatResponse,
   sanitizeGeneratedOutput,
   formatSafeErrorMessage,
 } from '../../shared/guardrails/index.js';
 
-export class ChatOrchestrationError extends AppError {
+export class ChatServiceError extends AppError {
   constructor(message, statusCode = HTTP_STATUS.BAD_REQUEST) {
     super(message, statusCode);
   }
@@ -37,7 +37,7 @@ export class ChatOrchestrationError extends AppError {
  */
 export async function orchestrateChat(rawMessage, options = {}) {
   if (!rawMessage || typeof rawMessage !== 'string' || !rawMessage.trim()) {
-    throw new ChatOrchestrationError(SERVER_MESSAGES.ERRORS.QUERY_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+    throw new ChatServiceError(SERVER_MESSAGES.ERRORS.QUERY_REQUIRED, HTTP_STATUS.BAD_REQUEST);
   }
 
   const query = rawMessage.trim();
@@ -68,12 +68,12 @@ export async function orchestrateChat(rawMessage, options = {}) {
       retrieval: ragResult.retrieval,
     };
   } catch (error) {
-    if (error instanceof ChatOrchestrationError) {
+    if (error instanceof ChatServiceError) {
       throw error;
     }
     console.error('[ChatOrchestrator] Error during LLM generation:', error.message);
     const safeMessage = formatSafeErrorMessage(error);
-    throw new ChatOrchestrationError(
+    throw new ChatServiceError(
       safeMessage,
       HTTP_STATUS.INTERNAL_SERVER_ERROR
     );
@@ -94,7 +94,7 @@ export async function orchestrateChatStream(rawMessage, emit, options = {}) {
   const signal = options.signal;
 
   if (!rawMessage || typeof rawMessage !== 'string' || !rawMessage.trim()) {
-    throw new ChatOrchestrationError(SERVER_MESSAGES.ERRORS.QUERY_REQUIRED, HTTP_STATUS.BAD_REQUEST);
+    throw new ChatServiceError(SERVER_MESSAGES.ERRORS.QUERY_REQUIRED, HTTP_STATUS.BAD_REQUEST);
   }
 
   const query = rawMessage.trim();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchSystemPrompt, updateSystemPrompt, resetSystemPrompt } from '../services/adminApi';
+import { fetchSystemPrompt, updateSystemPrompt, resetSystemPrompt } from '../services/systemPromptApi';
 import { UI_LABELS, APP_MESSAGES } from '../constants';
 
 /**

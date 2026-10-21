@@ -5,8 +5,10 @@ import DocumentTable from './DocumentTable';
 import ChunkReview from './ChunkReview';
 import SystemPromptEditor from './SystemPromptEditor';
 import AdminAnalyticsDashboard from './analytics/AdminAnalyticsDashboard';
+import Drawer from '../common/Drawer';
 import { useAdminDashboard } from '../../hooks';
 import { UI_LABELS, ADMIN_PANELS, ADMIN_TABS } from '../../constants';
+
 
 export default function AdminDashboard({ health, onRefreshHealth }) {
   const isOffline = Boolean(health?.error);
@@ -84,80 +86,63 @@ export default function AdminDashboard({ health, onRefreshHealth }) {
             </nav>
           </div>
 
-          {/* Backdrop */}
-          <div
-            className={`drawer-backdrop ${drawer.isDrawerOpen ? 'drawer-backdrop--open' : ''}`}
-            onClick={drawer.closeDrawer}
-            aria-hidden="true"
-          />
-
           {/* Slide-out Drawer */}
-          <aside
+          <Drawer
             id="admin-drawer"
-            className={`drawer ${drawer.isDrawerOpen ? 'drawer--open' : ''}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="drawer-title"
-            aria-hidden={!drawer.isDrawerOpen}
-            tabIndex={-1}
-            ref={drawer.drawerRef}
-            onClick={(e) => e.stopPropagation()}
+            isOpen={drawer.isDrawerOpen}
+            onClose={drawer.closeDrawer}
+            title={drawer.getDrawerTitle()}
+            drawerRef={drawer.drawerRef}
           >
-            <div className="drawer-header">
-              <div>
-                <h3 id="drawer-title" className="drawer-title">
-                  {drawer.getDrawerTitle()}
-                </h3>
-              </div>
-            </div>
-
-            <div className="drawer-body">
-              {/* Documents Management & Inline Editor */}
-              {drawer.activePanel === ADMIN_PANELS.DOCUMENTS && (
-                <>
-                  <DocumentEditor
-                    editingDoc={docs.editingDoc}
-                    onChange={docs.setEditingDoc}
-                    onSave={docs.handleSaveDocument}
-                    onCancel={docs.cancelEdit}
-                  />
-                  <DocumentTable
-                    documents={docs.documents}
-                    editorLoading={docs.editorLoading}
-                    onNew={docs.handleNewDocument}
-                    onEdit={docs.handleEditDocument}
-                    onDelete={docs.handleDeleteDocument}
-                    onUpload={docs.handleFileUpload}
-                    onReindex={kb.handleTriggerIndexing}
-                    indexing={kb.indexing}
-                    loading={loading}
-                  />
-                </>
-              )}
-
-              {/* Chunk Review Interface */}
-              {drawer.activePanel === ADMIN_PANELS.CHUNKS && (
-                <ChunkReview
-                  chunks={chunksState.chunks}
-                  totalChunks={chunksState.totalChunks}
-                  limit={chunksState.chunkLimit}
-                  offset={chunksState.chunkOffset}
-                  hasMore={chunksState.hasMore}
-                  searchQuery={chunksState.chunkSearch}
-                  loading={chunksState.chunksLoading}
-                  onSearchChange={chunksState.handleSearchChange}
-                  onLimitChange={chunksState.handleLimitChange}
-                  onPrevPage={chunksState.handlePrevPage}
-                  onNextPage={chunksState.handleNextPage}
+            {/* Documents Management & Inline Editor */}
+            {drawer.activePanel === ADMIN_PANELS.DOCUMENTS && (
+              <>
+                <DocumentEditor
+                  editingDoc={docs.editingDoc}
+                  onChange={docs.setEditingDoc}
+                  onSave={docs.handleSaveDocument}
+                  onCancel={docs.cancelEdit}
                 />
-              )}
+                <DocumentTable
+                  documents={docs.documents}
+                  editorLoading={docs.editorLoading}
+                  onNew={docs.handleNewDocument}
+                  onEdit={docs.handleEditDocument}
+                  onDelete={docs.handleDeleteDocument}
+                  onUpload={docs.handleFileUpload}
+                  onReindex={kb.handleTriggerIndexing}
+                  indexing={kb.indexing}
+                  loading={loading}
+                />
+              </>
+            )}
 
-              {/* System Prompt Configuration */}
-              {drawer.activePanel === ADMIN_PANELS.PROMPT && (
-                <SystemPromptEditor isOffline={isOffline} />
-              )}
-            </div>
-          </aside>
+            {/* Chunk Review Interface */}
+            {drawer.activePanel === ADMIN_PANELS.CHUNKS && (
+              <ChunkReview
+                chunks={chunksState.chunks}
+                totalChunks={chunksState.totalChunks}
+                limit={chunksState.chunkLimit}
+                offset={chunksState.chunkOffset}
+                page={chunksState.page}
+                totalPages={chunksState.totalPages}
+                hasMore={chunksState.hasMore}
+                searchQuery={chunksState.chunkSearch}
+                loading={chunksState.chunksLoading}
+                onSearchChange={chunksState.handleSearchChange}
+                onLimitChange={chunksState.handleLimitChange}
+                onPageChange={chunksState.handlePageChange}
+                onPrevPage={chunksState.handlePrevPage}
+                onNextPage={chunksState.handleNextPage}
+              />
+            )}
+
+            {/* System Prompt Configuration */}
+            {drawer.activePanel === ADMIN_PANELS.PROMPT && (
+              <SystemPromptEditor isOffline={isOffline} />
+            )}
+          </Drawer>
+
         </>
       )}
     </div>

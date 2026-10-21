@@ -1,16 +1,15 @@
 import * as analyticsService from './analytics.service.js';
+import { getValidatedData } from '../../shared/middleware/index.js';
+import { analyticsFilterSchema, analyticsHistorySchema } from './analytics.schemas.js';
 
-function getFilters(req, res) {
-  return res?.locals?.validated?.query || req.query || {};
-}
 
 /**
  * GET /api/admin/analytics/overview
  */
 export async function getOverview(req, res, next) {
   try {
-    const filters = getFilters(req, res);
-    const data = await analyticsService.getAnalyticsOverview(filters);
+    const validated = getValidatedData(res, 'query', analyticsFilterSchema, req?.query);
+    const data = await analyticsService.getAnalyticsOverview(validated);
     res.json(data);
   } catch (error) {
     next(error);
@@ -22,8 +21,8 @@ export async function getOverview(req, res, next) {
  */
 export async function getTimeseries(req, res, next) {
   try {
-    const filters = getFilters(req, res);
-    const data = await analyticsService.getAnalyticsTimeseries(filters);
+    const validated = getValidatedData(res, 'query', analyticsFilterSchema, req?.query);
+    const data = await analyticsService.getAnalyticsTimeseries(validated);
     res.json(data);
   } catch (error) {
     next(error);
@@ -35,8 +34,8 @@ export async function getTimeseries(req, res, next) {
  */
 export async function getBreakdown(req, res, next) {
   try {
-    const filters = getFilters(req, res);
-    const data = await analyticsService.getAnalyticsBreakdown(filters);
+    const validated = getValidatedData(res, 'query', analyticsFilterSchema, req?.query);
+    const data = await analyticsService.getAnalyticsBreakdown(validated);
     res.json(data);
   } catch (error) {
     next(error);
@@ -48,8 +47,8 @@ export async function getBreakdown(req, res, next) {
  */
 export async function getHistory(req, res, next) {
   try {
-    const filters = getFilters(req, res);
-    const data = await analyticsService.getAnalyticsHistory(filters);
+    const validated = getValidatedData(res, 'query', analyticsHistorySchema, req?.query);
+    const data = await analyticsService.getAnalyticsHistory(validated);
     res.json(data);
   } catch (error) {
     next(error);

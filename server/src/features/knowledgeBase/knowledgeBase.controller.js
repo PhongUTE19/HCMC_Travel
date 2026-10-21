@@ -1,14 +1,7 @@
-import * as knowledgeService from './knowledge.service.js';
-import { paginationQuerySchema } from './knowledge.schemas.js';
-import { validate } from '../../shared/middleware/validateRequest.js';
+import * as knowledgeService from './knowledgeBase.service.js';
+import { paginationQuerySchema } from './knowledgeBase.schemas.js';
+import { getValidatedData } from '../../shared/middleware/index.js';
 
-/**
- * Retrieves pre-validated request data populated by validation middleware,
- * or falls back to direct schema validation when called in standalone unit tests.
- */
-function getValidatedData(res, property, schema, fallbackData, errorClass) {
-  return res?.locals?.validated?.[property] || validate(schema, fallbackData, { errorClass });
-}
 
 /**
  * GET /api/admin/status

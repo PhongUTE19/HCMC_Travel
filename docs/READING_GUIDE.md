@@ -10,7 +10,7 @@ The system is a RAG assistant with a React frontend, an Express backend organize
 * **Retrieval & Storage**: Qdrant Cloud (3072-dim vector collection: `Student_Handbook`).
 * **AI Provider**: Google Gemini (`gemini-3.5-flash-lite`, `gemini-embedding-001`) abstracted behind a pluggable interface.
 * **Analytics**: Supabase PostgreSQL persistence with an automated in-memory buffer fallback.
-* **Knowledge**: Section-based Markdown documents in `data/knowledge/` and editable prompts in `data/prompts/`.
+* **Knowledge**: Section-based Markdown documents in `data/knowledge/` and editable prompts in `data/systemPrompt/`.
 
 ---
 
@@ -50,9 +50,9 @@ The system is a RAG assistant with a React frontend, an Express backend organize
 * **Controller**: `knowledge.controller.js` (`getChunks`) $\rightarrow$ `chunker.loadAndChunkMarkdown()` filters and returns slice with `hasMore`.
 
 ### 6. System Prompt Management & Reset
-* **Routes**: `GET|PUT /api/admin/prompt` and `POST /api/admin/prompt/reset` in `server/src/features/prompts/prompts.routes.js`
+* **Routes**: `GET|PUT /api/admin/prompt` and `POST /api/admin/prompt/reset` in `server/src/features/systemPrompt/prompts.routes.js`
 * **Controller**: `prompts.controller.js`
-* **Service**: `prompts.service.js` reads/writes `data/prompts/system_prompt.txt`. Reset endpoint restores factory default from `data/prompts/system_prompt_default.txt`.
+* **Service**: `prompts.service.js` reads/writes `data/systemPrompt/system_prompt.txt`. Reset endpoint restores factory default from `data/systemPrompt/system_prompt_default.txt`.
 
 ### 7. AI Usage Analytics & Telemetry
 * **Routes**: `/api/admin/analytics/{overview,timeseries,breakdown,history}` in `server/src/features/analytics/analytics.routes.js`

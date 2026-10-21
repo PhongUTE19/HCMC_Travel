@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import HealthBadge from './components/HealthBadge';
 import UserChatView from './components/user/UserChatView';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -9,18 +9,6 @@ import { USER_ROLES, UI_LABELS } from './constants';
 export default function App() {
   const [role, setRole] = useState(USER_ROLES.USER);
   const { health, checkHealth } = useHealth(role);
-
-  // Restore normal health check and fetching automatically when browser connectivity returns
-  useEffect(() => {
-    const handleOnline = () => {
-      checkHealth();
-    };
-
-    window.addEventListener('online', handleOnline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [checkHealth]);
 
   return (
     <ToastProvider>

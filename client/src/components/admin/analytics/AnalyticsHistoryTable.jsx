@@ -1,18 +1,10 @@
 import React, { useState } from 'react';
 import { ANALYTICS_CONFIG, ANALYTICS_CHART_CONFIG, UI_LABELS } from '../../../constants';
 import { validatePagination } from '../../../utils';
+import { formatTimestamp } from '../../../utils/formatters';
 import { useSort } from '../../../hooks';
-import { Pagination, SortableHeader } from '../../common';
-
-function formatTimestamp(isoString) {
-  if (!isoString) return '—';
-  try {
-    const d = new Date(isoString);
-    return d.toISOString().replace('T', ' ').slice(0, 19);
-  } catch {
-    return isoString;
-  }
-}
+import Pagination from '../../common/Pagination';
+import SortableHeader from '../../common/SortableHeader';
 
 const historyComparators = {
   tokens: (a, b, dir) => {
@@ -21,6 +13,55 @@ const historyComparators = {
     return dir === 'desc' ? valB - valA : valA - valB;
   },
 };
+
+/**
+ * Renders expanded details for a failed, refused, or retried request.
+ */
+function AnalyticsHistoryDetailRow({ record }) {
+  return (
+    <tr className="analytics-history-detail-row">
+      <td colSpan="9">
+        <div className="analytics-history-detail-box">
+          {record.isRefusal && (
+            <div className="analytics-detail-item">
+              <strong>Refusal Reason:</strong>{' '}
+              <span>{record.refusalReason || 'Provider refused prompt'}</span>
+            </div>
+          )}
+
+          {record.error && (
+            <div className="analytics-detail-item">
+              <strong>Error Message:</strong>{' '}
+              <span className="text-error">
+                {record.error.message || String(record.error)}
+              </span>
+              {record.error.category && (
+                <span className="analytics-detail-category">
+                  (Category: {record.error.category})
+                </span>
+              )}
+            </div>
+          )}
+
+          {record.attempts && record.attempts.length > 0 && (
+            <div>
+              <strong>Attempt History ({record.attempts.length}):</strong>
+              <ul className="analytics-attempts-list">
+                {record.attempts.map((att, i) => (
+                  <li key={i}>
+                    Attempt #{att.attemptNumber}: {att.status} ({att.durationMs} ms){' '}
+                    {att.error ? `— ${att.error.message}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 
 export default function AnalyticsHistoryTable({
   historyData,
@@ -242,49 +283,9 @@ export default function AnalyticsHistoryTable({
                       </td>
                     </tr>
 
-                    {isExpanded && (
-                      <tr className="analytics-history-detail-row">
-                        <td colSpan="9">
-                          <div className="analytics-history-detail-box">
-                            {rec.isRefusal && (
-                              <div className="analytics-detail-item">
-                                <strong>Refusal Reason:</strong>{' '}
-                                <span>{rec.refusalReason || 'Provider refused prompt'}</span>
-                              </div>
-                            )}
-
-                            {rec.error && (
-                              <div className="analytics-detail-item">
-                                <strong>Error Message:</strong>{' '}
-                                <span className="text-error">
-                                  {rec.error.message || String(rec.error)}
-                                </span>
-                                {rec.error.category && (
-                                  <span className="analytics-detail-category">
-                                    (Category: {rec.error.category})
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            {rec.attempts && rec.attempts.length > 0 && (
-                              <div>
-                                <strong>Attempt History ({rec.attempts.length}):</strong>
-                                <ul className="analytics-attempts-list">
-                                  {rec.attempts.map((att, i) => (
-                                    <li key={i}>
-                                      Attempt #{att.attemptNumber}: {att.status} ({att.durationMs} ms){' '}
-                                      {att.error ? `— ${att.error.message}` : ''}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
+                    {isExpanded && <AnalyticsHistoryDetailRow record={rec} />}
                   </React.Fragment>
+
                 );
               })
             )}

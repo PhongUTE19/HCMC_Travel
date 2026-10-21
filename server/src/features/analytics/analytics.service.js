@@ -8,12 +8,9 @@ import {
   calculateOverviewMetrics,
   groupRecordsIntoTimeBuckets,
   calculateDistributions,
-  resolveTimeBounds,
 } from './analytics.utils.js';
 import { PAGINATION_DEFAULTS } from './analytics.constants.js';
 
-// Re-export resolveTimeBounds for backwards compatibility
-export { resolveTimeBounds };
 
 /**
  * Retrieves analytics overview KPIs, percentiles, token usage, and persistence state.

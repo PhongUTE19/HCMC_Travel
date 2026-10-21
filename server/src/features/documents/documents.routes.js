@@ -13,31 +13,15 @@ const router = express.Router();
 router.get('/', documentsController.getDocuments);
 
 // GET /api/admin/documents/:filename
-router.get(
-  '/:filename',
-  validateRequest({ params: documentParamsSchema }),
-  documentsController.getDocument
-);
+router.get("/:filename", validateRequest({ params: documentParamsSchema }), documentsController.getDocument);
 
 // POST /api/admin/documents
-router.post(
-  '/',
-  validateRequest({ body: createDocumentSchema }),
-  documentsController.createDocument
-);
+router.post("/", validateRequest({ body: createDocumentSchema }), documentsController.createDocument);
 
 // PUT /api/admin/documents/:filename
-router.put(
-  '/:filename',
-  validateRequest({ params: documentParamsSchema, body: updateDocumentSchema }),
-  documentsController.updateDocument
-);
+router.put("/:filename", validateRequest({ params: documentParamsSchema, body: updateDocumentSchema }), documentsController.updateDocument);
 
 // DELETE /api/admin/documents/:filename
-router.delete(
-  '/:filename',
-  validateRequest({ params: documentParamsSchema }),
-  documentsController.deleteDocument
-);
+router.delete("/:filename", validateRequest({ params: documentParamsSchema }), documentsController.deleteDocument);
 
 export default router;

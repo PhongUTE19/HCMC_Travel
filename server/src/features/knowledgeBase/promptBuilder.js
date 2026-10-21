@@ -1,5 +1,5 @@
 import { config } from '../../config.js';
-import { getSystemPrompt } from '../prompts/prompts.service.js';
+import { getSystemPrompt } from '../systemPrompt/systemPrompt.service.js';
 
 /**
  * Formats retrieved chunks into standardized context blocks with citation headers.

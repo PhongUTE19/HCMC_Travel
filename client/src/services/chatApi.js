@@ -1,13 +1,9 @@
 /**
- * User API service to communicate with Express backend chat and health endpoints.
+ * Chat API service communicating with Express backend chat and SSE streaming endpoints.
  */
 
 import { API_ENDPOINTS, APP_MESSAGES, HTTP_METHODS } from '../constants';
-import { apiRequest, apiJsonRequest } from './apiClient';
-
-export function fetchHealth() {
-  return apiRequest(API_ENDPOINTS.HEALTH, {}, APP_MESSAGES.API_ERROR.HEALTH_CHECK_FAILED);
-}
+import { apiJsonRequest } from './apiClient';
 
 export async function sendChatMessage(message) {
   const trimmed = typeof message === 'string' ? message.trim() : '';
@@ -195,4 +191,3 @@ export async function streamChatMessage(message, callbacks = {}, options = {}) {
     }
   }
 }
-

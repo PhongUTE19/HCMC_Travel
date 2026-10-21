@@ -18,7 +18,7 @@ The Student Handbook Assistant helps undergraduate students at Lumen Institute o
    - Section-aware Markdown parsing and chunk inspection with search, sorting, and pagination.
    - Document CRUD operations stored in `data/knowledge/`.
    - One-click cloud re-indexing into Qdrant Cloud (`Student_Handbook` collection).
-   - System prompt customization with instant restore to default template (`data/prompts/`).
+   - System prompt customization with instant restore to default template (`data/systemPrompt/`).
 6. **AI Provider Abstraction Layer**: Lightweight, provider-independent interface (`embedText`, `generateAnswer`, `generateAnswerStream`) supporting pluggable AI backends with Google Gemini as the reference implementation.
 7. **AI Usage Analytics & Telemetry**: Automatically tracks request counts, token usage (prompt, completion, total), latencies (P50, P95), and estimated costs with dual-mode persistence (Supabase PostgreSQL with in-memory buffer fallback).
 
@@ -86,8 +86,8 @@ Configure environment variables in a single `.env` file at the project root (see
 | `QDRANT_URL` | Qdrant Cloud cluster endpoint | `https://<cluster-id>.<region>.cloud.qdrant.io:6333` |
 | `QDRANT_API_KEY` | Qdrant Cloud secret API key | `your_qdrant_cloud_api_key_here` |
 | `QDRANT_COLLECTION_NAME` | Vector collection name | `Student_Handbook` |
-| `PROMPT_FILE` | Persistent system prompt file path | `data/prompts/system_prompt.txt` |
-| `PROMPT_FILE_DEFAULT` | Default system prompt template path | `data/prompts/system_prompt_default.txt` |
+| `PROMPT_FILE` | Persistent system prompt file path | `data/systemPrompt/system_prompt.txt` |
+| `PROMPT_FILE_DEFAULT` | Default system prompt template path | `data/systemPrompt/system_prompt_default.txt` |
 | `KNOWLEDGE_DIR` | Knowledge base directory path | `data/knowledge` |
 | `SUPABASE_URL` | Supabase project URL (Analytics) | `https://your-project.supabase.co` |
 | `SUPABASE_SECRET_KEY` | Supabase service role key (or `SUPABASE_KEY`) | `your_supabase_service_role_key` |

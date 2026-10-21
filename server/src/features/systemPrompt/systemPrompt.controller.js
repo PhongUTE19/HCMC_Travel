@@ -1,14 +1,7 @@
-import * as promptsService from './prompts.service.js';
-import { updatePromptSchema } from './prompts.schemas.js';
-import { validate } from '../../shared/middleware/validateRequest.js';
+import * as promptsService from './systemPrompt.service.js';
+import { updateSystemPromptSchema } from './systemPrompt.schemas.js';
+import { getValidatedData } from '../../shared/middleware/index.js';
 
-/**
- * Retrieves pre-validated request data populated by validation middleware,
- * or falls back to direct schema validation when called in standalone unit tests.
- */
-function getValidatedData(res, property, schema, fallbackData, errorClass) {
-  return res?.locals?.validated?.[property] || validate(schema, fallbackData, { errorClass });
-}
 
 /**
  * GET /api/admin/prompt
@@ -27,7 +20,7 @@ export function getPrompt(req, res, next) {
  */
 export function updatePrompt(req, res, next) {
   try {
-    const { prompt } = getValidatedData(res, 'body', updatePromptSchema, req.body, promptsService.PromptServiceError);
+    const { prompt } = getValidatedData(res, 'body', updateSystemPromptSchema, req.body, promptsService.PromptServiceError);
     const result = promptsService.saveSystemPrompt(prompt);
     res.json({
       success: true,

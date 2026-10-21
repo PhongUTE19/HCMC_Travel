@@ -2,7 +2,10 @@ import React, { useRef } from 'react';
 import { UI_LABELS, FILE_EXTENSIONS, UI_UNITS, PAGINATION } from '../../constants';
 import { formatFileSize } from '../../utils/formatters';
 import { useSearch, useSort, usePagination } from '../../hooks';
-import { SearchInput, SortableHeader, Pagination } from '../common';
+import SearchInput from '../common/SearchInput';
+import SortableHeader from '../common/SortableHeader';
+import Pagination from '../common/Pagination';
+
 
 export default function DocumentTable({
   documents = [],

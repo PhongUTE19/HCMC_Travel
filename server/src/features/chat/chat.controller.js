@@ -1,9 +1,8 @@
 import * as chatService from './chat.service.js';
 import { SERVER_MESSAGES } from '../../constants/index.js';
 import { chatRequestSchema } from './chat.schema.js';
-import { validate } from '../../shared/middleware/validateRequest.js';
+import { getValidatedData } from '../../shared/middleware/index.js';
 
-export { chatService };
 
 /**
  * Handles user chat POST requests:
@@ -11,16 +10,14 @@ export { chatService };
  * If streaming is requested (via body.stream or Accept: text/event-stream), delegates to chatStream.
  */
 export async function chat(req, res, next) {
-  const validated = res?.locals?.validated?.body;
+  const validated = getValidatedData(res, 'body', chatRequestSchema, req.body, chatService.ChatServiceError);
   const isStream = (validated?.stream ?? req.body?.stream) === true || req.headers?.accept?.includes('text/event-stream');
   if (isStream) {
     return chatStream(req, res, next);
   }
 
   try {
-    const { message } = validated || validate(chatRequestSchema, req.body, {
-      errorClass: chatService.ChatOrchestrationError,
-    });
+    const { message } = validated;
     const result = await chatService.orchestrateChat(message);
     res.json(result);
   } catch (error) {
@@ -35,13 +32,12 @@ export async function chat(req, res, next) {
 export async function chatStream(req, res, next) {
   let validated;
   try {
-    validated = res?.locals?.validated?.body || validate(chatRequestSchema, req.body || {}, {
-      errorClass: chatService.ChatOrchestrationError,
-    });
+    validated = getValidatedData(res, 'body', chatRequestSchema, req.body || {}, chatService.ChatServiceError);
   } catch (validationError) {
     // Failures before stream starts are propagated to centralized error middleware
     return next(validationError);
   }
+
 
   const { message } = validated;
 

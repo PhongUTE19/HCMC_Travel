@@ -1,10 +1,7 @@
 import React from 'react';
 import { UI_LABELS } from '../../../constants';
+import { formatNumber } from '../../../utils/formatters';
 
-function formatNumber(num) {
-  if (num === null || num === undefined) return '0';
-  return Number(num).toLocaleString();
-}
 
 export default function AnalyticsKpiCards({ overview }) {
   if (!overview) return null;

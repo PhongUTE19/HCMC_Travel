@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '../context/ToastContext';
-import { streamChatMessage } from '../services/userApi';
+import { streamChatMessage } from '../services/chatApi';
 import { APP_MESSAGES, STATUS_KEYS } from '../constants';
 
 /**
@@ -137,10 +137,10 @@ export function useChat({ health, onRefreshHealth } = {}) {
                 prev.map((msg) =>
                   msg.id === assistantMsgId
                     ? {
-                        ...msg,
-                        sources: metadata?.sources || [],
-                        retrieval: metadata?.retrieval || null,
-                      }
+                      ...msg,
+                      sources: metadata?.sources || [],
+                      retrieval: metadata?.retrieval || null,
+                    }
                     : msg
                 )
               );
@@ -150,10 +150,10 @@ export function useChat({ health, onRefreshHealth } = {}) {
                 prev.map((msg) =>
                   msg.id === assistantMsgId
                     ? {
-                        ...msg,
-                        content: msg.content + text,
-                        isThinking: false,
-                      }
+                      ...msg,
+                      content: msg.content + text,
+                      isThinking: false,
+                    }
                     : msg
                 )
               );
@@ -163,13 +163,13 @@ export function useChat({ health, onRefreshHealth } = {}) {
                 prev.map((msg) =>
                   msg.id === assistantMsgId
                     ? {
-                        ...msg,
-                        sources: doneData?.sources || msg.sources,
-                        retrieval: doneData?.retrieval || msg.retrieval,
-                        isStreaming: false,
-                        isThinking: false,
-                        isInterrupted: false,
-                      }
+                      ...msg,
+                      sources: doneData?.sources || msg.sources,
+                      retrieval: doneData?.retrieval || msg.retrieval,
+                      isStreaming: false,
+                      isThinking: false,
+                      isInterrupted: false,
+                    }
                     : msg
                 )
               );

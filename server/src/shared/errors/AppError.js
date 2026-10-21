@@ -31,3 +31,39 @@ export class ValidationError extends AppError {
     super(message, statusCode);
   }
 }
+
+/**
+ * Operational error thrown when a requested route or entity is not found (404).
+ */
+export class NotFoundError extends AppError {
+  constructor(message = 'Resource not found.', statusCode = HTTP_STATUS.NOT_FOUND) {
+    super(message, statusCode);
+  }
+}
+
+/**
+ * Operational error thrown when authentication credentials are required or invalid (401).
+ */
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Authentication required.', statusCode = HTTP_STATUS.UNAUTHORIZED) {
+    super(message, statusCode);
+  }
+}
+
+/**
+ * Operational error thrown when an authenticated user lacks permission for a resource (403).
+ */
+export class ForbiddenError extends AppError {
+  constructor(message = 'Access forbidden.', statusCode = HTTP_STATUS.FORBIDDEN) {
+    super(message, statusCode);
+  }
+}
+
+/**
+ * Operational error thrown when request rate limits are exceeded (429).
+ */
+export class TooManyRequestsError extends AppError {
+  constructor(message = 'Too many requests.', statusCode = HTTP_STATUS.TOO_MANY_REQUESTS) {
+    super(message, statusCode);
+  }
+}

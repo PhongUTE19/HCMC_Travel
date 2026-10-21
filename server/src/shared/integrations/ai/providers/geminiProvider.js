@@ -425,7 +425,4 @@ export const geminiProvider = {
   embedText,
   generateAnswer,
   generateAnswerStream,
-  validateStructuredOutput,
 };
-
-export { validateStructuredOutput };

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchAdminStatus, triggerIndexing } from '../services/adminApi';
+import { fetchAdminStatus, triggerIndexing } from '../services/knowledgeBaseApi';
 import { APP_MESSAGES } from '../constants';
 
 /**

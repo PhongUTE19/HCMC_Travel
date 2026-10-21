@@ -1,7 +1,7 @@
 import express from 'express';
 import documentsRouter from '../features/documents/documents.routes.js';
-import promptsRouter from '../features/prompts/prompts.routes.js';
-import knowledgeRouter from '../features/knowledge/knowledge.routes.js';
+import promptsRouter from '../features/systemPrompt/systemPrompt.routes.js';
+import knowledgeRouter from '../features/knowledgeBase/knowledgeBase.routes.js';
 import analyticsRouter from '../features/analytics/analytics.routes.js';
 
 const router = express.Router();
