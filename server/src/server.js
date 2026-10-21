@@ -4,6 +4,7 @@ import { config } from './config.js';
 import { initVectorStore, getVectorStoreCount } from './features/knowledge/vectorStore.js';
 import adminRouter from './routes/adminRoute.js';
 import chatRouter from './features/chat/chat.routes.js';
+import expenseRouter from './features/expenses/expenses.routes.js';
 import { STATUS_KEYS, HTTP_STATUS } from './constants/index.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
 
@@ -16,6 +17,7 @@ app.use(express.json());
 // Mounted API routes
 app.use('/api/admin', adminRouter);
 app.use('/api/user', chatRouter);
+app.use('/api', expenseRouter);
 
 // Health check endpoint (queries vector database count)
 app.get('/api/health', async (req, res) => {
