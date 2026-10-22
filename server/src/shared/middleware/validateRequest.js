@@ -10,7 +10,7 @@ import { HTTP_STATUS } from '../../constants/index.js';
  * Invariants:
  * 1. Never leaks raw Zod issue objects, stack traces, or credentials to clients.
  * 2. Maps to HTTP 400 Bad Request by default.
- * 3. Supports injecting domain error classes (e.g. ChatOrchestrationError, DocumentServiceError)
+ * 3. Supports injecting domain error classes (e.g. ChatServiceError, DocumentServiceError)
  *    to preserve backward compatibility with existing tests and error catchers.
  * 
  * @template T

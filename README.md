@@ -140,37 +140,51 @@ npm run docker:down
 
 ## Testing & Quality Assurance
 
-The project includes unit, schema, regression, and live integration tests:
+The project separates tests into offline unit tests, mock/ephemeral integration tests, and live RAG acceptance evaluations:
 
-### 1. Default Unit & Component Tests (Offline, No API Costs)
+### 1. Automated Test Suites (Offline, Zero API Costs)
 ```bash
+# Run all automated unit and integration tests
 npm test
-```
-Runs the core RAG test suite (`test/rag.test.js`) verifying chunking, table preservation, cosine math, guardrails, SSE streaming, and error handling.
 
-### 2. Dedicated Feature Test Suites
-```bash
-# AI provider abstraction test suite
-node --test test/aiProvider.test.js
+# Run unit tests only (tests/unit/)
+npm run test:unit
 
-# Analytics repository, writer, and telemetry test suite
-node --test test/analytics.test.js
-
-# Client collection utilities (pagination, search, sorting)
-node --test test/collectionUtils.test.js
-
-# Backend and client validation test suites
-node --test test/validation.test.js
-node --test test/tableUtils.test.js
-```
-
-### 3. Live Integration Tests (Requires Active Cloud Credentials)
-```bash
+# Run integration tests only (tests/integration/)
 npm run test:integration
 ```
-Runs live end-to-end queries against Qdrant Cloud and Gemini, testing tuition questions, Section 11 installment overrides, make-up exam fees, and out-of-scope refusals.
 
-### 4. Run All Test Suites
+### 2. Dedicated Feature Unit Tests
+```bash
+node --test tests/unit/aiProvider.test.js
+node --test tests/unit/analytics.test.js
+node --test tests/unit/knowledgeBase.test.js
+node --test tests/unit/collectionUtils.test.js
+node --test tests/unit/clientValidation.test.js
+node --test tests/unit/backendValidation.test.js
+node --test tests/unit/documents.test.js
+node --test tests/unit/systemPrompt.test.js
+node --test tests/unit/guardrails.test.js
+node --test tests/unit/middleware.test.js
+node --test tests/unit/errors.test.js
+node --test tests/unit/textReveal.test.js
+```
+
+### 3. Dedicated Integration Tests (Mocked/Ephemeral Server)
+```bash
+node --test tests/integration/apiRoutes.test.js
+node --test tests/integration/chatOrchestration.test.js
+node --test tests/integration/chatStreaming.test.js
+node --test tests/integration/indexingWorkflow.test.js
+```
+
+### 4. Live RAG Acceptance Evaluations (Requires Cloud Credentials)
+```bash
+npm run eval:rag
+```
+Runs 11 end-to-end acceptance evaluations against live Qdrant and Gemini models via `evals/rag/runner.js`, evaluating tuition rules, Section 11 overrides, make-up exam fees, out-of-scope refusals, and diagnostic metadata. Results are written to `test-results.json`.
+
+### 5. Run All Tests and Evaluations
 ```bash
 npm run test:all
 ```

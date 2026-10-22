@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { z } from '../server/node_modules/zod/index.js';
+import { z } from '../../server/node_modules/zod/index.js';
 import {
   detectPromptInjection,
   sanitizeGeneratedOutput,
@@ -11,10 +11,10 @@ import {
   formatSafeErrorMessage,
   AIResponseTimeoutError,
   AIResponseValidationError,
-} from '../server/src/shared/guardrails/index.js';
-import { SERVER_MESSAGES, GUARDRAIL_CONFIG, HTTP_STATUS } from '../server/src/constants/index.js';
-import { executeRAG } from '../server/src/features/knowledge/ragService.js';
-import { orchestrateChat, orchestrateChatStream, ChatOrchestrationError } from '../server/src/features/chat/chat.service.js';
+} from '../../server/src/shared/guardrails/index.js';
+import { SERVER_MESSAGES, GUARDRAIL_CONFIG, HTTP_STATUS } from '../../server/src/constants/index.js';
+import { executeRAG } from '../../server/src/features/knowledgeBase/ragService.js';
+import { orchestrateChat, orchestrateChatStream, ChatServiceError } from '../../server/src/features/chat/chat.service.js';
 
 describe('Guardrails Comprehensive Test Suite', () => {
   describe('1. Prompt Injection Guardrails', () => {

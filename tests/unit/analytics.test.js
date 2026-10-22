@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {
   getSupabaseClient,
   isSupabaseConfigured,
-} from '../server/src/shared/integrations/index.js';
+} from '../../server/src/shared/integrations/index.js';
 import {
   createUsageTracker,
   InMemoryUsageStore,
@@ -29,7 +29,7 @@ import {
   calculateDistributions,
   formatRecordForDb,
   formatDbToRecord,
-} from '../server/src/features/analytics/index.js';
+} from '../../server/src/features/analytics/index.js';
 
 describe('AI Usage Analytics Suite', () => {
   let tracker;

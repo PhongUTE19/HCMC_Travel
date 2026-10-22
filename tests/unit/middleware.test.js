@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatRequestSchema } from '../server/src/features/chat/chat.schema.js';
+import { chatRequestSchema } from '../../server/src/features/chat/chat.schema.js';
 import {
   getValidatedData,
   validateRequest,
@@ -13,7 +13,7 @@ import {
   apiRateLimiter,
   chatRateLimiter,
   indexingRateLimiter,
-} from '../server/src/shared/middleware/index.js';
+} from '../../server/src/shared/middleware/index.js';
 
 import {
   AppError,
@@ -22,8 +22,8 @@ import {
   UnauthorizedError,
   ForbiddenError,
   TooManyRequestsError,
-} from '../server/src/shared/errors/index.js';
-import { HTTP_STATUS } from '../server/src/constants/index.js';
+} from '../../server/src/shared/errors/index.js';
+import { HTTP_STATUS } from '../../server/src/constants/index.js';
 
 describe('Shared Middleware Suite', () => {
   describe('1. getValidatedData Standardized Consumption', () => {

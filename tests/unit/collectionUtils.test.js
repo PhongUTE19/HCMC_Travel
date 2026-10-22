@@ -7,11 +7,10 @@ import {
   sortItems,
   getNextSortDirection,
   getNestedValue,
-} from '../client/src/utils/tableUtils.js';
-import { formatNumber, formatTimestamp } from '../client/src/utils/formatters.js';
+} from '../../client/src/utils/collectionUtils.js';
+import { formatNumber, formatTimestamp } from '../../client/src/utils/formatters.js';
 
-
-describe('Table Utilities Suite', () => {
+describe('Collection and Table Utilities Suite', () => {
   describe('calculatePagination', () => {
     it('calculates correct metrics for standard pagination', () => {
       const res = calculatePagination({ total: 45, page: 2, limit: 10 });
@@ -193,7 +192,6 @@ describe('Table Utilities Suite', () => {
       };
 
       const sorted = sortItems(items, 'customLength', 'asc', comparators);
-      // 'Beta' (4), 'Gamma' (5), 'Alpha' (5), 'Delta' (5)
       assert.strictEqual(sorted[0].name, 'Beta');
     });
 
@@ -224,7 +222,6 @@ describe('Table Utilities Suite', () => {
 
   describe('formatNumber', () => {
     it('formats valid numbers with locale string', () => {
-
       assert.strictEqual(formatNumber(1000), (1000).toLocaleString());
       assert.strictEqual(formatNumber(0), '0');
     });

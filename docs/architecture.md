@@ -352,13 +352,29 @@ Student_Handbook/
 ├── docs/
 │   ├── architecture.md                   # Detailed architecture documentation
 │   └── READING_GUIDE.md                  # Quick-reference feature navigation guide
-├── test/                                 # Automated test suites
-│   ├── aiProvider.test.js
-│   ├── analytics.test.js
-│   ├── collectionUtils.test.js
-│   ├── rag.test.js
-│   ├── tableUtils.test.js
-│   └── validation.test.js
+├── tests/                                # Automated offline test suites
+│   ├── unit/                             # Focused unit tests (zero external dependencies)
+│   │   ├── aiProvider.test.js
+│   │   ├── analytics.test.js
+│   │   ├── backendValidation.test.js
+│   │   ├── clientValidation.test.js
+│   │   ├── collectionUtils.test.js
+│   │   ├── documents.test.js
+│   │   ├── errors.test.js
+│   │   ├── guardrails.test.js
+│   │   ├── knowledgeBase.test.js
+│   │   ├── middleware.test.js
+│   │   ├── systemPrompt.test.js
+│   │   └── textReveal.test.js
+│   └── integration/                      # Mock & ephemeral server integration tests
+│       ├── apiRoutes.test.js
+│       ├── chatOrchestration.test.js
+│       ├── chatStreaming.test.js
+│       └── indexingWorkflow.test.js
+├── evals/                                # RAG evaluation datasets and runners
+│   └── rag/
+│       ├── cases.js                      # Curated acceptance evaluation dataset
+│       └── runner.js                     # Live model evaluation harness & reporter
 ├── docker-compose.yml                    # Container orchestrator
 ├── .env.example                          # Environment template
 ├── package.json                          # Root orchestration scripts

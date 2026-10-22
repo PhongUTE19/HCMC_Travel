@@ -86,7 +86,7 @@ The system is a RAG assistant with a React frontend, an Express backend organize
 ## 4. Cross-Cutting Infrastructure
 
 * **Validation**: Centralized Zod schemas in each feature directory (`*.schemas.js`). Always read validated data from `res.locals.validated` in controllers.
-* **Error Handling**: Throw `AppError` (or domain subclasses like `PromptServiceError`, `ChatOrchestrationError`) with explicit HTTP status codes; unhandled exceptions are safely masked as HTTP 500.
+* **Error Handling**: Throw `AppError` (or domain subclasses like `PromptServiceError`, `ChatServiceError`) with explicit HTTP status codes; unhandled exceptions are safely masked as HTTP 500.
 * **Configuration**: Defined in `server/src/constants/config.js` and loaded through `server/src/config.js`.
 
 ---
@@ -97,10 +97,11 @@ The system is a RAG assistant with a React frontend, an Express backend organize
 # Run unit & mock tests (offline)
 npm test
 
-# Run feature-specific suites
-node --test test/aiProvider.test.js
-node --test test/analytics.test.js
-node --test test/collectionUtils.test.js
+# Run unit suites
+npm run test:unit
+
+# Run integration suites
+npm run test:integration
 
 # Verify client build
 npm --prefix client run build

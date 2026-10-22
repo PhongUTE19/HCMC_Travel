@@ -7,7 +7,7 @@ import {
   generateAnswerStream,
   embedText,
   geminiProvider,
-} from '../server/src/shared/integrations/ai/index.js';
+} from '../../server/src/shared/integrations/ai/index.js';
 
 describe('AI Provider Abstraction Suite', () => {
   it('resolves the default configured AI provider as gemini', () => {
