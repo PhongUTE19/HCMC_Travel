@@ -4,7 +4,7 @@
 
 body {
   font-family: var(--font-family-sans);
-  background-color: var(--color-bg-page);
+  background: var(--color-bg-page);
   color: var(--color-text-primary);
   padding: var(--space-6) var(--space-4);
   line-height: var(--line-height-normal);

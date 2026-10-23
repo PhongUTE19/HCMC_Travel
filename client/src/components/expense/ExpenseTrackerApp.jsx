@@ -106,7 +106,11 @@ export default function ExpenseTrackerApp() {
         </div>}
         {view === 'categories' && <div className="coming-soon"><h2>Categories are a secondary flow</h2><p>The final-project core is receipt-to-transaction and transaction CRUD. This page stays out of the primary demo flow until the core is validated.</p></div>}
         {view === 'transactions' && <>
-          <div className="summary-grid"><article><span>Income on this page</span><strong>{formatMoney(summary.income)}</strong></article><article><span>Expenses on this page</span><strong>{formatMoney(summary.expense)}</strong></article><article><span>Balance on this page</span><strong>{formatMoney(summary.income - summary.expense)}</strong></article></div>
+          <section className="summary-grid" aria-label="Transaction page summary">
+            <article className="summary-card summary-card--income"><span>Income on this page</span><strong>{formatMoney(summary.income)}</strong><small>Funds recorded in this result set</small></article>
+            <article className="summary-card summary-card--expense"><span>Expenses on this page</span><strong>{formatMoney(summary.expense)}</strong><small>Spending recorded in this result set</small></article>
+            <article className="summary-card summary-card--balance"><span>Balance on this page</span><strong>{formatMoney(summary.income - summary.expense)}</strong><small>Income less expenses shown</small></article>
+          </section>
           <TransactionTable data={data} filters={filters} loading={loading} onChangeFilters={setFilters} onEdit={setEditingTransaction} onDelete={deleteTransaction} onSearch={loadTransactions} />
         </>}
       </section>

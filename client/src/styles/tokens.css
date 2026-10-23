@@ -39,7 +39,11 @@
 
   /* Palette: Base */
   --color-white: #ffffff;
-  --color-focus-ring-alpha: rgba(2, 132, 199, 0.25);
+  --color-focus-ring-alpha: rgba(0, 0, 0, 0.28);
+  --color-overlay: rgba(0, 0, 0, 0.56);
+  --gradient-brand: #09090b;
+  --gradient-brand-hover: #27272a;
+  --gradient-sidebar: rgba(9, 9, 11, 0.88);
 
   /* Spacing Scale (4px-based grid + compact sub-unit) */
   --space-0-5: 2px;
@@ -48,6 +52,7 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
+  --space-8: 32px;
 
   /* Typography: Font Families */
   --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -86,14 +91,16 @@
   --border-width-accent: 4px;
 
   /* Shadows */
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 4px 12px rgba(24, 24, 27, 0.06);
+  --shadow-card-hover: 0 14px 28px rgba(0, 0, 0, 0.16);
+  --shadow-button-hover: 0 8px 18px rgba(0, 0, 0, 0.22);
 
   /* ------------------------------------------------------------------------
      2. Semantic Tokens (Role-Based References)
      ------------------------------------------------------------------------ */
 
   /* Surfaces & Backgrounds */
-  --color-bg-page: var(--color-slate-50);
+  --color-bg-page: linear-gradient(135deg, #ffffff 0%, #fafbfe 56%, #eef2f8 100%);
   --color-surface: var(--color-white);
   --color-surface-subtle: var(--color-slate-50);
   --color-surface-muted: var(--color-slate-100);
@@ -110,8 +117,8 @@
   --color-focus-ring: var(--color-focus-ring-alpha);
 
   /* Primary Brand & Interactive */
-  --color-primary: var(--color-sky-600);
-  --color-primary-hover: var(--color-sky-700);
+  --color-primary: #09090b;
+  --color-primary-hover: #27272a;
   --color-primary-border-light: var(--color-sky-200);
 
   /* Status: Success */
@@ -136,4 +143,27 @@
   /* Reusable Semantic Border Presets */
   --border-default: var(--border-width-thin) solid var(--color-border);
   --border-dashed: var(--border-width-thin) dashed var(--color-border);
+
+  --button-primary-bg: var(--gradient-brand);
+  --button-primary-bg-hover: var(--gradient-brand-hover);
+  --button-primary-fg: var(--color-text-inverse);
+  --button-secondary-bg: var(--color-surface);
+  --button-secondary-fg: var(--color-text-secondary);
+  --button-radius: var(--radius-lg);
+  --button-min-height: 40px;
+  --field-bg: var(--color-surface);
+  --field-border-focus: var(--color-primary);
+  --field-radius: var(--radius-md);
+  --color-income: var(--color-green-700);
+  --color-expense: var(--color-red-700);
+  --color-sidebar: #09090b;
+  --color-sidebar-muted: #cbd5e1;
+  --color-sidebar-active: rgba(255, 255, 255, 0.16);
+  --color-sidebar-fg: var(--color-white);
+  --color-sidebar-avatar: rgba(255, 255, 255, 0.2);
+  --glass-surface: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --workspace-rail-border: rgba(255, 255, 255, 0.22);
+  --workspace-rail-hover: rgba(255, 255, 255, 0.1);
+  --shell-sidebar-width: 280px;
 }

@@ -10,23 +10,26 @@ export default function TransactionTable({ data, filters, loading, onChangeFilte
 
   return (
     <section className="transaction-panel">
+      <div className="panel-heading">
+        <div><h2>All transactions</h2><p>Review activity and refine the current result set.</p></div>
+        <span className="result-count" aria-live="polite">{data.total} total</span>
+      </div>
       <div className="filters">
-        <input
+        <label className="filter-field filter-search"><span>Search</span><input
           value={filters.search}
           onChange={(event) => onChangeFilters((current) => ({ ...current, search: event.target.value, page: '1' }))}
           onKeyDown={(event) => event.key === 'Enter' && onSearch()}
           placeholder="Search merchant or note"
-        />
-        <select value={filters.type} onChange={(event) => onChangeFilters((current) => ({ ...current, type: event.target.value, page: '1' }))}>
-          <option value="">All types</option><option value="expense">Expenses</option><option value="income">Income</option>
-        </select>
-        <select value={filters.category} onChange={(event) => onChangeFilters((current) => ({ ...current, category: event.target.value, page: '1' }))}>
+        /></label>
+        <label className="filter-field"><span>Type</span><select value={filters.type} onChange={(event) => onChangeFilters((current) => ({ ...current, type: event.target.value, page: '1' }))}>
+          <option value="">All types</option><option value="expense">Expenses</option><option value="income">Income</option></select></label>
+        <label className="filter-field"><span>Category</span><select value={filters.category} onChange={(event) => onChangeFilters((current) => ({ ...current, category: event.target.value, page: '1' }))}>
           <option value="">All categories</option>
           {EXPENSE_CATEGORIES.map((category) => <option key={category}>{category}</option>)}
-        </select>
-        <input type="date" value={filters.from} onChange={(event) => onChangeFilters((current) => ({ ...current, from: event.target.value, page: '1' }))} />
-        <input type="date" value={filters.to} onChange={(event) => onChangeFilters((current) => ({ ...current, to: event.target.value, page: '1' }))} />
-        <button className="secondary-button" onClick={onSearch}>Search</button>
+        </select></label>
+        <label className="filter-field"><span>From date</span><input type="date" value={filters.from} onChange={(event) => onChangeFilters((current) => ({ ...current, from: event.target.value, page: '1' }))} /></label>
+        <label className="filter-field"><span>To date</span><input type="date" value={filters.to} onChange={(event) => onChangeFilters((current) => ({ ...current, to: event.target.value, page: '1' }))} /></label>
+        <div className="filter-actions"><button className="secondary-button" onClick={onSearch}>Apply filters</button></div>
       </div>
 
       <div className="table-wrap">

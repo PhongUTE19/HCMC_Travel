@@ -16,11 +16,13 @@ export default function ExpenseSidebar({ activeView, onNavigate }) {
       </div>
 
       <nav aria-label="Expense tracker navigation">
+        <p className="sidebar-section-label">Workspace</p>
         {navigationItems.map(([view, label]) => (
           <button
             className={activeView === view ? 'active' : ''}
             key={view}
             onClick={() => onNavigate(view)}
+            aria-current={activeView === view ? 'page' : undefined}
           >
             {label}
           </button>
