@@ -1,4 +1,43 @@
 import { UnauthorizedError } from '../errors/index.js';
+import { createSupabaseAuthClient } from '../integrations/supabase.js';
+
+let tokenVerifier = null;
+
+function extractBearerToken(authHeader) {
+  if (!authHeader || !/^Bearer\s+\S+$/i.test(authHeader)) {
+    throw new UnauthorizedError('Authentication token is required.');
+  }
+  return authHeader.replace(/^Bearer\s+/i, '').trim();
+}
+
+async function verifyWithSupabase(token) {
+  const client = createSupabaseAuthClient();
+  if (!client) {
+    throw new UnauthorizedError('Authentication is not configured.');
+  }
+  const { data, error } = await client.auth.getUser(token);
+  if (error || !data?.user?.id) {
+    throw new UnauthorizedError('Invalid or expired authentication token.');
+  }
+  return data.user;
+}
+
+async function verifyToken(token) {
+  return (tokenVerifier || verifyWithSupabase)(token);
+}
+
+function toVerifiedIdentity(user, token) {
+  const requestedRole = user.app_metadata?.role;
+  // Only a verified app_metadata role may elevate access.  All other users
+  // deliberately receive the least-privileged role.
+  const role = requestedRole === 'admin' ? 'admin' : 'user';
+  return { id: user.id, email: user.email || '', role, token };
+}
+
+// Test seam: production always uses Supabase Auth's getUser verification.
+export function setTokenVerifierForTests(verifier) {
+  tokenVerifier = verifier;
+}
 
 /**
  * Authentication verification middleware.
@@ -11,25 +50,14 @@ import { UnauthorizedError } from '../errors/index.js';
  * @param {import('express').Response} res - Express response
  * @param {import('express').NextFunction} next - Express next function
  */
-export function authenticate(req, res, next) {
-  const authHeader = req.headers?.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new UnauthorizedError('Authentication token is required.'));
+export async function authenticate(req, res, next) {
+  try {
+    const token = extractBearerToken(req.headers?.authorization);
+    req.user = toVerifiedIdentity(await verifyToken(token), token);
+    next();
+  } catch (error) {
+    next(error instanceof UnauthorizedError ? error : new UnauthorizedError('Invalid or expired authentication token.'));
   }
-
-  const token = authHeader.slice(7).trim();
-  if (!token) {
-    return next(new UnauthorizedError('Invalid authentication token format.'));
-  }
-
-  // Hook point: verify JWT signature or validate against auth provider session (e.g. supabase.auth.getUser)
-  // Example populated user context:
-  req.user = {
-    token,
-    // id, email, role will be populated by the provider integration
-  };
-
-  next();
 }
 
 /**
@@ -41,13 +69,13 @@ export function authenticate(req, res, next) {
  * @param {import('express').Response} res - Express response
  * @param {import('express').NextFunction} next - Express next function
  */
-export function optionalAuthenticate(req, res, next) {
-  const authHeader = req.headers?.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    if (token) {
-      req.user = { token };
-    }
+export async function optionalAuthenticate(req, res, next) {
+  if (!req.headers?.authorization) return next();
+  try {
+    const token = extractBearerToken(req.headers.authorization);
+    req.user = toVerifiedIdentity(await verifyToken(token), token);
+  } catch {
+    // Optional auth never turns an otherwise public endpoint into a 401.
   }
   next();
 }

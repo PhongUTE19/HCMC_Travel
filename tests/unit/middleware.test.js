@@ -24,6 +24,7 @@ import {
   TooManyRequestsError,
 } from '../../server/src/shared/errors/index.js';
 import { HTTP_STATUS } from '../../server/src/constants/index.js';
+import { setTokenVerifierForTests } from '../../server/src/shared/middleware/authenticate.js';
 
 describe('Shared Middleware Suite', () => {
   describe('1. getValidatedData Standardized Consumption', () => {
@@ -102,28 +103,29 @@ describe('Shared Middleware Suite', () => {
 
 
   describe('3. authenticate & optionalAuthenticate Middleware', () => {
-    it('authenticate: rejects missing authorization header with UnauthorizedError', () => {
+    it('authenticate: rejects missing authorization header with UnauthorizedError', async () => {
       const req = { headers: {} };
       let err;
-      authenticate(req, {}, (e) => { err = e; });
+      await authenticate(req, {}, (e) => { err = e; });
 
       assert.ok(err instanceof UnauthorizedError);
       assert.equal(err.statusCode, HTTP_STATUS.UNAUTHORIZED);
     });
 
-    it('authenticate: rejects non-Bearer header format with UnauthorizedError', () => {
+    it('authenticate: rejects non-Bearer header format with UnauthorizedError', async () => {
       const req = { headers: { authorization: 'Basic 12345' } };
       let err;
-      authenticate(req, {}, (e) => { err = e; });
+      await authenticate(req, {}, (e) => { err = e; });
 
       assert.ok(err instanceof UnauthorizedError);
       assert.equal(err.statusCode, HTTP_STATUS.UNAUTHORIZED);
     });
 
-    it('authenticate: attaches verified user and calls next when Bearer token is provided', () => {
+    it('authenticate: verifies a Supabase identity and ignores user_metadata roles', async () => {
+      setTokenVerifierForTests(async () => ({ id: 'user-1', email: 'user@example.com', app_metadata: {}, user_metadata: { role: 'admin' } }));
       const req = { headers: { authorization: 'Bearer test-valid-jwt-token' } };
       let nextCalled = false;
-      authenticate(req, {}, (e) => {
+      await authenticate(req, {}, (e) => {
         assert.equal(e, undefined);
         nextCalled = true;
       });
@@ -131,18 +133,23 @@ describe('Shared Middleware Suite', () => {
       assert.equal(nextCalled, true);
       assert.ok(req.user);
       assert.equal(req.user.token, 'test-valid-jwt-token');
+      assert.equal(req.user.role, 'user');
+      setTokenVerifierForTests(null);
     });
 
-    it('optionalAuthenticate: populates req.user if Bearer token present without failing if missing', () => {
+    it('optionalAuthenticate: only populates req.user after verification', async () => {
+      setTokenVerifierForTests(async () => ({ id: 'user-2', email: 'optional@example.com', app_metadata: { role: 'admin' } }));
       const reqWithToken = { headers: { authorization: 'Bearer opt-token' } };
-      optionalAuthenticate(reqWithToken, {}, () => {});
+      await optionalAuthenticate(reqWithToken, {}, () => {});
       assert.equal(reqWithToken.user?.token, 'opt-token');
+      assert.equal(reqWithToken.user?.role, 'admin');
 
       const reqWithoutToken = { headers: {} };
       let nextCalled = false;
-      optionalAuthenticate(reqWithoutToken, {}, () => { nextCalled = true; });
+      await optionalAuthenticate(reqWithoutToken, {}, () => { nextCalled = true; });
       assert.equal(nextCalled, true);
       assert.equal(reqWithoutToken.user, undefined);
+      setTokenVerifierForTests(null);
     });
   });
 

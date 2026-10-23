@@ -32,3 +32,39 @@ export function getSupabaseClient() {
 export function isSupabaseConfigured() {
   return Boolean(config.supabaseUrl && config.supabaseServiceKey);
 }
+
+/**
+ * Returns a short-lived client authenticated as the verified request user.
+ * Never use the service-role client for ordinary user data: it bypasses RLS.
+ *
+ * @param {string} accessToken A token already verified by authenticate.
+ * @returns {import('@supabase/supabase-js').SupabaseClient|null}
+ */
+export function createUserScopedSupabaseClient(accessToken) {
+  if (!config.supabaseUrl || !config.supabaseAnonKey || !accessToken) return null;
+
+  return createClient(config.supabaseUrl, config.supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  });
+}
+
+/**
+ * Auth client used only to verify a bearer token with Supabase Auth.
+ * This uses the public anon key; getUser() validates the token server-side.
+ */
+export function createSupabaseAuthClient() {
+  if (!config.supabaseUrl || !config.supabaseAnonKey) return null;
+  return createClient(config.supabaseUrl, config.supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+export function isSupabaseAuthConfigured() {
+  return Boolean(config.supabaseUrl && config.supabaseAnonKey);
+}

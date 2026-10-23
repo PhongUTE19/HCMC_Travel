@@ -2,9 +2,11 @@ import express from 'express';
 import * as controller from './expenses.controller.js';
 import { validateRequest } from '../../shared/middleware/validateRequest.js';
 import { receiptSchema, transactionQuerySchema, transactionSchema } from './expenses.schemas.js';
+import { authenticate } from '../../shared/middleware/authenticate.js';
 const router = express.Router();
 
 // Route chỉ định tuyến HTTP method và path đến controller tương ứng.
+router.use(authenticate);
 router.get('/transactions', validateRequest({ query: transactionQuerySchema }), controller.list);
 router.get('/transactions/:id', controller.get);
 router.post('/transactions', validateRequest({ body: transactionSchema }), controller.create);

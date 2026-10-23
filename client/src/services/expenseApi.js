@@ -1,7 +1,19 @@
+import { getAccessToken, signOut } from './supabaseAuth';
+
 const request = async (url, options = {}) => {
-  const response = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+  const token = await getAccessToken();
+  const headers = new Headers(options.headers);
+  headers.set('Content-Type', 'application/json');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(url, { ...options, headers });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || 'Request failed.');
+  if (!response.ok) {
+    if (response.status === 401) {
+      await signOut();
+      window.dispatchEvent(new CustomEvent('spendwise:unauthorized'));
+    }
+    throw new Error(body.error || 'Request failed.');
+  }
   return body;
 };
 export const expenseApi = {

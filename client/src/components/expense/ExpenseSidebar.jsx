@@ -4,7 +4,9 @@ const navigationItems = [
   ['categories', 'Categories'],
 ];
 
-export default function ExpenseSidebar({ activeView, onNavigate }) {
+export default function ExpenseSidebar({ activeView, onNavigate, user, onSignOut }) {
+  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Account';
+  const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   return (
     <aside className="expense-sidebar">
       <div className="brand">
@@ -30,11 +32,12 @@ export default function ExpenseSidebar({ activeView, onNavigate }) {
       </nav>
 
       <div className="sidebar-user">
-        <span>NU</span>
+        <span>{initials}</span>
         <div>
-          <strong>Demo user</strong>
+          <strong>{displayName}</strong>
           <small>Personal workspace</small>
         </div>
+        <button type="button" className="sidebar-signout" onClick={onSignOut}>Sign out</button>
       </div>
     </aside>
   );

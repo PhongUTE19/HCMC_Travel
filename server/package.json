@@ -6,7 +6,8 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",
-    "index": "node src/features/knowledge/indexer.js"
+    "index": "node src/features/knowledge/indexer.js",
+    "set-role": "node scripts/set-user-role.js"
   },
   "keywords": [
     "student",

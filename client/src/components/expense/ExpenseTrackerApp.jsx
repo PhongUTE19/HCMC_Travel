@@ -17,7 +17,7 @@ function pageTitle(view) {
   return { transactions: 'Transactions', receipt: 'Scan a receipt', categories: 'Categories' }[view];
 }
 
-export default function ExpenseTrackerApp() {
+export default function ExpenseTrackerApp({ user, onSignOut }) {
   const [view, setView] = useState('transactions');
   const [data, setData] = useState({ transactions: [], total: 0, page: 1, pageSize: 10 });
   const [filters, setFilters] = useState(INITIAL_FILTERS);
@@ -91,7 +91,7 @@ export default function ExpenseTrackerApp() {
 
   return (
     <main className="expense-shell">
-      <ExpenseSidebar activeView={view} onNavigate={setView} />
+      <ExpenseSidebar activeView={view} onNavigate={setView} user={user} onSignOut={onSignOut} />
       <section className="expense-main">
         <header className="expense-header">
           <div><p className="eyebrow">PERSONAL FINANCE</p><h1>{pageTitle(view)}</h1></div>

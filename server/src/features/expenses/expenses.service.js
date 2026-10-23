@@ -1,111 +1,111 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { AppError } from '../../shared/errors/index.js';
 import { HTTP_STATUS } from '../../constants/index.js';
+import { createUserScopedSupabaseClient } from '../../shared/integrations/supabase.js';
 import { EXPENSE_MESSAGES } from './expenses.constants.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const storePath = path.resolve(__dirname, '../../../data/expense-transactions.json');
-const EMPTY_TRANSACTIONS = [];
+const TRANSACTIONS_TABLE = 'expense_transactions';
+let clientFactory = null;
 
-function readStore() {
-  try {
-    return JSON.parse(fs.readFileSync(storePath, 'utf8'));
-  } catch (error) {
-    if (error.code === 'ENOENT') return EMPTY_TRANSACTIONS;
-    throw error;
-  }
+/** @internal Test seam; production creates a fresh RLS-aware client per request. */
+export function setExpenseClientFactoryForTests(factory) { clientFactory = factory; }
+
+function clientFor(user) {
+  const client = clientFactory ? clientFactory(user) : createUserScopedSupabaseClient(user.token);
+  if (!client) throw new AppError('Expense persistence is not configured.', HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  return client;
 }
 
-// Cô lập phần lưu JSON tạm thời để sau này thay bằng database repository.
-function writeStore(transactions) {
-  fs.mkdirSync(path.dirname(storePath), { recursive: true });
-  fs.writeFileSync(storePath, JSON.stringify(transactions, null, 2), 'utf8');
-}
-function makeId() {
-  return `txn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+function databaseError() {
+  // Do not leak PostgREST/schema details to clients.
+  return new AppError('Expense persistence is temporarily unavailable.', HTTP_STATUS.INTERNAL_SERVER_ERROR);
 }
 
-function findOrThrow(id) {
-  const transaction = readStore().find((entry) => entry.id === id);
-  if (!transaction) {
-    throw new AppError(EXPENSE_MESSAGES.TRANSACTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-  }
-  return transaction;
-}
+function notFound() { return new AppError(EXPENSE_MESSAGES.TRANSACTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND); }
 
-export function listTransactions(query) {
-  const { search, type, category, from, to, page, pageSize, sortBy, sortOrder } = query;
-  const normalizedSearch = search.toLowerCase();
-  const filtered = readStore().filter((transaction) => (
-    (!type || transaction.type === type)
-    && (!category || transaction.category === category)
-    && (!from || transaction.date >= from)
-    && (!to || transaction.date <= to)
-    && (!normalizedSearch || `${transaction.merchant} ${transaction.note}`.toLowerCase().includes(normalizedSearch))
-  )).sort((a, b) => {
-    const left = sortBy === 'amount' ? a.amount : a.date;
-    const right = sortBy === 'amount' ? b.amount : b.date;
-    return (left > right ? 1 : left < right ? -1 : 0) * (sortOrder === 'asc' ? 1 : -1);
-  });
-  const start = (page - 1) * pageSize;
+// The public API retains the original camelCase/date shape while the database
+// keeps its established snake_case transaction_date/timestamp columns.
+function toTransaction(row) {
+  if (!row) return row;
   return {
-    transactions: filtered.slice(start, start + pageSize),
-    total: filtered.length,
-    page,
-    pageSize,
+    id: row.id,
+    type: row.type,
+    amount: Number(row.amount),
+    date: row.transaction_date,
+    category: row.category,
+    merchant: row.merchant,
+    note: row.note || '',
+    items: row.items || [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
-export function getTransaction(id) {
-  return findOrThrow(id);
+function toRow(input) {
+  return {
+    type: input.type,
+    amount: input.amount,
+    transaction_date: input.date,
+    category: input.category,
+    merchant: input.merchant,
+    note: input.note || '',
+    items: input.items || [],
+  };
 }
 
-export function createTransaction(input) {
-  const now = new Date().toISOString();
-  const transaction = { id: makeId(), ...input, createdAt: now, updatedAt: now };
-  const transactions = readStore();
-  transactions.push(transaction);
-  writeStore(transactions);
-  return transaction;
-}
+function escapeSearch(value) { return value.replace(/[,%()]/g, '\\$&'); }
 
-export function updateTransaction(id, input) {
-  const transactions = readStore();
-  const index = transactions.findIndex((entry) => entry.id === id);
-  if (index < 0) {
-    throw new AppError(EXPENSE_MESSAGES.TRANSACTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+export async function listTransactions(user, query) {
+  const { search, type, category, from, to, page, pageSize, sortBy, sortOrder } = query;
+  let request = clientFor(user).from(TRANSACTIONS_TABLE).select('*', { count: 'exact' }).eq('user_id', user.id);
+  if (type) request = request.eq('type', type);
+  if (category) request = request.eq('category', category);
+  if (from) request = request.gte('transaction_date', from);
+  if (to) request = request.lte('transaction_date', to);
+  if (search) {
+    const term = `%${escapeSearch(search)}%`;
+    request = request.or(`merchant.ilike.${term},note.ilike.${term}`);
   }
-  transactions[index] = { ...transactions[index], ...input, id, updatedAt: new Date().toISOString() };
-  writeStore(transactions);
-  return transactions[index];
+  const column = sortBy === 'amount' ? 'amount' : 'transaction_date';
+  const start = (page - 1) * pageSize;
+  const { data, count, error } = await request.order(column, { ascending: sortOrder === 'asc' }).range(start, start + pageSize - 1);
+  if (error) throw databaseError();
+  return { transactions: (data || []).map(toTransaction), total: count || 0, page, pageSize };
 }
 
-export function deleteTransaction(id) {
-  const transactions = readStore();
-  const index = transactions.findIndex((entry) => entry.id === id);
-  if (index < 0) {
-    throw new AppError(EXPENSE_MESSAGES.TRANSACTION_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-  }
-  const [deleted] = transactions.splice(index, 1);
-  writeStore(transactions);
-  return deleted;
+export async function getTransaction(user, id) {
+  const { data, error } = await clientFor(user).from(TRANSACTIONS_TABLE).select('*').eq('id', id).eq('user_id', user.id).maybeSingle();
+  if (error) throw databaseError();
+  if (!data) throw notFound();
+  return toTransaction(data);
 }
 
-// Trả về draft an toàn để review trong khi chưa tích hợp AI extraction thật.
-export function createReceiptDraft(file) {
+export async function createTransaction(user, input) {
+  const { data, error } = await clientFor(user).from(TRANSACTIONS_TABLE).insert({ ...toRow(input), user_id: user.id }).select('*').single();
+  if (error) throw databaseError();
+  return toTransaction(data);
+}
+
+export async function updateTransaction(user, id, input) {
+  const { data, error } = await clientFor(user).from(TRANSACTIONS_TABLE).update(toRow(input)).eq('id', id).eq('user_id', user.id).select('*').maybeSingle();
+  if (error) throw databaseError();
+  if (!data) throw notFound();
+  return toTransaction(data);
+}
+
+export async function deleteTransaction(user, id) {
+  const { data, error } = await clientFor(user).from(TRANSACTIONS_TABLE).delete().eq('id', id).eq('user_id', user.id).select('*').maybeSingle();
+  if (error) throw databaseError();
+  if (!data) throw notFound();
+  return toTransaction(data);
+}
+
+// This deliberately remains metadata-only. It neither uploads a file nor
+// invokes an AI provider; authentication only scopes the draft operation.
+export function createReceiptDraft(user, file) {
   return {
     id: `receipt_${Date.now()}`,
     filename: file.filename,
     status: 'draft',
-    extraction: {
-      merchant: '',
-      date: new Date().toISOString().slice(0, 10),
-      amount: '',
-      currency: 'VND',
-      category: 'Other expenses',
-      items: [],
-    },
+    extraction: { merchant: '', date: new Date().toISOString().slice(0, 10), amount: '', currency: 'VND', category: 'Other expenses', items: [] },
   };
 }
