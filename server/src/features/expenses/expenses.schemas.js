@@ -33,7 +33,10 @@ export const budgetSchema = z.object({
 
 export const receiptExtractionSchema = z.object({
   merchant: z.string().trim().max(120).optional().default(""),
-  occurredAt: z.coerce.date().optional(),
+  occurredAt: z.preprocess(
+    (value) => value === null || value === "" ? undefined : value,
+    z.coerce.date().optional()
+  ),
   total: z.coerce.number().positive().optional(),
   currency: z.string().trim().length(3).optional().default("VND"),
   suggestedCategoryId: z.string().optional().nullable(),
