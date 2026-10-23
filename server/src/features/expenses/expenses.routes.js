@@ -1,3 +1,4 @@
+import { asyncHandler } from "../../shared/middleware/asyncHandler.js";
 import express from "express";
 import { validate } from "../../shared/middleware/validateRequest.js";
 import { AppError } from "../../shared/errors/AppError.js";
@@ -12,6 +13,11 @@ import {
 import * as store from "./expenses.store.js";
 
 const router = express.Router();
+
+function addExpenseRoute(method, path, handler) {
+  //các API CRUD sau khi đăng ký qua addExpenseRoute tự chuyển lỗi bất đồng bộ đến middleware xử lý lỗi.
+  router[method](path, asyncHandler(handler));
+}
 
 function currentUserId(req) {
   // OAuth/JWT sẽ gắn user vào request. Header chỉ hỗ trợ lúc phát triển local.
@@ -62,12 +68,12 @@ function sendNoContent(res) {
 
 // ---------- Categories ----------
 
-router.get("/categories", async (req, res) => {
+addExpenseRoute("get", "/categories", async (req, res) => {
   const categories = await store.collection("categories", currentUserId(req));
   res.json({ data: categories });
 });
 
-router.post("/categories", async (req, res) => {
+router.post("/categories", asyncHandler(async (req, res) => {
   const userId = currentUserId(req);
   const input = validate(categorySchema, req.body);
   const categories = await store.collection("categories", userId);
@@ -85,10 +91,10 @@ router.post("/categories", async (req, res) => {
     ...input,
     isDefault: false,
   });
-  return sendCreated(res, category);
-});
+    return sendCreated(res, category);
+}));
 
-router.put("/categories/:id", async (req, res) => {
+addExpenseRoute("put", "/categories/:id", async (req, res) => {
   const userId = currentUserId(req);
   const category = await requireRecord(
     "categories",
@@ -114,7 +120,7 @@ router.put("/categories/:id", async (req, res) => {
   res.json({ data: updatedCategory });
 });
 
-router.delete("/categories/:id", async (req, res) => {
+addExpenseRoute("delete", "/categories/:id", async (req, res) => {
   const userId = currentUserId(req);
   const category = await requireRecord(
     "categories",
@@ -146,7 +152,7 @@ router.delete("/categories/:id", async (req, res) => {
 
 // ---------- Transactions ----------
 
-router.get("/transactions", async (req, res) => {
+addExpenseRoute("get", "/transactions", async (req, res) => {
   const userId = currentUserId(req);
   const {
     search = "",
@@ -202,7 +208,7 @@ router.get("/transactions", async (req, res) => {
   });
 });
 
-router.post("/transactions", async (req, res) => {
+addExpenseRoute("post", "/transactions", async (req, res) => {
   const userId = currentUserId(req);
   const input = validate(transactionSchema, req.body);
   await requireMatchingCategory(userId, input.categoryId, input.type);
@@ -214,7 +220,7 @@ router.post("/transactions", async (req, res) => {
   return sendCreated(res, transaction);
 });
 
-router.get("/transactions/:id", async (req, res) => {
+addExpenseRoute("get", "/transactions/:id", async (req, res) => {
   const transaction = await requireRecord(
     "transactions",
     currentUserId(req),
@@ -224,7 +230,7 @@ router.get("/transactions/:id", async (req, res) => {
   res.json({ data: transaction });
 });
 
-router.put("/transactions/:id", async (req, res) => {
+addExpenseRoute("put", "/transactions/:id", async (req, res) => {
   const userId = currentUserId(req);
   await requireRecord("transactions", userId, req.params.id, "Transaction");
   const input = validate(transactionSchema, req.body);
@@ -242,7 +248,7 @@ router.put("/transactions/:id", async (req, res) => {
   res.json({ data: transaction });
 });
 
-router.delete("/transactions/:id", async (req, res) => {
+addExpenseRoute("delete", "/transactions/:id", async (req, res) => {
   const userId = currentUserId(req);
   await requireRecord("transactions", userId, req.params.id, "Transaction");
   await store.remove("transactions", userId, req.params.id);
@@ -251,7 +257,7 @@ router.delete("/transactions/:id", async (req, res) => {
 
 // ---------- Budgets ----------
 
-router.get("/budgets", async (req, res) => {
+addExpenseRoute("get", "/budgets", async (req, res) => {
   const userId = currentUserId(req);
   const budgets = await store.collection("budgets", userId);
   const transactions = await store.collection("transactions", userId);
@@ -272,7 +278,7 @@ router.get("/budgets", async (req, res) => {
   res.json({ data });
 });
 
-router.post("/budgets", async (req, res) => {
+addExpenseRoute("post", "/budgets", async (req, res) => {
   const userId = currentUserId(req);
   const input = validate(budgetSchema, req.body);
   await requireRecord("categories", userId, input.categoryId, "Category");
@@ -292,7 +298,7 @@ router.post("/budgets", async (req, res) => {
   return sendCreated(res, await store.create("budgets", userId, input));
 });
 
-router.put("/budgets/:id", async (req, res) => {
+addExpenseRoute("put", "/budgets/:id", async (req, res) => {
   const userId = currentUserId(req);
   await requireRecord("budgets", userId, req.params.id, "Budget");
   const input = validate(budgetSchema, req.body);
@@ -301,7 +307,7 @@ router.put("/budgets/:id", async (req, res) => {
   res.json({ data: budget });
 });
 
-router.delete("/budgets/:id", async (req, res) => {
+addExpenseRoute("delete", "/budgets/:id", async (req, res) => {
   const userId = currentUserId(req);
   await requireRecord("budgets", userId, req.params.id, "Budget");
   await store.remove("budgets", userId, req.params.id);
@@ -310,12 +316,12 @@ router.delete("/budgets/:id", async (req, res) => {
 
 // ---------- Receipts ----------
 
-router.get("/receipts", async (req, res) => {
+addExpenseRoute("get", "/receipts", async (req, res) => {
   res.json({ data: await store.collection("receipts", currentUserId(req)) });
 });
 
 // Upload ảnh trước. AI/OCR sẽ đọc imageData và cập nhật metadata ở bước sau.
-router.post("/receipts/upload", async (req, res) => {
+addExpenseRoute("post", "/receipts/upload", async (req, res) => {
   const input = validate(receiptUploadSchema, req.body);
   const receipt = await store.create("receipts", currentUserId(req), {
     fileName: input.fileName,
@@ -332,7 +338,7 @@ router.post("/receipts/upload", async (req, res) => {
   return sendCreated(res, receipt);
 });
 
-router.post("/receipts", async (req, res) => {
+addExpenseRoute("post", "/receipts", async (req, res) => {
   const input = validate(receiptExtractionSchema, req.body);
   const receipt = await store.create("receipts", currentUserId(req), {
     ...input,
@@ -342,7 +348,7 @@ router.post("/receipts", async (req, res) => {
   return sendCreated(res, receipt);
 });
 
-router.get("/receipts/:id", async (req, res) => {
+addExpenseRoute("get", "/receipts/:id", async (req, res) => {
   const receipt = await requireRecord(
     "receipts",
     currentUserId(req),
@@ -352,7 +358,7 @@ router.get("/receipts/:id", async (req, res) => {
   res.json({ data: receipt });
 });
 
-router.put("/receipts/:id", async (req, res) => {
+addExpenseRoute("put", "/receipts/:id", async (req, res) => {
   const userId = currentUserId(req);
   await requireRecord("receipts", userId, req.params.id, "Receipt");
   const input = validate(receiptExtractionSchema, req.body);
@@ -363,7 +369,7 @@ router.put("/receipts/:id", async (req, res) => {
   res.json({ data: receipt });
 });
 
-router.delete("/receipts/:id", async (req, res) => {
+addExpenseRoute("delete", "/receipts/:id", async (req, res) => {
   const userId = currentUserId(req);
   await requireRecord("receipts", userId, req.params.id, "Receipt");
   await store.remove("receipts", userId, req.params.id);
