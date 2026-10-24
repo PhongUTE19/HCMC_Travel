@@ -3,6 +3,9 @@ import { config } from '../../../../config.js';
 import { SERVER_MESSAGES, RETRY_CONFIG, SERVER_CONFIG_DEFAULTS, GUARDRAIL_CONFIG } from '../../../../constants/index.js';
 import { recordUsage, hashPrompt } from '../../../../features/analytics/index.js';
 import { validateChatResponse, withTimeout, validateStructuredOutput } from '../../../guardrails/index.js';
+import { RECEIPT_CATEGORIES, receiptExtractionSchema } from '../../../../features/expenses/receipt.schemas.js';
+import { enforceReceiptGuardrails } from '../../../../features/expenses/receiptGuardrails.js';
+import { getReceiptPrompt, RECEIPT_PROMPT_VERSION } from '../../../../features/expenses/receiptPrompt.js';
 
 let aiInstance = null;
 
@@ -177,7 +180,7 @@ export async function embedText(text, options = {}) {
 export async function generateAnswer(prompt, options = {}) {
   const ai = getAIClient();
   const feature = options.feature || 'chat';
-  const model = options.model || config.geminiModel;
+  const model = options.model || config.geminiReceiptModel;
   const promptVersion = hashPrompt(prompt);
 
   try {
@@ -266,7 +269,7 @@ export async function generateAnswer(prompt, options = {}) {
 export async function generateAnswerStream(prompt, options = {}) {
   const ai = getAIClient();
   const feature = options.feature || 'chat';
-  const model = options.model || config.geminiModel;
+  const model = options.model || config.geminiReceiptModel;
   const promptVersion = hashPrompt(prompt);
 
   const requestConfig = {};
@@ -418,6 +421,44 @@ export async function generateAnswerStream(prompt, options = {}) {
 }
 
 /**
+ * Extracts a strictly validated, review-only receipt draft from image bytes.
+ * The configured model is not assumed to support vision/JSON mode: provider
+ * errors are surfaced as safe failures and must be live-probed before release.
+ */
+export async function extractReceiptImage(image, options = {}) {
+  const ai = getAIClient();
+  const model = options.model || config.geminiModel;
+  const prompt = options.prompt || getReceiptPrompt();
+  const started = Date.now();
+  try {
+    const { result, attempts, totalAttempts, durationMs } = await executeWithRetry(() => ai.models.generateContent({
+      model,
+      contents: [{ role: 'user', parts: [
+        { text: prompt },
+        { inlineData: { mimeType: image.mimeType, data: image.buffer.toString('base64') } },
+      ] }],
+      config: { responseMimeType: 'application/json', responseJsonSchema: { type: 'object', properties: { documentType: { type: 'string', enum: ['receipt', 'invoice', 'unknown'] }, transactionType: { type: 'string', enum: ['expense', 'income', 'unknown'] }, merchant: { type: ['string', 'null'] }, transactionDate: { type: ['string', 'null'] }, totalAmount: { type: ['number', 'null'] }, currency: { type: 'string' }, category: { type: 'string', enum: RECEIPT_CATEGORIES }, items: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, amount: { type: ['number', 'null'] } } } } } }, temperature: 0 },
+    }), undefined, undefined, options.timeoutMs);
+    const validated = validateStructuredOutput(result.text || '', receiptExtractionSchema, { throwOnError: true });
+    enforceReceiptGuardrails(validated.data);
+    const usage = result.usageMetadata || {};
+    recordUsage({ feature: 'receipt_extraction', operation: 'extractReceiptImage', provider: 'google-genai', model,
+      outcome: 'success', durationMs, attempts, totalAttempts, promptVersion: `${RECEIPT_PROMPT_VERSION}:${hashPrompt(prompt)}`,
+      toolsExecuted: [], tokenUsage: { inputTokens: usage.promptTokenCount ?? null, outputTokens: usage.candidatesTokenCount ?? null, totalTokens: usage.totalTokenCount ?? null, tokenCountsAvailable: typeof usage.promptTokenCount === 'number' },
+    });
+    return { extraction: validated.data, provider: 'google-genai', model, latencyMs: Date.now() - started, tokenUsage: usage };
+  } catch (error) {
+    const meta = error.executionMetadata || { attempts: [], totalAttempts: 1, durationMs: Date.now() - started };
+    recordUsage({ feature: 'receipt_extraction', operation: 'extractReceiptImage', provider: 'google-genai', model,
+      outcome: 'failure', durationMs: meta.durationMs, attempts: meta.attempts, totalAttempts: meta.totalAttempts,
+      promptVersion: `${RECEIPT_PROMPT_VERSION}:${hashPrompt(prompt)}`, toolsExecuted: [], error,
+      tokenUsage: { inputTokens: null, outputTokens: null, totalTokens: null, tokenCountsAvailable: false },
+    });
+    throw error;
+  }
+}
+
+/**
  * Gemini AI Provider implementation object.
  */
 export const geminiProvider = {
@@ -425,4 +466,5 @@ export const geminiProvider = {
   embedText,
   generateAnswer,
   generateAnswerStream,
+  extractReceiptImage,
 };

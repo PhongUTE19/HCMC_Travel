@@ -15,8 +15,13 @@ function clientFor(user) {
   return client;
 }
 
-function databaseError() {
+function databaseError(error, operation = 'database operation') {
   // Do not leak PostgREST/schema details to clients.
+  console.error(`[ExpenseService] ${operation} failed`, {
+    code: error?.code ?? null,
+    message: error?.message ?? null,
+    details: error?.details ?? null,
+  });
   return new AppError('Expense persistence is temporarily unavailable.', HTTP_STATUS.INTERNAL_SERVER_ERROR);
 }
 
@@ -94,7 +99,10 @@ export async function updateTransaction(user, id, input) {
 
 export async function deleteTransaction(user, id) {
   const { data, error } = await clientFor(user).from(TRANSACTIONS_TABLE).delete().eq('id', id).eq('user_id', user.id).select('*').maybeSingle();
-  if (error) throw databaseError();
+  if (error?.code === '23503') {
+    throw new AppError(EXPENSE_MESSAGES.TRANSACTION_LINKED_TO_RECEIPT, HTTP_STATUS.CONFLICT);
+  }
+  if (error) throw databaseError(error, 'Transaction deletion');
   if (!data) throw notFound();
   return toTransaction(data);
 }

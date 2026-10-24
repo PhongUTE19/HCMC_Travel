@@ -1,4 +1,5 @@
 import * as expenseService from './expenses.service.js';
+import * as receiptService from './receipt.service.js';
 import { HTTP_STATUS } from '../../constants/index.js';
 
 // Chuyển lỗi nghiệp vụ về error handler dùng chung của Express.
@@ -27,9 +28,18 @@ export const update = (req, res, next) => respond(
 );
 
 export const remove = (req, res, next) => respond(
-  async () => res.json({ transaction: await expenseService.deleteTransaction(req.user, req.params.id) }), req, res, next
+  async () => {
+    const linkedDeletion = await receiptService.deleteConfirmedReceiptTransaction(req.user, req.params.id);
+    res.json({ transaction: linkedDeletion?.transaction || await expenseService.deleteTransaction(req.user, req.params.id) });
+  }, req, res, next
 );
 
 export const upload = (req, res, next) => respond(
-  async () => res.status(HTTP_STATUS.CREATED).json({ receipt: expenseService.createReceiptDraft(req.user, res.locals.validated.body) }), req, res, next
+  async () => res.status(HTTP_STATUS.CREATED).json({ receipt: await receiptService.uploadReceipt(req.user, req.receiptFile, req.receiptMeta) }), req, res, next
 );
+
+export const listReceipts = (req, res, next) => respond(async () => res.json({ receipts: await receiptService.listReceipts(req.user) }), req, res, next);
+export const retryReceipt = (req, res, next) => respond(async () => res.json({ receipt: await receiptService.retryReceipt(req.user, req.params.id) }), req, res, next);
+export const confirmReceipt = (req, res, next) => respond(async () => res.json(await receiptService.confirmReceipt(req.user, req.params.id, res.locals.validated.body.finalTransaction)), req, res, next);
+export const deleteReceipt = (req, res, next) => respond(async () => res.json({ receipt: await receiptService.deleteReceipt(req.user, req.params.id) }), req, res, next);
+export const previewReceipt = (req, res, next) => respond(async () => res.json(await receiptService.previewReceipt(req.user, req.params.id)), req, res, next);

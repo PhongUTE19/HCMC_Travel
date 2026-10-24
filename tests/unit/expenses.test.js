@@ -94,4 +94,13 @@ describe('Expense tracker schema and service', () => {
     await assert.rejects(() => getTransaction(testUser, 'belongs-to-user-b'), { statusCode: 404 });
     await assert.rejects(() => deleteTransaction(testUser, 'belongs-to-user-b'), { statusCode: 404 });
   });
+
+  it('blocks deletion of a transaction linked to a confirmed receipt', async () => {
+    const { client } = mockClient({ data: null, count: 0, error: { code: '23503', message: 'foreign key violation' } });
+    setExpenseClientFactoryForTests(() => client);
+    await assert.rejects(
+      () => deleteTransaction(testUser, row.id),
+      { statusCode: 409, message: 'This transaction is linked to a receipt and cannot be deleted.' },
+    );
+  });
 });

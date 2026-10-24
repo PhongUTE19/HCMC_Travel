@@ -1,6 +1,14 @@
 import { EXPENSE_CATEGORIES } from './expenseConstants';
 import { formatMoney } from './expenseFormatters';
 
+function EditIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.8 5.2 18.8 10.2M4 20l4.1-.9L19.5 7.7a2.1 2.1 0 0 0-3-3L5.1 16.1 4 20Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function DeleteIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 .8 13h8.4L17 7M10 11v5m4-5v5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
 export default function TransactionTable({ data, filters, loading, onChangeFilters, onEdit, onDelete, onSearch }) {
   const toggleAmountSort = () => onChangeFilters((current) => ({
     ...current,
@@ -44,7 +52,7 @@ export default function TransactionTable({ data, filters, loading, onChangeFilte
                 <td><span className="category-pill">{transaction.category}</span></td>
                 <td>{transaction.date}</td>
                 <td className={transaction.type === 'income' ? 'income' : 'expense'}>{transaction.type === 'income' ? '+' : '-'}{formatMoney(transaction.amount)}</td>
-                <td><button className="row-action" onClick={() => onEdit(transaction)}>Edit</button><button className="row-action danger" onClick={() => onDelete(transaction)}>Delete</button></td>
+                <td><div className="row-actions"><button className="row-action row-action--icon" type="button" onClick={() => onEdit(transaction)} aria-label={`Edit ${transaction.merchant}`} title="Edit transaction"><EditIcon /></button><button className="row-action row-action--icon danger" type="button" onClick={() => onDelete(transaction)} aria-label={`Delete ${transaction.merchant}`} title="Delete transaction"><DeleteIcon /></button></div></td>
               </tr>
             ))}
           </tbody>

@@ -25,6 +25,9 @@ export default function ExpenseTrackerApp({ user, onSignOut }) {
   const [error, setError] = useState('');
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [receipt, setReceipt] = useState(null);
+  const [processingReceipt, setProcessingReceipt] = useState(null);
+  const [pendingReviews, setPendingReviews] = useState([]);
+  const [pendingActionId, setPendingActionId] = useState(null);
 
   async function loadTransactions() {
     setLoading(true);
@@ -43,6 +46,19 @@ export default function ExpenseTrackerApp({ user, onSignOut }) {
     loadTransactions();
   }, [filters.page, filters.pageSize, filters.sortBy, filters.sortOrder, filters.type, filters.category, filters.from, filters.to]);
 
+  useEffect(() => {
+    if (view === 'receipt') loadPendingReviews();
+  }, [view]);
+
+  async function loadPendingReviews() {
+    try {
+      const result = await expenseApi.listReceipts();
+      setPendingReviews(result.receipts.filter((item) => item.status === 'review_required'));
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
   const summary = useMemo(() => data.transactions.reduce((totals, transaction) => ({
     income: totals.income + (transaction.type === 'income' ? transaction.amount : 0),
     expense: totals.expense + (transaction.type === 'expense' ? transaction.amount : 0),
@@ -58,7 +74,7 @@ export default function ExpenseTrackerApp({ user, onSignOut }) {
   }
 
   async function deleteTransaction(transaction) {
-    if (!window.confirm(`Delete ${transaction.merchant}?`)) return;
+    if (!window.confirm(`Delete ${transaction.merchant}? If it was created from a receipt, its receipt image will also be deleted.`)) return;
     try {
       await expenseApi.remove(transaction.id);
       await loadTransactions();
@@ -69,24 +85,82 @@ export default function ExpenseTrackerApp({ user, onSignOut }) {
 
   async function uploadReceipt(event) {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || processingReceipt || receipt) return;
     if (!RECEIPT_ACCEPTED_TYPES.includes(file.type) || file.size > MAX_RECEIPT_SIZE_BYTES) {
       setError('Upload a JPG, PNG, or WebP file up to 5 MB.');
       return;
     }
+    const previewUrl = URL.createObjectURL(file);
+    let keepPreview = false;
+    setError('');
+    setProcessingReceipt({ file, previewUrl });
     try {
       const result = await expenseApi.upload(file);
-      setReceipt({ file, draft: result.receipt.extraction });
+      keepPreview = true;
+      setReceipt({ id: result.receipt.id, file, previewUrl, localPreview: true, draft: result.receipt.extraction });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
+      setProcessingReceipt(null);
+      if (!keepPreview) URL.revokeObjectURL(previewUrl);
       event.target.value = '';
     }
   }
 
   function closeReceiptReview() {
-    setReceipt(null);
+    setReceipt((current) => {
+      if (current?.localPreview && current.previewUrl) URL.revokeObjectURL(current.previewUrl);
+      return null;
+    });
     setView('transactions');
+  }
+
+  async function confirmReceipt(finalTransaction) {
+    if (!receipt) return;
+    await expenseApi.confirmReceipt(receipt.id, finalTransaction);
+    await loadTransactions();
+    await loadPendingReviews();
+    closeReceiptReview();
+  }
+
+  async function discardReceipt() {
+    if (!receipt) return;
+    await expenseApi.deleteReceipt(receipt.id);
+    await loadPendingReviews();
+    closeReceiptReview();
+  }
+
+  async function resumePendingReview(pendingReceipt) {
+    if (processingReceipt || receipt) return;
+    try {
+      setPendingActionId(pendingReceipt.id);
+      setError('');
+      const preview = await expenseApi.previewReceipt(pendingReceipt.id);
+      setReceipt({
+        id: pendingReceipt.id,
+        file: { name: pendingReceipt.filename, size: pendingReceipt.size },
+        previewUrl: preview.url,
+        localPreview: false,
+        draft: pendingReceipt.extraction,
+      });
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setPendingActionId(null);
+    }
+  }
+
+  async function discardPendingReview(pendingReceipt) {
+    try {
+      setPendingActionId(pendingReceipt.id);
+      setError('');
+      await expenseApi.deleteReceipt(pendingReceipt.id);
+      await loadPendingReviews();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setPendingActionId(null);
+    }
   }
 
   return (
@@ -98,11 +172,21 @@ export default function ExpenseTrackerApp({ user, onSignOut }) {
           {view === 'transactions' && <button className="primary-button" onClick={() => setEditingTransaction(INITIAL_TRANSACTION)}>+ New transaction</button>}
         </header>
         {error && <div className="page-error">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
-        {view === 'receipt' && <div className="upload-card">
+        {view === 'receipt' && <div className="upload-card" aria-busy={Boolean(processingReceipt)}>
           <h2>Upload a receipt</h2>
           <p>Upload an image to prepare an expense transaction. You will always review and confirm the extracted data before it is saved.</p>
-          <label className="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadReceipt} /><strong>Choose a receipt image</strong><small>JPG, PNG, or WebP · maximum 5 MB</small></label>
-          {receipt && <ReceiptReview file={receipt.file} draft={receipt.draft} onConfirm={saveTransaction} onDiscard={closeReceiptReview} />}
+          {!processingReceipt && !receipt && pendingReviews.length > 0 && <section className="pending-receipts" aria-label="Pending receipt reviews">
+            <div><p className="eyebrow">PENDING REVIEW</p><h3>Finish a previous receipt</h3><p>Your extracted receipt details are saved until you confirm or discard them.</p></div>
+            <ul>
+              {pendingReviews.map((pendingReceipt) => <li key={pendingReceipt.id}>
+                <div><strong>{pendingReceipt.filename}</strong><small>{pendingReceipt.extraction?.merchant || 'Receipt draft'} · {pendingReceipt.createdAt ? new Date(pendingReceipt.createdAt).toLocaleDateString() : 'Pending'}</small></div>
+                <div className="pending-receipt-actions"><button className="secondary-button" type="button" onClick={() => discardPendingReview(pendingReceipt)} disabled={Boolean(pendingActionId)}>{pendingActionId === pendingReceipt.id ? 'Working…' : 'Discard'}</button><button className="primary-button" type="button" onClick={() => resumePendingReview(pendingReceipt)} disabled={Boolean(pendingActionId)}>{pendingActionId === pendingReceipt.id ? 'Opening…' : 'Resume review'}</button></div>
+              </li>)}
+            </ul>
+          </section>}
+          {!processingReceipt && !receipt && <label className="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadReceipt} /><strong>Choose a receipt image</strong><small>JPG, PNG, or WebP · maximum 5 MB</small></label>}
+          {processingReceipt && <section className="receipt-processing" role="status" aria-live="polite"><img src={processingReceipt.previewUrl} alt={`Selected receipt: ${processingReceipt.file.name}`} /><div><p className="eyebrow">PROCESSING RECEIPT</p><h3>Reading {processingReceipt.file.name}</h3><p>Uploading the image and extracting its details with Gemini. Please wait before choosing another receipt.</p></div><span className="receipt-spinner" aria-hidden="true" /></section>}
+          {receipt && <ReceiptReview file={receipt.file} previewUrl={receipt.previewUrl} draft={receipt.draft} onConfirm={confirmReceipt} onDiscard={discardReceipt} />}
         </div>}
         {view === 'categories' && <div className="coming-soon"><h2>Categories are a secondary flow</h2><p>The final-project core is receipt-to-transaction and transaction CRUD. This page stays out of the primary demo flow until the core is validated.</p></div>}
         {view === 'transactions' && <>

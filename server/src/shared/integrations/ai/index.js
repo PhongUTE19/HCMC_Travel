@@ -100,5 +100,13 @@ export async function generateAnswerStream(prompt, options = {}) {
   return provider.generateAnswerStream(prompt, options);
 }
 
+export async function extractReceiptImage(image, options = {}) {
+  const provider = getAIProvider(options.provider);
+  if (typeof provider.extractReceiptImage !== 'function') {
+    throw new Error(`AI provider "${provider.name || config.aiProvider}" does not support receipt extraction.`);
+  }
+  return provider.extractReceiptImage(image, options);
+}
+
 export { geminiProvider };
 export { validateStructuredOutput } from '../../guardrails/index.js';
