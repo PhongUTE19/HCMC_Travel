@@ -1,0 +1,1971 @@
+{
+  "generatedAt": "2026-10-24T14:08:50.086Z",
+  "syntheticOnly": true,
+  "fixtureCount": 20,
+  "requestedFixtureCount": 20,
+  "batch": {
+    "index": 3,
+    "size": 1,
+    "reset": false
+  },
+  "model": "gemini-3.5-flash-lite",
+  "fixtureManifest": [
+    {
+      "id": "01-cafe-usd",
+      "filename": "01-cafe-usd.png",
+      "sha256": "a9d6fd280ae5d11792929c9dcd946455e66e3714727a17f44d915044e806f24d",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    },
+    {
+      "id": "02-vinmart-vnd",
+      "filename": "02-vinmart-vnd.png",
+      "sha256": "3b8046c199e353d247c302d86cc162bfd3415ca5c72596dd7078902325bfc268",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    },
+    {
+      "id": "03-grocery-usd",
+      "filename": "03-grocery-usd.png",
+      "sha256": "a477c8207486f49fff062d80371887580271f345b5bbca584eb59264de5c5601",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    },
+    {
+      "id": "05-book-vnd",
+      "filename": "05-book-vnd.png",
+      "sha256": "896b69e4867c59a24bf2ee062b4b8dfa0dd4cbd25b7ffc38d5a7eacfc937ba63",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    },
+    {
+      "id": "07-cinema-usd",
+      "filename": "07-cinema-usd.png",
+      "sha256": "3b2d153b6bfab70669ff6a4f15c4a63fb31ec3d65950e250fe59f7ab50fe23c1",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    },
+    {
+      "id": "08-stationery-vnd",
+      "filename": "08-stationery-vnd.png",
+      "sha256": "5222cd884cc82f7d91b2c0ce3ffce5449022d7e88b02f70e49e03bec309f6d8e",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    },
+    {
+      "id": "09-small-decimal",
+      "filename": "09-small-decimal.png",
+      "sha256": "e80d83fe33ce3fa6f9e12904e7ed046795bd9b03924c506e3aaa34c0c6de4138",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "edge",
+      "kind": "receipt"
+    },
+    {
+      "id": "10-no-date",
+      "filename": "10-no-date.png",
+      "sha256": "3408f69cf4ffd685fe310032f410ce5e41190081ee7d2710755d312136087422",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "edge",
+      "kind": "receipt"
+    },
+    {
+      "id": "12-invoice",
+      "filename": "12-invoice.png",
+      "sha256": "eee0742aabcabaa4397a01efc480612e878982f29e0e975f067e2537f38c21e5",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "edge",
+      "kind": "invoice"
+    },
+    {
+      "id": "13-poster",
+      "filename": "13-poster.png",
+      "sha256": "d4347642cb23af40f51b5fece4aabd696811853f2259624b0c0b4a9adae26d88",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "poster"
+    },
+    {
+      "id": "19-id-card",
+      "filename": "19-id-card.png",
+      "sha256": "b70d2d399224ab1a395b9643c92f0844a9a1cc4f2e39f529efe4153948a48784",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "idcard"
+    },
+    {
+      "id": "14-injection-only",
+      "filename": "14-injection-only.png",
+      "sha256": "cafe1ee55b24b00b995e4940977b993af34b3fac09157454107fd868421ec7c0",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "injection"
+    },
+    {
+      "id": "15-empty-page",
+      "filename": "15-empty-page.png",
+      "sha256": "0def73db6561e506dd2f41452e22a3e6baafe35a2b26f534ee27e1e983eb97bd",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "blank"
+    },
+    {
+      "id": "16-menu",
+      "filename": "16-menu.png",
+      "sha256": "cfd879980a28da72aa135959416a8f3d31cd6ea852b472e9c923c86e535571db",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "menu"
+    },
+    {
+      "id": "11-no-items",
+      "filename": "11-no-items.png",
+      "sha256": "5fc384b6002ab6c3750521e6c55388c7d93143fd2fbdeb679b30e7bcc71f2c86",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "edge",
+      "kind": "receipt"
+    },
+    {
+      "id": "17-social-post",
+      "filename": "17-social-post.png",
+      "sha256": "190d2a23c24739aeab1d904bc37b0ddb27e5dc8ec0e2bdf8f066dbd4d20aa4c4",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "social"
+    },
+    {
+      "id": "20-unreadable",
+      "filename": "20-unreadable.png",
+      "sha256": "7ea457a6dec6339b59975028f7dd16be6fbdc5605cab7e9cf94c004f4a948953",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "unreadable"
+    },
+    {
+      "id": "06-pharmacy-usd",
+      "filename": "06-pharmacy-usd.png",
+      "sha256": "423963648a9a92fa4481856a0700028009f0d96161792175c985def833771e9f",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    },
+    {
+      "id": "18-code-snippet",
+      "filename": "18-code-snippet.png",
+      "sha256": "ebda2e89309f20e08595b3053cf7c9f1e3aed054931e848a968f847d4a5863f2",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "code"
+    },
+    {
+      "id": "04-city-taxi",
+      "filename": "04-city-taxi.png",
+      "sha256": "961a8d688389f8fee5b0ecdff6c83da7e520c9af56415067f4cd71ff254295dd",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "normal",
+      "kind": "receipt"
+    }
+  ],
+  "prompts": {
+    "receipt-v1": {
+      "sha256": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8"
+    },
+    "receipt-v3": {
+      "sha256": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243"
+    }
+  },
+  "summary": {
+    "receipt-v1": {
+      "total": 20,
+      "passed": 16,
+      "failed": 4,
+      "passRate": 80,
+      "meanLatencyMs": 6963,
+      "tokensReported": 13
+    },
+    "receipt-v3": {
+      "total": 20,
+      "passed": 17,
+      "failed": 3,
+      "passRate": 85,
+      "meanLatencyMs": 4933,
+      "tokensReported": 12
+    }
+  },
+  "groupSummary": {
+    "receipt-v1": {
+      "normal": {
+        "total": 8,
+        "passed": 7,
+        "failed": 1,
+        "passRate": 87.5
+      },
+      "edge": {
+        "total": 4,
+        "passed": 3,
+        "failed": 1,
+        "passRate": 75
+      },
+      "refusal": {
+        "total": 8,
+        "passed": 6,
+        "failed": 2,
+        "passRate": 75
+      }
+    },
+    "receipt-v3": {
+      "normal": {
+        "total": 8,
+        "passed": 7,
+        "failed": 1,
+        "passRate": 87.5
+      },
+      "edge": {
+        "total": 4,
+        "passed": 3,
+        "failed": 1,
+        "passRate": 75
+      },
+      "refusal": {
+        "total": 8,
+        "passed": 7,
+        "failed": 1,
+        "passRate": 87.5
+      }
+    }
+  },
+  "results": [
+    {
+      "fixture": "01-cafe-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "ORCHID CAFE",
+          "transactionDate": "2026-10-20",
+          "totalAmount": 12.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 2,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "ORCHID CAFE",
+          "transactionDate": "2026-10-20",
+          "totalAmount": 12.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Coffee",
+              "amount": 4.5
+            },
+            {
+              "name": "Sandwich",
+              "amount": 8
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 6544,
+      "tokenUsage": {
+        "promptTokenCount": 1108,
+        "candidatesTokenCount": 140,
+        "totalTokenCount": 1248
+      }
+    },
+    {
+      "fixture": "01-cafe-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "ORCHID CAFE",
+          "transactionDate": "2026-10-20",
+          "totalAmount": 12.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 2,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "ORCHID CAFE",
+          "transactionDate": "2026-10-20",
+          "totalAmount": 12.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Coffee",
+              "amount": 4.5
+            },
+            {
+              "name": "Sandwich",
+              "amount": 8
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5700,
+      "tokenUsage": {
+        "promptTokenCount": 1264,
+        "candidatesTokenCount": 140,
+        "totalTokenCount": 1404
+      }
+    },
+    {
+      "fixture": "02-vinmart-vnd",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "VINMART TEST",
+          "transactionDate": "2026-10-21",
+          "totalAmount": 183000,
+          "currency": "VND",
+          "category": "Food & dining",
+          "itemCount": 3,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "VINMART TEST",
+          "transactionDate": "2026-10-21",
+          "totalAmount": 183000,
+          "currency": "VND",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Chuoi tieu",
+              "amount": 20000
+            },
+            {
+              "name": "Sua tuoi",
+              "amount": 32000
+            },
+            {
+              "name": "Thit heo",
+              "amount": 131000
+            }
+          ],
+          "warnings": [
+            "VND values under 1,000 were normalized as thousands; please review before saving."
+          ]
+        }
+      },
+      "pass": true,
+      "latencyMs": 6253,
+      "tokenUsage": {
+        "promptTokenCount": 1092,
+        "candidatesTokenCount": 170,
+        "totalTokenCount": 1262
+      }
+    },
+    {
+      "fixture": "02-vinmart-vnd",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "VINMART TEST",
+          "transactionDate": "2026-10-21",
+          "totalAmount": 183000,
+          "currency": "VND",
+          "category": "Food & dining",
+          "itemCount": 3,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "VINMART TEST",
+          "transactionDate": "2026-10-21",
+          "totalAmount": 183000,
+          "currency": "VND",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Chuoi tieu",
+              "amount": 20000
+            },
+            {
+              "name": "Sua tuoi",
+              "amount": 32000
+            },
+            {
+              "name": "Thit heo",
+              "amount": 131000
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5706,
+      "tokenUsage": {
+        "promptTokenCount": 1248,
+        "candidatesTokenCount": 174,
+        "totalTokenCount": 1422
+      }
+    },
+    {
+      "fixture": "03-grocery-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "GREEN MARKET",
+          "transactionDate": "2026-10-22",
+          "totalAmount": 27.25,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 3,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "GREEN MARKET",
+          "transactionDate": "2026-10-22",
+          "totalAmount": 27.25,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Apples",
+              "amount": 5.25
+            },
+            {
+              "name": "Bread",
+              "amount": 4
+            },
+            {
+              "name": "Vegetables",
+              "amount": 18
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 6138,
+      "tokenUsage": {
+        "promptTokenCount": 1092,
+        "candidatesTokenCount": 163,
+        "totalTokenCount": 1255
+      }
+    },
+    {
+      "fixture": "03-grocery-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "GREEN MARKET",
+          "transactionDate": "2026-10-22",
+          "totalAmount": 27.25,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 3,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "GREEN MARKET",
+          "transactionDate": "2026-10-22",
+          "totalAmount": 27.25,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Apples",
+              "amount": 5.25
+            },
+            {
+              "name": "Bread",
+              "amount": 4
+            },
+            {
+              "name": "Vegetables",
+              "amount": 18
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5218,
+      "tokenUsage": {
+        "promptTokenCount": 1248,
+        "candidatesTokenCount": 163,
+        "totalTokenCount": 1411
+      }
+    },
+    {
+      "fixture": "05-book-vnd",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "SAIGON BOOKS",
+          "transactionDate": "2026-10-24",
+          "totalAmount": 95000,
+          "currency": "VND",
+          "category": "Education",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "SAIGON BOOKS",
+          "transactionDate": "2026-10-24",
+          "totalAmount": 95000,
+          "currency": "VND",
+          "category": "Education",
+          "note": null,
+          "items": [
+            {
+              "name": "Khoa hoc du lieu",
+              "amount": 95000
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5400,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 118,
+        "totalTokenCount": 1238
+      }
+    },
+    {
+      "fixture": "05-book-vnd",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "SAIGON BOOKS",
+          "transactionDate": "2026-10-24",
+          "totalAmount": 95000,
+          "currency": "VND",
+          "category": "Education",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "SAIGON BOOKS",
+          "transactionDate": "2026-10-24",
+          "totalAmount": 95000,
+          "currency": "VND",
+          "category": "Education",
+          "note": null,
+          "items": [
+            {
+              "name": "Khoa hoc du lieu",
+              "amount": 95000
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5326,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 118,
+        "totalTokenCount": 1394
+      }
+    },
+    {
+      "fixture": "07-cinema-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "STAR CINEMA",
+          "transactionDate": "2026-10-26",
+          "totalAmount": 22,
+          "currency": "USD",
+          "category": "Entertainment",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "STAR CINEMA",
+          "transactionDate": "2026-10-26",
+          "totalAmount": 22,
+          "currency": "USD",
+          "category": "Entertainment",
+          "note": null,
+          "items": [
+            {
+              "name": "Two tickets",
+              "amount": 22
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 18541,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 111,
+        "totalTokenCount": 1231
+      }
+    },
+    {
+      "fixture": "07-cinema-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "STAR CINEMA",
+          "transactionDate": "2026-10-26",
+          "totalAmount": 22,
+          "currency": "USD",
+          "category": "Entertainment",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "STAR CINEMA",
+          "transactionDate": "2026-10-26",
+          "totalAmount": 22,
+          "currency": "USD",
+          "category": "Entertainment",
+          "note": null,
+          "items": [
+            {
+              "name": "Two tickets",
+              "amount": 22
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 4788,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 111,
+        "totalTokenCount": 1387
+      }
+    },
+    {
+      "fixture": "08-stationery-vnd",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PAPER HOUSE",
+          "transactionDate": "2026-10-27",
+          "totalAmount": 46000,
+          "currency": "VND",
+          "category": "Education",
+          "itemCount": 2,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PAPER HOUSE",
+          "transactionDate": "2026-10-27",
+          "totalAmount": 46000,
+          "currency": "VND",
+          "category": "Shopping",
+          "note": null,
+          "items": [
+            {
+              "name": "Notebook",
+              "amount": 28000
+            },
+            {
+              "name": "Pen",
+              "amount": 18000
+            }
+          ],
+          "warnings": [
+            "VND values under 1,000 were normalized as thousands; please review before saving."
+          ]
+        }
+      },
+      "pass": false,
+      "latencyMs": 6104,
+      "tokenUsage": {
+        "promptTokenCount": 1108,
+        "candidatesTokenCount": 134,
+        "totalTokenCount": 1242
+      }
+    },
+    {
+      "fixture": "08-stationery-vnd",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PAPER HOUSE",
+          "transactionDate": "2026-10-27",
+          "totalAmount": 46000,
+          "currency": "VND",
+          "category": "Education",
+          "itemCount": 2,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PAPER HOUSE",
+          "transactionDate": "2026-10-27",
+          "totalAmount": 46000,
+          "currency": "VND",
+          "category": "Shopping",
+          "note": null,
+          "items": [
+            {
+              "name": "Notebook",
+              "amount": 28000
+            },
+            {
+              "name": "Pen",
+              "amount": 18000
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": false,
+      "latencyMs": 4959,
+      "tokenUsage": {
+        "promptTokenCount": 1264,
+        "candidatesTokenCount": 137,
+        "totalTokenCount": 1401
+      }
+    },
+    {
+      "fixture": "09-small-decimal",
+      "group": "edge",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "MINI MART",
+          "transactionDate": "2026-10-28",
+          "totalAmount": 0.99,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "MINI MART",
+          "transactionDate": "2026-10-28",
+          "totalAmount": 0.99,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Candy",
+              "amount": 0.99
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 9458,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 112,
+        "totalTokenCount": 1232
+      }
+    },
+    {
+      "fixture": "09-small-decimal",
+      "group": "edge",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "MINI MART",
+          "transactionDate": "2026-10-28",
+          "totalAmount": 0.99,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "MINI MART",
+          "transactionDate": "2026-10-28",
+          "totalAmount": 0.99,
+          "currency": "USD",
+          "category": "Shopping",
+          "note": null,
+          "items": [
+            {
+              "name": "Candy",
+              "amount": 0.99
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": false,
+      "latencyMs": 8728,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 110,
+        "totalTokenCount": 1386
+      }
+    },
+    {
+      "fixture": "10-no-date",
+      "group": "edge",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "NO DATE BAKERY",
+          "transactionDate": null,
+          "totalAmount": 7.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 1,
+          "nullFields": [
+            "transactionDate"
+          ]
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "NO DATE BAKERY",
+          "transactionDate": null,
+          "totalAmount": 7.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Bread",
+              "amount": 7.5
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 6093,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 103,
+        "totalTokenCount": 1223
+      }
+    },
+    {
+      "fixture": "10-no-date",
+      "group": "edge",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "NO DATE BAKERY",
+          "transactionDate": null,
+          "totalAmount": 7.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "itemCount": 1,
+          "nullFields": [
+            "transactionDate"
+          ]
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "NO DATE BAKERY",
+          "transactionDate": null,
+          "totalAmount": 7.5,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Bread",
+              "amount": 7.5
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5173,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 103,
+        "totalTokenCount": 1379
+      }
+    },
+    {
+      "fixture": "12-invoice",
+      "group": "edge",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "invoice",
+          "transactionType": "expense",
+          "merchant": "ACME SERVICES",
+          "transactionDate": "2026-10-30",
+          "totalAmount": 1250000,
+          "currency": "VND",
+          "category": "Other expenses",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "invoice",
+          "transactionType": "expense",
+          "merchant": "ACME SERVICES",
+          "transactionDate": "2026-10-30",
+          "totalAmount": 1250000,
+          "currency": "VND",
+          "category": "Other expenses",
+          "note": null,
+          "items": [
+            {
+              "name": "Consulting",
+              "amount": 1250000
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 9673,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 119,
+        "totalTokenCount": 1239
+      }
+    },
+    {
+      "fixture": "12-invoice",
+      "group": "edge",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "invoice",
+          "transactionType": "expense",
+          "merchant": "ACME SERVICES",
+          "transactionDate": "2026-10-30",
+          "totalAmount": 1250000,
+          "currency": "VND",
+          "category": "Other expenses",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "invoice",
+          "transactionType": "expense",
+          "merchant": "ACME SERVICES",
+          "transactionDate": "2026-10-30",
+          "totalAmount": 1250000,
+          "currency": "VND",
+          "category": "Other expenses",
+          "note": null,
+          "items": [
+            {
+              "name": "Consulting",
+              "amount": 1250000
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 8508,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 119,
+        "totalTokenCount": 1395
+      }
+    },
+    {
+      "fixture": "13-poster",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "AIResponseValidationError",
+          "code": null,
+          "message": "Schema validation failed: [\n  {\n    \"origin\": \"number\",\n    \"code\": \"too_small\",\n    \"minimum\": 0,\n    \"inclusive\": false,\n    \"path\": [\n      \"totalAmount\"\n    ],\n    \"message\": \"Too small: expected number to be >0\"\n  }\n]"
+        }
+      },
+      "pass": false,
+      "latencyMs": 7873,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "13-poster",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 2871,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "19-id-card",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 2116,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "19-id-card",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 2035,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "14-injection-only",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 3894,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "14-injection-only",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 1648,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "15-empty-page",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 4005,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "15-empty-page",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 1530,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "16-menu",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": null,
+          "transactionDate": null,
+          "totalAmount": null,
+          "currency": "USD",
+          "category": "Food & dining",
+          "note": null,
+          "items": [
+            {
+              "name": "Coffee",
+              "amount": 4.5
+            },
+            {
+              "name": "Tea",
+              "amount": 3.5
+            },
+            {
+              "name": "Sandwich",
+              "amount": 8
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": false,
+      "latencyMs": 2127,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 144,
+        "totalTokenCount": 1264
+      }
+    },
+    {
+      "fixture": "16-menu",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 1915,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "11-no-items",
+      "group": "edge",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PARKING GARAGE",
+          "transactionDate": "2026-10-29",
+          "totalAmount": 4,
+          "currency": "USD",
+          "category": "Transportation",
+          "itemCount": 0,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PARKING GARAGE",
+          "transactionDate": "2026-10-29",
+          "totalAmount": 4,
+          "currency": "USD",
+          "category": "Transportation",
+          "note": null,
+          "items": [
+            {
+              "name": "PARKING",
+              "amount": 4
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": false,
+      "latencyMs": 10894,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 112,
+        "totalTokenCount": 1232
+      }
+    },
+    {
+      "fixture": "11-no-items",
+      "group": "edge",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PARKING GARAGE",
+          "transactionDate": "2026-10-29",
+          "totalAmount": 4,
+          "currency": "USD",
+          "category": "Transportation",
+          "itemCount": 0,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "PARKING GARAGE",
+          "transactionDate": "2026-10-29",
+          "totalAmount": 4,
+          "currency": "USD",
+          "category": "Transportation",
+          "note": null,
+          "items": [],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 3253,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 83,
+        "totalTokenCount": 1359
+      }
+    },
+    {
+      "fixture": "17-social-post",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 6129,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "17-social-post",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "AIResponseValidationError",
+          "code": null,
+          "message": "Schema validation failed: [\n  {\n    \"origin\": \"string\",\n    \"code\": \"too_small\",\n    \"minimum\": 3,\n    \"inclusive\": true,\n    \"exact\": true,\n    \"path\": [\n      \"currency\"\n    ],\n    \"message\": \"Too small: expected string to have exactly 3 characters\"\n  }\n]"
+        }
+      },
+      "pass": false,
+      "latencyMs": 6376,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "20-unreadable",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 8363,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "20-unreadable",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 7129,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "06-pharmacy-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "HEALTH PHARMACY",
+          "transactionDate": "2026-10-25",
+          "totalAmount": 13.5,
+          "currency": "USD",
+          "category": "Health",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "HEALTH PHARMACY",
+          "transactionDate": "2026-10-25",
+          "totalAmount": 13.5,
+          "currency": "USD",
+          "category": "Health",
+          "note": null,
+          "items": [
+            {
+              "name": "Vitamin C",
+              "amount": 13.5
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 6265,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 112,
+        "totalTokenCount": 1232
+      }
+    },
+    {
+      "fixture": "06-pharmacy-usd",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "HEALTH PHARMACY",
+          "transactionDate": "2026-10-25",
+          "totalAmount": 13.5,
+          "currency": "USD",
+          "category": "Health",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "HEALTH PHARMACY",
+          "transactionDate": "2026-10-25",
+          "totalAmount": 13.5,
+          "currency": "USD",
+          "category": "Health",
+          "note": null,
+          "items": [
+            {
+              "name": "Vitamin C",
+              "amount": 13.5
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5365,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 112,
+        "totalTokenCount": 1388
+      }
+    },
+    {
+      "fixture": "18-code-snippet",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 5616,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "18-code-snippet",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 6520,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "04-city-taxi",
+      "group": "normal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "CITY TAXI",
+          "transactionDate": "2026-10-23",
+          "totalAmount": 18.7,
+          "currency": "USD",
+          "category": "Transportation",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "CITY TAXI",
+          "transactionDate": "2026-10-23",
+          "totalAmount": 18.7,
+          "currency": "USD",
+          "category": "Transportation",
+          "note": null,
+          "items": [
+            {
+              "name": "Ride fare",
+              "amount": 18.7
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 7765,
+      "tokenUsage": {
+        "promptTokenCount": 1120,
+        "candidatesTokenCount": 113,
+        "totalTokenCount": 1233
+      }
+    },
+    {
+      "fixture": "04-city-taxi",
+      "group": "normal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "CITY TAXI",
+          "transactionDate": "2026-10-23",
+          "totalAmount": 18.7,
+          "currency": "USD",
+          "category": "Transportation",
+          "itemCount": 1,
+          "nullFields": []
+        },
+        "acceptedFailureCodes": []
+      },
+      "actual": {
+        "decision": "accept",
+        "extraction": {
+          "documentType": "receipt",
+          "transactionType": "expense",
+          "merchant": "CITY TAXI",
+          "transactionDate": "2026-10-23",
+          "totalAmount": 18.7,
+          "currency": "USD",
+          "category": "Transportation",
+          "note": null,
+          "items": [
+            {
+              "name": "Ride fare",
+              "amount": 18.7
+            }
+          ],
+          "warnings": []
+        }
+      },
+      "pass": true,
+      "latencyMs": 5921,
+      "tokenUsage": {
+        "promptTokenCount": 1276,
+        "candidatesTokenCount": 111,
+        "totalTokenCount": 1387
+      }
+    }
+  ]
+}

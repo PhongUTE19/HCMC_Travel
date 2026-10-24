@@ -1,0 +1,152 @@
+{
+  "generatedAt": "2026-10-24T14:08:25.877Z",
+  "syntheticOnly": true,
+  "fixtureCount": 1,
+  "requestedFixtureCount": 20,
+  "batch": {
+    "index": 17,
+    "size": 1,
+    "reset": true
+  },
+  "model": "gemini-3.5-flash-lite",
+  "fixtureManifest": [
+    {
+      "id": "18-code-snippet",
+      "filename": "18-code-snippet.png",
+      "sha256": "ebda2e89309f20e08595b3053cf7c9f1e3aed054931e848a968f847d4a5863f2",
+      "source": "locally-generated synthetic SVG-to-PNG fixture",
+      "group": "refusal",
+      "kind": "code"
+    }
+  ],
+  "prompts": {
+    "receipt-v1": {
+      "sha256": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8"
+    },
+    "receipt-v3": {
+      "sha256": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243"
+    }
+  },
+  "summary": {
+    "receipt-v1": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "passRate": 100,
+      "meanLatencyMs": 5616,
+      "tokensReported": 0
+    },
+    "receipt-v3": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "passRate": 100,
+      "meanLatencyMs": 6520,
+      "tokensReported": 0
+    }
+  },
+  "groupSummary": {
+    "receipt-v1": {
+      "normal": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "passRate": null
+      },
+      "edge": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "passRate": null
+      },
+      "refusal": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "passRate": 100
+      }
+    },
+    "receipt-v3": {
+      "normal": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "passRate": null
+      },
+      "edge": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "passRate": null
+      },
+      "refusal": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "passRate": 100
+      }
+    }
+  },
+  "results": [
+    {
+      "fixture": "18-code-snippet",
+      "group": "refusal",
+      "promptVersion": "receipt-v1",
+      "promptHash": "5c374c9f34f0440fab0e77d2e52232920749bbfac5f46c07a9dd587d2732ebc8",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 5616,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    },
+    {
+      "fixture": "18-code-snippet",
+      "group": "refusal",
+      "promptVersion": "receipt-v3",
+      "promptHash": "ddeb76aaa7d49ee52363870faa4951b9bdf1addfecd6208f2466ede81bc09243",
+      "model": "gemini-3.5-flash-lite",
+      "expected": {
+        "decision": "reject",
+        "extraction": null,
+        "acceptedFailureCodes": [
+          "NOT_A_RECEIPT",
+          "PROMPT_INJECTION_REJECTED"
+        ]
+      },
+      "actual": {
+        "decision": "reject",
+        "error": {
+          "name": "Error",
+          "code": "NOT_A_RECEIPT",
+          "message": "This image does not appear to be a receipt. No transaction was created."
+        }
+      },
+      "pass": true,
+      "latencyMs": 6520,
+      "tokenUsage": {
+        "promptTokenCount": null,
+        "candidatesTokenCount": null,
+        "totalTokenCount": null
+      }
+    }
+  ]
+}
